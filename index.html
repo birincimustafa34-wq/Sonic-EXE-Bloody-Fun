@@ -103,6 +103,10 @@
 
   const W = canvas.width, H = canvas.height;
   const GROUND = H - Math.max(50, Math.min(150, Number(CONFIG.groundHeight) || 92));
+  // Off-screen snapshot used for brief horizontal glitch/tearing slices.
+  const glitchBuffer = document.createElement('canvas');
+  glitchBuffer.width = W; glitchBuffer.height = H;
+  const glitchBufferCtx = glitchBuffer.getContext('2d');
   const images = Object.create(null);
   function loadImageAsset(name, path) {
     if (!path) return;
@@ -147,6 +151,8 @@
   let spawnClock = 0, ringClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
   let shake = 0, flash = 0;
+  // Glitch strength follows score smoothly; glitchPulse adds short bursts on top.
+  let glitchLevel = 0, glitchPulse = 0;
   let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
   const player = { x:132, y:GROUND-52, w:46, h:52, vy:0, jumps:0, sliding:false, flight:0, invuln:0 };
 
@@ -207,7 +213,7 @@
   let ringCount = 0;
   function reset() {
     elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.4; emeraldClock=10; shieldClock=13; glitchClock=0;
-    shake=0; flash=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
+    shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
     player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
@@ -286,6 +292,11 @@
   function activateFlight() { player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
   function update(dt) {
     elapsed+=dt; score+=dt*(10+speed*.012); speed=Math.min(Number(CONFIG.maxSpeed)||650,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5));
+    // Starts subtly after 220 points and reaches full intensity around 3,000 points.
+    // Easing prevents sudden jumps when ring combos award a lot of score at once.
+    const targetGlitch = Math.max(0, Math.min(1, (score-220)/(3000-220)));
+    glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
+    glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
     spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
     comboTimer=Math.max(0,comboTimer-dt); if(comboTimer===0) combo=0;
     rushTimer=Math.max(0,rushTimer-dt); shieldTimer=Math.max(0,shieldTimer-dt);
@@ -354,7 +365,11 @@
     }
     if(shake>0)shake=Math.max(0,shake-dt);
     if(flash>0)flash=Math.max(0,flash-dt*1.7);
-    if(glitchClock<=0 && score>260){glitchClock=.12+Math.random()*.6;}
+    if(glitchClock<=0 && glitchLevel>.012){
+      // Higher score means more frequent and more noticeable interference.
+      glitchPulse=Math.max(glitchPulse,(.24+Math.random()*.58)*glitchLevel);
+      glitchClock=.95-glitchLevel*.58+Math.random()*(1.05-glitchLevel*.68);
+    }
   }
   function pixelRect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
   function drawTree(t,offset){
@@ -404,6 +419,55 @@
       pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
     }
   }
+  function drawGlitchOverlay(){
+    const intensity=Math.max(0,Math.min(1,glitchLevel*.72+glitchPulse*.42));
+    if(intensity<.008)return;
+
+    ctx.save();
+    // A low, steady layer of dark-red interference builds as the score rises.
+    ctx.fillStyle=`rgba(42,0,13,${.018+intensity*.045})`;
+    ctx.fillRect(0,0,W,H);
+
+    // Fine scanlines become more visible at higher corruption levels.
+    ctx.fillStyle='#080208';
+    ctx.globalAlpha=.025+intensity*.075;
+    for(let y=2;y<H;y+=5)ctx.fillRect(0,y,W,1);
+    ctx.globalAlpha=1;
+
+    // Short bursts tear narrow strips of the current frame sideways.
+    if(glitchPulse>.035){
+      glitchBufferCtx.clearRect(0,0,W,H);
+      glitchBufferCtx.drawImage(canvas,0,0,W,H);
+      const strips=1+Math.floor(intensity*5);
+      for(let i=0;i<strips;i++){
+        if(Math.random()>(.32+intensity*.48))continue;
+        const y=Math.random()*H;
+        const height=2+Math.random()*(3+intensity*17);
+        const shift=(Math.random()*2-1)*(3+intensity*34);
+        ctx.save();
+        ctx.beginPath();ctx.rect(0,y,W,height);ctx.clip();
+        ctx.globalAlpha=.12+intensity*.22;
+        ctx.drawImage(glitchBuffer,shift,0);
+        ctx.restore();
+        ctx.fillStyle=`rgba(190,0,34,${.06+intensity*.13})`;
+        ctx.fillRect(0,y,W,1);
+      }
+    }
+
+    // Small red data fragments flicker around the frame; their number scales with score.
+    const fragments=1+Math.floor(intensity*10);
+    for(let i=0;i<fragments;i++){
+      if(Math.random()>(.22+intensity*.42))continue;
+      const x=Math.random()*W, y=Math.random()*H;
+      const width=8+Math.random()*(24+intensity*132);
+      const height=1+Math.random()*(1+intensity*2.5);
+      ctx.globalAlpha=.10+Math.random()*.13*intensity;
+      ctx.fillStyle=Math.random()<.82?'#c20b35':'#a9d2dc';
+      ctx.fillRect(x,y,width,height);
+    }
+    ctx.globalAlpha=1;
+    ctx.restore();
+  }
   function draw(){
     ctx.save();
     if(shake>0)ctx.translate((Math.random()-.5)*12,(Math.random()-.5)*8);
@@ -447,8 +511,8 @@
     if(rushTimer>0){ctx.fillStyle='#e02a32';ctx.fillText('BLOOD RUSH  x2  '+rushTimer.toFixed(1)+'s',W-22,54);}
     ctx.textAlign='left';
     if(player.flight>0){ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);ctx.fillStyle='#410008';ctx.fillRect(22,113,170,7);ctx.fillStyle='#a90016';ctx.fillRect(22,113,170*(player.flight/10),7);}
-    if(score>260 && Math.random()<.045){const gy=Math.random()*H;pixelRect(0,gy,W,5,'rgba(255,20,60,.28)');}
     if(flash>0){ctx.fillStyle=`rgba(230,0,35,${flash*.35})`;ctx.fillRect(0,0,W,H);}
+    drawGlitchOverlay();
     ctx.restore();
   }
   function loop(now){
