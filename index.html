@@ -92,6 +92,7 @@
     initialSpeed:360, maxSpeed:650, speedRamp:8.5, gravity:1750,
     jumpPower:650, doubleJumpPower:565, flightDuration:10,
     shieldDuration:9, ringComboWindow:2.35, groundHeight:92,
+    usePlayerImage:false,
     music:{path:'assets/audio/background.mp3',volume:.45,loop:true},
     images:{}, sounds:{}, colors:{}
   }, window.BLOODY_FLIGHT_CONFIG || {});
@@ -267,10 +268,19 @@
   }
   function spawnObstacle() {
     const r=Math.random();
-    if (r<.39) obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
-    else if (r<.68) obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
-    else if (r<.86) obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
-    else obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42,phase:Math.random()*6});
+    if (r<.36) obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
+    else if (r<.62) obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
+    else if (r<.78) obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
+    else if (r<.90) obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42,phase:Math.random()*6});
+    else {
+      const baseY=72+Math.random()*118;
+      obstacles.push({
+        type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,
+        phase:Math.random()*6,
+        trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),
+        cooldown:0
+      });
+    }
   }
   function addRingGroup() {
     const high=Math.random()<.5;
@@ -321,7 +331,20 @@
     for(const t of trail){t.x-=speed*.75*dt;t.life-=dt;}
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
-    for(const o of obstacles){o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:1)*dt;if(o.type==='bat')o.phase+=dt*12;if(o.type==='rock')o.phase+=dt*2;}
+    for(const o of obstacles){
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:1)*dt;
+      if(o.type==='bat')o.phase+=dt*12;
+      if(o.type==='rock')o.phase+=dt*2;
+      if(o.type==='wyvern'){
+        o.phase+=dt*3.4;
+        o.cooldown=Math.max(0,(o.cooldown||0)-dt);
+        const wave=Math.sin(o.phase)*18;
+        const tracking=player.flight>0 && o.x<W+500;
+        const target=tracking ? player.y+(o.trackOffset||0)+wave : o.baseY+wave;
+        const limited=Math.max(42,Math.min(GROUND-116,target));
+        o.y+=(limited-o.y)*Math.min(1,dt*(tracking?.8:.38));
+      }
+    }
     for(const r of rings)r.x-=speed*dt;
     for(const em of emeralds){em.x-=speed*dt;em.phase+=dt*4;}
     for(const sh of shields){sh.x-=speed*dt;sh.phase+=dt*4;}
@@ -355,8 +378,21 @@
       let oy=o.y;
       if(o.type==='bat')oy+=Math.sin(o.phase)*9;
       if(o.type==='rock')oy+=Math.sin(o.phase)*13;
-      const box={x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+      const box=o.type==='wyvern'
+        ? {x:o.x+13,y:oy+9,w:o.w-24,h:o.h-16}
+        : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
+        if(o.type==='wyvern' && player.flight>0){
+          if(o.cooldown<=0){
+            player.flight=Math.max(0,player.flight-2.15);
+            player.invuln=player.flight;
+            player.y=Math.min(GROUND-player.h-4,player.y+27);
+            o.x+=92; o.cooldown=1.25; o.trackOffset=-(o.trackOffset||0);
+            burst(o.x+o.w/2,oy+o.h/2,'#a52a62',22);
+            sfx('smash'); shake=.19; flash=.16;
+          }
+          continue;
+        }
         if(player.flight>0){burst(o.x+o.w/2,oy+o.h/2,'#a80012',14);score+=30;sfx('smash');shake=.12;obstacles.splice(i,1);continue;}
         if(shieldTimer>0){shieldTimer=0;score+=50;sfx('shieldBreak');shake=.16;flash=.22;burst(player.x+player.w/2,player.y+player.h/2,'#b00015',24);obstacles.splice(i,1);continue;}
         state='over';stopMusic();flash=.75;shake=.22;sfx('hit');setOverlay('over');return;
@@ -378,27 +414,125 @@
     pixelRect(x-8,top+70,12,7,'#100711');pixelRect(x+8,top+95,16,8,'#100711');
     if(t.eyes){pixelRect(x+4,top+t.h*.42,4,4,'#ff1f43');pixelRect(x+12,top+t.h*.42,4,4,'#ff1f43');}
   }
+  function drawFlightAura(x,y,h){
+    const cx=x+24, cy=y+h*.52, t=elapsed, pulse=Math.sin(t*11);
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle='rgba(166,10,61,.13)';
+    ctx.beginPath();ctx.ellipse(cx,cy,30+Math.sin(t*8)*3,h*.72+10,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(83,22,130,.12)';
+    ctx.beginPath();ctx.ellipse(cx+2,cy-5,23, h*.63,0,0,Math.PI*2);ctx.fill();
+
+    // Uneven flame-streams make the flight field feel alive rather than like a sphere.
+    for(let i=0;i<4;i++){
+      const side=i%2===0?-1:1, offset=(i>>1)*8;
+      const drift=Math.sin(t*8+i*2.1)*6;
+      ctx.beginPath();
+      ctx.moveTo(cx+side*(10+offset),y+h+5);
+      ctx.bezierCurveTo(cx+side*(30+offset)+drift,cy+18,cx+side*(7+offset)-drift,cy-7,cx+side*(17+offset)+drift,y-13-pulse*2);
+      ctx.strokeStyle=i<2?'rgba(255,39,83,.74)':'rgba(151,61,225,.62)';
+      ctx.lineWidth=i<2?4:2.5;ctx.lineCap='round';ctx.stroke();
+    }
+    // Small angular sparks orbit the runner and drift upward.
+    for(let i=0;i<9;i++){
+      const a=t*1.9+i*Math.PI*2/9;
+      const rx=28+Math.sin(t*5+i)*4, ry=24+Math.cos(t*4+i)*5;
+      const px=cx+Math.cos(a)*rx, py=cy+Math.sin(a)*ry-i%3*3;
+      ctx.save();ctx.translate(px,py);ctx.rotate(a+.6);
+      ctx.globalAlpha=.45+.35*Math.sin(t*9+i);
+      ctx.fillStyle=i%3===0?'#f4a7ff':'#ff496f';
+      ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(3,1);ctx.lineTo(0,5);ctx.lineTo(-2,1);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawShieldField(x,y,h){
+    const cx=x+24,cy=y+h*.52,rotation=elapsed*1.4;
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);
+    ctx.strokeStyle='rgba(255,177,196,.78)';ctx.lineWidth=2.2;ctx.setLineDash([9,7]);ctx.lineDashOffset=-elapsed*25;
+    ctx.beginPath();ctx.ellipse(0,0,34,29,0,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2;
+      ctx.save();ctx.rotate(a);
+      ctx.fillStyle='rgba(255,79,112,.86)';
+      ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(4,-27);ctx.lineTo(0,-21);ctx.lineTo(-4,-27);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawPlayer(){
     const x=Math.round(player.x), y=Math.round(player.y), h=player.h, flying=player.flight>0;
-    if(flying){
-      const pulse=7+Math.sin(elapsed*12)*4;
-      ctx.fillStyle='rgba(255,22,57,.22)';ctx.beginPath();ctx.ellipse(x+24,y+h/2,36+pulse,h/2+14+pulse,0,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(255,60,85,.65)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x+24,y+h/2,41+pulse,h/2+18+pulse,0,0,Math.PI*2);ctx.stroke();
+    const run=elapsed*13, step=Math.sin(run), bob=flying?Math.sin(elapsed*9)*1.5:Math.abs(step)*1.2;
+    if(flying)drawFlightAura(x,y,h);
+    if(shieldTimer>0)drawShieldField(x,y,h);
+    ctx.save();ctx.translate(0,bob);
+    if(CONFIG.usePlayerImage===true && drawAsset('player',x-4,y-4,player.w+8,player.h+8)){ctx.restore();return;}
+
+    // Ground shadow and a lean, side-facing silhouette.
+    if(!flying){ctx.fillStyle='rgba(0,0,0,.36)';ctx.beginPath();ctx.ellipse(x+25,y+h+3,23,4,0,0,Math.PI*2);ctx.fill();}
+    ctx.lineJoin='round';ctx.lineCap='round';
+
+    // Rear quills: long, swept-back shapes give the runner a sharper profile.
+    ctx.fillStyle='#080b1b';ctx.strokeStyle='#03040d';ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(x+29,y+19);ctx.lineTo(x+12,y+12);ctx.lineTo(x+1,y+2);
+    ctx.lineTo(x+8,y+21);ctx.lineTo(x-5,y+25);ctx.lineTo(x+10,y+31);
+    ctx.lineTo(x+3,y+43);ctx.lineTo(x+23,y+38);ctx.lineTo(x+36,y+34);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#142b69';
+    ctx.beginPath();ctx.moveTo(x+24,y+18);ctx.lineTo(x+11,y+10);ctx.lineTo(x+18,y+22);ctx.lineTo(x+5,y+25);ctx.lineTo(x+19,y+29);ctx.lineTo(x+11,y+38);ctx.lineTo(x+29,y+32);ctx.closePath();ctx.fill();
+
+    // Back spines and crown, shaded in midnight blue with restrained electric highlights.
+    ctx.fillStyle='#101d4d';ctx.strokeStyle='#050817';ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(x+25,y+19);ctx.lineTo(x+17,y+5);ctx.lineTo(x+31,y+12);
+    ctx.lineTo(x+37,y+1);ctx.lineTo(x+41,y+14);ctx.lineTo(x+51,y+9);
+    ctx.lineTo(x+45,y+24);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.strokeStyle='rgba(73,121,214,.75)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x+20,y+12);ctx.lineTo(x+29,y+17);ctx.lineTo(x+35,y+7);ctx.stroke();
+
+    // Compact torso and shoulder.
+    ctx.fillStyle='#101b45';ctx.strokeStyle='#050817';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x+17,y+25);ctx.quadraticCurveTo(x+28,y+19,x+38,y+27);
+    ctx.lineTo(x+38,y+43);ctx.quadraticCurveTo(x+28,y+49,x+16,y+41);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#294b9c';ctx.beginPath();ctx.moveTo(x+26,y+27);ctx.quadraticCurveTo(x+33,y+30,x+32,y+40);ctx.lineTo(x+24,y+42);ctx.closePath();ctx.fill();
+
+    // Head and angular muzzle. No broad grin: the red eye carries the expression.
+    ctx.fillStyle='#17285e';ctx.strokeStyle='#050817';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(x+34,y+20,13,12,-.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#070916';
+    ctx.beginPath();ctx.moveTo(x+35,y+22);ctx.lineTo(x+49,y+25);ctx.lineTo(x+54,y+30);
+    ctx.lineTo(x+45,y+33);ctx.lineTo(x+34,y+29);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#817c91';
+    ctx.beginPath();ctx.moveTo(x+43,y+27);ctx.lineTo(x+53,y+29);ctx.lineTo(x+47,y+33);ctx.lineTo(x+39,y+31);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#08050e';ctx.fillRect(x+49,y+27,3,3);
+    ctx.fillStyle='#05040b';ctx.fillRect(x+33,y+16,14,6);
+    ctx.fillStyle='#ff234d';ctx.fillRect(x+39,y+17,8,3);
+    ctx.fillStyle='rgba(255,210,220,.9)';ctx.fillRect(x+45,y+17,2,2);
+    ctx.fillStyle='#080b1c';
+    ctx.beginPath();ctx.moveTo(x+25,y+12);ctx.lineTo(x+22,y+3);ctx.lineTo(x+31,y+9);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#53659b';ctx.fillRect(x+25,y+10,3,3);
+
+    // Forward arm and dark glove.
+    ctx.strokeStyle='#080b1b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+31,y+31);ctx.lineTo(x+42,y+36);ctx.stroke();
+    ctx.fillStyle='#a7b1c9';ctx.beginPath();ctx.arc(x+43,y+36,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#bd183c';ctx.fillRect(x+34,y+32,5,3);
+
+    // Alternating legs and heavy red-black running shoes.
+    const legA=step*5,legB=-step*5;
+    ctx.strokeStyle='#080b1b';ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(x+23,y+40);ctx.lineTo(x+18+legA,y+h-12);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+33,y+40);ctx.lineTo(x+32+legB,y+h-12);ctx.stroke();
+    function shoe(sx,sy,flip){
+      ctx.save();ctx.translate(sx,sy);if(flip)ctx.scale(-1,1);
+      ctx.fillStyle='#080710';ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(12,-1);ctx.lineTo(17,4);ctx.lineTo(14,9);ctx.lineTo(-3,8);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#9b1234';ctx.beginPath();ctx.moveTo(1,-3);ctx.lineTo(12,-3);ctx.lineTo(15,3);ctx.lineTo(-1,4);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#ed3659';ctx.fillRect(2,0,9,2);ctx.fillStyle='#c5c9d4';ctx.fillRect(4,3,7,2);
+      ctx.fillStyle='#03040b';ctx.fillRect(-3,7,19,2);
+      ctx.restore();
     }
-    if (drawAsset('player',x-4,y-4,player.w+8,player.h+8)) return;
-    // Rear quills and body
-    const body=flying?'#26112f':'#101f58', shade='#070d2d';
-    pixelRect(x+4,y+10,16,10,shade);pixelRect(x-5,y+20,18,9,shade);pixelRect(x-2,y+31,16,9,shade);
-    pixelRect(x+8,y+5,27,Math.max(18,h-12),body);pixelRect(x+12,y+9,17,Math.max(12,h-23),'#1c347b');
-    // Ear, muzzle and face
-    pixelRect(x+28,y+8,10,10,shade);pixelRect(x+31,y+12,4,4,'#d6a7a0');
-    pixelRect(x+29,y+23,18,15,'#c89c87');pixelRect(x+32,y+20,12,5,'#d9b09a');
-    pixelRect(x+27,y+16,16,9,'#05040b');pixelRect(x+31,y+18,6,5,'#ff173d');pixelRect(x+38,y+18,4,4,'#ff173d');
-    pixelRect(x+33,y+32,13,4,'#fff0e7');pixelRect(x+36,y+32,2,4,'#5d071b');pixelRect(x+42,y+32,2,4,'#5d071b');
-    // Running legs and red shoes
-    const step=Math.floor(elapsed*13)%2===0?4:-3;
-    pixelRect(x+9+step,y+h-11,14,8,'#a90027');pixelRect(x+25-step,y+h-11,15,8,'#d31639');
-    pixelRect(x+8+step,y+h-4,16,4,'#ff405d');pixelRect(x+24-step,y+h-4,17,4,'#ff405d');
+    shoe(x+15+legA,y+h-10,step<0);shoe(x+29+legB,y+h-10,step>0);
+    ctx.restore();
   }
   function drawObstacle(o){
     const x=Math.round(o.x), y=Math.round(o.y+(o.type==='bat'?Math.sin(o.phase)*9:o.type==='rock'?Math.sin(o.phase)*13:0));
@@ -414,6 +548,30 @@
       pixelRect(x+16,y+9,18,14,'#100916');pixelRect(x+20,y+5,10,8,'#24102b');
       pixelRect(x+2,y+6+flap,17,8,'#190b20');pixelRect(x+31,y+6-flap,17,8,'#190b20');
       pixelRect(x+21,y+14,4,4,'#ff2346');pixelRect(x+29,y+14,4,4,'#ff2346');
+    } else if(o.type==='wyvern'){
+      const flap=Math.sin(o.phase*2.1)*11;
+      ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+      ctx.shadowColor='#9c124e';ctx.shadowBlur=8;
+      // Long, ragged wings: more like a night predator than a second bat.
+      ctx.fillStyle='#170b22';ctx.strokeStyle='#581638';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+34,y+24);ctx.lineTo(x+15,y-5-flap);ctx.lineTo(x+11,y+13);
+      ctx.lineTo(x+2,y+4-flap*.45);ctx.lineTo(x+12,y+33);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+42,y+23);ctx.lineTo(x+64,y-7+flap);ctx.lineTo(x+68,y+14);
+      ctx.lineTo(x+77,y+5+flap*.45);ctx.lineTo(x+62,y+36);ctx.closePath();ctx.fill();ctx.stroke();
+      // Thin spined tail and the low, predatory body.
+      ctx.strokeStyle='#32102c';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+29,y+27);ctx.lineTo(x+12,y+32);ctx.lineTo(x+1,y+29);ctx.stroke();
+      ctx.fillStyle='#211026';ctx.strokeStyle='#090611';ctx.lineWidth=2;
+      ctx.beginPath();ctx.ellipse(x+39,y+27,19,10,-.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+48,y+25);ctx.lineTo(x+57,y+13);ctx.lineTo(x+70,y+16);
+      ctx.lineTo(x+77,y+23);ctx.lineTo(x+63,y+29);ctx.lineTo(x+51,y+31);ctx.closePath();ctx.fill();ctx.stroke();
+      // Horns, teeth, claws and one visible red eye.
+      ctx.fillStyle='#493047';ctx.beginPath();ctx.moveTo(x+56,y+15);ctx.lineTo(x+58,y+5);ctx.lineTo(x+64,y+15);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+65,y+17);ctx.lineTo(x+73,y+10);ctx.lineTo(x+71,y+20);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#ff3158';ctx.fillRect(x+66,y+19,5,3);
+      ctx.fillStyle='#d8b6c4';ctx.fillRect(x+70,y+25,3,2);
+      ctx.strokeStyle='#b32955';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+31,y+34);ctx.lineTo(x+28,y+43);ctx.moveTo(x+47,y+34);ctx.lineTo(x+49,y+43);ctx.stroke();
+      ctx.restore();
     } else {
       pixelRect(x+9,y+4,25,31,'#29202e');pixelRect(x+4,y+12,34,22,'#19131f');
       pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
