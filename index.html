@@ -72,7 +72,7 @@
   <div id="mobileControls" aria-label="Touch controls">
     <button class="touch" data-key="Space">JUMP / FLY ↑</button>
     <button class="touch" data-key="ArrowDown">SLIDE / FLY ↓</button>
-    <button class="touch" data-key="KeyX">SHADOW DASH ✦</button>
+    <button class="touch" data-key="KeyX">SHADOW DASH x3 ✦</button>
   </div>
 </div>
 <script src="config.js"></script>
@@ -159,7 +159,8 @@
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
-  let dashTimer=0,dashCooldown=0;
+  let dashTimer=0,dashCharges=3;
+  let embers=[],emberClock=0;
   let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
   const player = { x:132, y:GROUND-52, w:46, h:52, vy:0, jumps:0, sliding:false, flight:0, invuln:0 };
 
@@ -204,7 +205,7 @@
     overlay.classList.remove('hidden');
     if (mode==='ready') {
       titleEl.textContent=CONFIG.title || 'SONIC.EXE';
-      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; X: Shadow Dash<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
+      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; X: Shadow Dash (3 uses)<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
       messageEl.textContent=CONFIG.startMessage || 'The blood moon is rising. The forest is watching.'; startBtn.textContent='START RUN';
     } else if (mode==='over') {
       titleEl.textContent='GAME OVER';
@@ -224,7 +225,8 @@
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;
     boss=null;bossProjectiles=[];bossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;
-    dashTimer=0;dashCooldown=0;
+    dashTimer=0;dashCharges=3;
+    embers=[];emberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
     player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
@@ -237,11 +239,11 @@
   startBtn.addEventListener('click',begin);
 
   function activateShadowDash(){
-    if(state!=='running'||dashCooldown>0||dashTimer>0)return;
-    dashTimer=.34;
-    dashCooldown=4.6;
+    if(state!=='running'||dashCharges<=0||dashTimer>0)return;
+    dashCharges--;
+    dashTimer=.22;
     player.sliding=false;
-    burst(player.x+player.w*.5,player.y+player.h*.5,'#bd55ff',16);
+    burst(player.x+player.w*.5,player.y+player.h*.5,'#bd55ff',18);
     shake=Math.max(shake,.07);
   }
   function pressKey(code, down) {
@@ -287,18 +289,15 @@
   }
   function spawnObstacle() {
     const r=Math.random();
-    if (r<.36) obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
-    else if (r<.62) obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
-    else if (r<.78) obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
-    else if (r<.90) obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42,phase:Math.random()*6});
-    else {
+    if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
+    else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
+    else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
+    else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
+    else if(score>=20000&&r>=.935){
+      obstacles.push({type:'stalker',x:W+70,y:GROUND-170,w:72,h:54,phase:Math.random()*6,cooldown:0,passed:false});
+    }else{
       const baseY=72+Math.random()*118;
-      obstacles.push({
-        type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,
-        phase:Math.random()*6,
-        trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),
-        cooldown:0
-      });
+      obstacles.push({type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,phase:Math.random()*6,trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),cooldown:0});
     }
   }
   function addRingGroup() {
@@ -413,6 +412,16 @@
     }
     ctx.globalAlpha=1;ctx.restore();
   }
+  function drawEmbers(){
+    if(score<20000)return;
+    for(const ember of embers){
+      const alpha=Math.min(1,ember.life/.65)*(.55+.35*Math.sin(ember.phase));
+      ctx.globalAlpha=Math.max(0,alpha);
+      pixelRect(ember.x,ember.y,ember.size,ember.size,ember.color);
+      if(ember.size>1&&Math.sin(ember.phase)>0)pixelRect(ember.x-1,ember.y+1,1,1,'#ffe1a1');
+    }
+    ctx.globalAlpha=1;
+  }
   function drawWorldDetails(){
     for(const d of worldDetails){
       const x=Math.round(d.x),y=Math.round(d.y);
@@ -489,8 +498,19 @@
     glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
     glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
 
-    const targetWorldCorruption=score>=10000?1:score>=5000?.42:0;
+    const targetWorldCorruption=score>=20000?1.42:score>=10000?1:score>=5000?.42:0;
     worldCorruption+=(targetWorldCorruption-worldCorruption)*Math.min(1,dt*.22);
+    if(score>=20000){
+      emberClock-=dt;
+      if(emberClock<=0&&embers.length<85){
+        const palette=['#ff6245','#ff9a55','#ffce78','#d13d61'];
+        const count=Math.random()<.22?2:1;
+        for(let i=0;i<count;i++)embers.push({x:W+Math.random()*100,y:35+Math.random()*(GROUND-65),vx:14+Math.random()*35,vy:-(8+Math.random()*25),life:2.5+Math.random()*2.8,size:1+Math.floor(Math.random()*2),color:palette[Math.floor(Math.random()*palette.length)],phase:Math.random()*6});
+        emberClock=.09+Math.random()*.15;
+      }
+    }
+    for(const ember of embers){ember.x-=ember.vx*dt;ember.y+=ember.vy*dt;ember.life-=dt;ember.phase+=dt*8;}
+    embers=embers.filter(e=>e.life>0&&e.x>-8);
     if(score>=5000){
       worldDetailClock-=dt;
       if(worldDetailClock<=0){
@@ -524,12 +544,12 @@
 
     spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
     dashTimer=Math.max(0,dashTimer-dt);
-    dashCooldown=Math.max(0,dashCooldown-dt);
     comboTimer=Math.max(0,comboTimer-dt); if(comboTimer===0) combo=0;
     rushTimer=Math.max(0,rushTimer-dt); shieldTimer=Math.max(0,shieldTimer-dt);
     if(spawnClock<=0){
       if(!boss)spawnObstacle();
-      spawnClock=boss?1.35:Math.max(.62,1.25-(speed-360)/700)+Math.random()*.34;
+      const baseInterval=Math.max(.62,1.25-(speed-360)/700)+Math.random()*.34;
+      spawnClock=boss?1.35:baseInterval*(score>=20000?.82:1);
     }
     if(ringClock<=0){addRingGroup();ringClock=2.6+Math.random()*1.6;}
     if(emeraldClock<=0){addEmerald();emeraldClock=14+Math.random()*6;}
@@ -552,17 +572,25 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:1)*dt;
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
       if(o.type==='wyvern'){
-        o.phase+=dt*3.4;
-        o.cooldown=Math.max(0,(o.cooldown||0)-dt);
+        o.phase+=dt*3.4;o.cooldown=Math.max(0,(o.cooldown||0)-dt);
         const wave=Math.sin(o.phase)*18;
-        const tracking=player.flight>0 && o.x<W+500;
-        const target=tracking ? player.y+(o.trackOffset||0)+wave : o.baseY+wave;
+        const tracking=player.flight>0&&o.x<W+500;
+        const target=tracking?player.y+(o.trackOffset||0)+wave:o.baseY+wave;
         const limited=Math.max(42,Math.min(GROUND-116,target));
         o.y+=(limited-o.y)*Math.min(1,dt*(tracking?.8:.38));
+      }
+      if(o.type==='stalker'){
+        o.phase+=dt*5.2;o.cooldown=Math.max(0,(o.cooldown||0)-dt);
+        const wave=Math.sin(o.phase)*8;
+        const tracking=player.flight>0&&o.x<W+470;
+        const target=tracking?player.y+8+wave:GROUND-74+wave;
+        const limited=Math.max(38,Math.min(GROUND-55,target));
+        o.y+=(limited-o.y)*Math.min(1,dt*(tracking?1.35:1.05));
+        if(!o.passed&&o.x+o.w<player.x){o.passed=true;score+=110;burst(o.x+o.w/2,o.y+o.h/2,'#39aaff',15);}
       }
     }
     for(const r of rings)r.x-=speed*dt;
@@ -600,8 +628,26 @@
       if(o.type==='rock')oy+=Math.sin(o.phase)*13;
       const box=o.type==='wyvern'
         ? {x:o.x+13,y:oy+9,w:o.w-24,h:o.h-16}
-        : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+        : o.type==='stalker'
+          ? {x:o.x+12,y:oy+8,w:o.w-22,h:o.h-15}
+          : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
+        if(o.type==='stalker' && dashTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#39aaff',24);score+=150;sfx('smash');shake=.14;
+          obstacles.splice(i,1);continue;
+        }
+        if(o.type==='stalker' && shieldTimer>0){
+          shieldTimer=0;score+=80;burst(o.x+o.w/2,oy+o.h/2,'#39aaff',20);
+          sfx('shieldBreak');shake=.16;flash=.18;obstacles.splice(i,1);continue;
+        }
+        if(o.type==='stalker' && player.flight>0){
+          if(o.cooldown<=0){
+            player.flight=Math.max(0,player.flight-2.8);player.invuln=player.flight;
+            o.x+=112;o.cooldown=1.35;burst(o.x+o.w/2,oy+o.h/2,'#39aaff',22);
+            sfx('smash');shake=.17;flash=.13;
+          }
+          continue;
+        }
         if(o.type==='wyvern' && player.flight>0 && dashTimer<=0){
           if(o.cooldown<=0){
             player.flight=Math.max(0,player.flight-2.15);
@@ -873,6 +919,25 @@
       ctx.strokeStyle='#b32955';ctx.lineWidth=2;
       ctx.beginPath();ctx.moveTo(x+31,y+34);ctx.lineTo(x+28,y+43);ctx.moveTo(x+47,y+34);ctx.lineTo(x+49,y+43);ctx.stroke();
       ctx.restore();
+    } else if(o.type==='stalker'){
+      const flap=Math.sin(o.phase*2.4)*10;
+      ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+      ctx.shadowColor='#168dff';ctx.shadowBlur=15;
+      ctx.fillStyle='#061425';ctx.strokeStyle='#1478c7';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+31,y+25);ctx.lineTo(x+11,y-4-flap);ctx.lineTo(x+14,y+18);ctx.lineTo(x+1,y+7-flap*.4);ctx.lineTo(x+13,y+39);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+41,y+24);ctx.lineTo(x+63,y-5+flap);ctx.lineTo(x+65,y+18);ctx.lineTo(x+72,y+8+flap*.4);ctx.lineTo(x+60,y+40);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#08203c';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+28,y+29);ctx.lineTo(x+12,y+37);ctx.lineTo(x+1,y+34);ctx.stroke();
+      ctx.fillStyle='#0a1d35';ctx.strokeStyle='#06101f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.ellipse(x+38,y+29,20,11,-.08,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+48,y+26);ctx.lineTo(x+57,y+13);ctx.lineTo(x+68,y+15);ctx.lineTo(x+72,y+24);ctx.lineTo(x+61,y+33);ctx.lineTo(x+49,y+33);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#1c70b8';ctx.beginPath();ctx.moveTo(x+24,y+21);ctx.lineTo(x+29,y+12);ctx.lineTo(x+34,y+22);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+38,y+22);ctx.lineTo(x+44,y+11);ctx.lineTo(x+47,y+24);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=9;ctx.fillStyle='#56caff';ctx.fillRect(x+62,y+19,6,4);
+      ctx.shadowBlur=0;ctx.fillStyle='#b6edff';ctx.fillRect(x+64,y+20,2,2);
+      ctx.fillStyle='#0a0b17';ctx.fillRect(x+69,y+25,3,2);
+      ctx.globalAlpha=.72;ctx.strokeStyle='#5bcaff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.ellipse(x+38,y+29,27,18,Math.sin(o.phase)*.06,0,Math.PI*2);ctx.stroke();
+      ctx.restore();
     } else {
       pixelRect(x+9,y+4,25,31,'#29202e');pixelRect(x+4,y+12,34,22,'#19131f');
       pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
@@ -944,6 +1009,7 @@
       trees.filter(t=>t.layer===1).forEach(t=>drawTree(t,0));
     }
     drawWorldAtmosphere();
+    drawEmbers();
     drawWorldDetails();
     drawHallucinations();
     // Ground
@@ -983,9 +1049,9 @@
     if(rushTimer>0){ctx.fillStyle='#e02a32';ctx.fillText('BLOOD RUSH  x2  '+rushTimer.toFixed(1)+'s',W-22,54);}
     ctx.textAlign='left';
     if(player.flight>0){ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);ctx.fillStyle='#410008';ctx.fillRect(22,113,170,7);ctx.fillStyle='#a90016';ctx.fillRect(22,113,170*(player.flight/10),7);}
-    if(dashTimer>0){ctx.fillStyle='#d48cff';ctx.font='bold 13px Consolas, monospace';ctx.fillText('SHADOW DASH!',22,139);}
-    else if(dashCooldown>0){ctx.fillStyle='#ad8ab8';ctx.font='12px Consolas, monospace';ctx.fillText('DASH RECHARGE '+dashCooldown.toFixed(1)+'s',22,139);}
-    else{ctx.fillStyle='#c89aff';ctx.font='12px Consolas, monospace';ctx.fillText('DASH READY [X]',22,139);}
+    ctx.fillStyle=dashCharges>0?'#c89aff':'#8d7c93';
+    ctx.font='bold 13px Consolas, monospace';
+    ctx.fillText('SHADOW DASH  x'+dashCharges+'  [X]',22,139);
     if(boss){
       ctx.textAlign='center';ctx.fillStyle='#ff6a8c';ctx.font='bold 15px Consolas, monospace';
       ctx.fillText('BOSS ENCOUNTER — SURVIVE '+Math.ceil(boss.timer)+'s',W/2,31);
