@@ -293,8 +293,11 @@
     else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
     else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
     else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
-    else if(score>=20000&&r>=.935){
+    else if(score>=20000&&r>=.97){
       obstacles.push({type:'stalker',x:W+70,y:GROUND-170,w:72,h:54,phase:Math.random()*6,cooldown:0,passed:false});
+    }else if(score>=10000&&r>=.93){
+      const baseY=GROUND-150-Math.random()*38;
+      obstacles.push({type:'emberwing',x:W+85,y:baseY,baseY,w:104,h:74,phase:Math.random()*6,cooldown:0,passed:false});
     }else{
       const baseY=72+Math.random()*118;
       obstacles.push({type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,phase:Math.random()*6,trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),cooldown:0});
@@ -572,7 +575,7 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:1)*dt;
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
       if(o.type==='wyvern'){
@@ -591,6 +594,20 @@
         const limited=Math.max(38,Math.min(GROUND-55,target));
         o.y+=(limited-o.y)*Math.min(1,dt*(tracking?1.35:1.05));
         if(!o.passed&&o.x+o.w<player.x){o.passed=true;score+=110;burst(o.x+o.w/2,o.y+o.h/2,'#39aaff',15);}
+      }
+      if(o.type==='emberwing'){
+        o.phase+=dt*3.1;o.cooldown=Math.max(0,(o.cooldown||0)-dt);
+        const wave=Math.sin(o.phase*1.65)*13;
+        const distance=o.x-player.x;
+        const dive=player.flight>0&&o.x<W+500;
+        // On the ground it dips toward the runner as it approaches; in flight it follows height more slowly.
+        const diveAmount=Math.max(0,1-Math.max(0,distance-70)/250);
+        const groundTarget=o.baseY+diveAmount*58+wave;
+        const flightTarget=player.y-5+wave;
+        const target=dive?flightTarget:groundTarget;
+        const limited=Math.max(36,Math.min(GROUND-48,target));
+        o.y+=(limited-o.y)*Math.min(1,dt*(dive?.82:.72));
+        if(!o.passed&&o.x+o.w<player.x){o.passed=true;score+=90;burst(o.x+o.w/2,o.y+o.h/2,'#ff9b32',13);}
       }
     }
     for(const r of rings)r.x-=speed*dt;
@@ -630,8 +647,26 @@
         ? {x:o.x+13,y:oy+9,w:o.w-24,h:o.h-16}
         : o.type==='stalker'
           ? {x:o.x+12,y:oy+8,w:o.w-22,h:o.h-15}
-          : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+          : o.type==='emberwing'
+            ? {x:o.x+14,y:oy+11,w:o.w-28,h:o.h-22}
+            : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
+        if(o.type==='emberwing' && dashTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#ff9b32',25);
+          score+=180;sfx('smash');shake=.16;flash=.12;
+          obstacles.splice(i,1);continue;
+        }
+        if(o.type==='emberwing' && player.flight>0){
+          if(o.cooldown<=0){
+            const lost=player.flight*.40;
+            player.flight=Math.max(0,player.flight-lost);
+            player.invuln=player.flight;
+            o.x+=138;o.cooldown=1.55;
+            burst(o.x+o.w/2,oy+o.h/2,'#ff9b32',28);
+            sfx('smash');shake=.2;flash=.17;
+          }
+          continue;
+        }
         if(o.type==='stalker' && dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#39aaff',24);score+=150;sfx('smash');shake=.14;
           obstacles.splice(i,1);continue;
@@ -938,6 +973,46 @@
       ctx.globalAlpha=.72;ctx.strokeStyle='#5bcaff';ctx.lineWidth=2;
       ctx.beginPath();ctx.ellipse(x+38,y+29,27,18,Math.sin(o.phase)*.06,0,Math.PI*2);ctx.stroke();
       ctx.restore();
+    } else if(o.type==='emberwing'){
+      const flap=Math.sin(o.phase*2.25)*15;
+      const bob=Math.sin(o.phase*1.1)*3;
+      ctx.save();ctx.translate(0,bob);
+      ctx.lineJoin='round';ctx.lineCap='round';
+      // Wide amber energy halo and drifting sparks make this enemy distinct from the purple and blue flyers.
+      ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#ff982b';ctx.shadowBlur=19;
+      ctx.strokeStyle='rgba(255,150,38,.62)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(x+52,y+39,54,37,Math.sin(o.phase)*.05,0,Math.PI*2);ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+      // Broad, feather-like wings, visibly larger than the bat and other flyers.
+      ctx.fillStyle='#281008';ctx.strokeStyle='#a84a18';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+43,y+35);ctx.lineTo(x+20,y-11-flap);ctx.lineTo(x+18,y+13);ctx.lineTo(x+2,y-2-flap*.45);ctx.lineTo(x+12,y+48);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+55,y+34);ctx.lineTo(x+82,y-13+flap);ctx.lineTo(x+84,y+14);ctx.lineTo(x+101,y-1+flap*.45);ctx.lineTo(x+91,y+48);ctx.closePath();ctx.fill();ctx.stroke();
+      // Heavy body, hooked beak and a row of small crest feathers.
+      ctx.fillStyle='#3a1b0d';ctx.strokeStyle='#17090a';ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(x+51,y+42,31,18,-.06,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#6b2a12';
+      ctx.beginPath();ctx.moveTo(x+31,y+29);ctx.lineTo(x+40,y+13);ctx.lineTo(x+47,y+28);ctx.lineTo(x+58,y+9);ctx.lineTo(x+64,y+29);ctx.lineTo(x+77,y+18);ctx.lineTo(x+73,y+39);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#51200f';ctx.beginPath();ctx.moveTo(x+68,y+34);ctx.lineTo(x+91,y+36);ctx.lineTo(x+103,y+44);ctx.lineTo(x+86,y+51);ctx.lineTo(x+69,y+46);ctx.closePath();ctx.fill();ctx.stroke();
+      // Two bright amber eyes and a pale hooked beak.
+      ctx.shadowColor='#ffb33d';ctx.shadowBlur=11;ctx.fillStyle='#ffd05a';
+      ctx.fillRect(x+70,y+29,7,5);ctx.fillRect(x+83,y+30,7,5);
+      ctx.shadowBlur=0;ctx.fillStyle='#fff1c2';ctx.fillRect(x+74,y+30,2,2);
+      ctx.fillStyle='#e5a66a';ctx.beginPath();ctx.moveTo(x+94,y+41);ctx.lineTo(x+106,y+44);ctx.lineTo(x+94,y+49);ctx.closePath();ctx.fill();
+      // Tail feathers and hooked talons.
+      ctx.strokeStyle='#5a210f';ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(x+27,y+45);ctx.lineTo(x+8,y+56);ctx.lineTo(x-2,y+52);ctx.stroke();
+      ctx.strokeStyle='#ff9a32';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+44,y+53);ctx.lineTo(x+38,y+66);ctx.lineTo(x+33,y+63);ctx.moveTo(x+64,y+54);ctx.lineTo(x+68,y+66);ctx.lineTo(x+73,y+62);ctx.stroke();
+      // Floating orange motes.
+      for(let i=0;i<5;i++){
+        const a=o.phase*1.2+i*Math.PI*2/5;
+        const px=x+52+Math.cos(a)*58,py=y+39+Math.sin(a)*39;
+        ctx.globalAlpha=.55+.35*Math.sin(o.phase*3+i);
+        ctx.fillStyle=i%2?'#ffd36a':'#ff7b28';
+        ctx.fillRect(px,py,3,3);
+      }
+      ctx.globalAlpha=1;ctx.restore();
     } else {
       pixelRect(x+9,y+4,25,31,'#29202e');pixelRect(x+4,y+12,34,22,'#19131f');
       pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
