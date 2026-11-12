@@ -295,6 +295,9 @@
     else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
     else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
     else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
+    else if(score>=30000&&r>=.90&&r<.93){
+      obstacles.push({type:'relicgolem',x:W+65,y:GROUND-88,w:88,h:88,phase:Math.random()*6,passed:false});
+    }
     else if(score>=25000&&r>=.985){
       const high=95+Math.random()*55;
       obstacles.push({type:'blinkwisp',x:W+75,y:high,targetY:high,w:76,h:70,phase:Math.random()*6,blinkTimer:1.2+Math.random(),warning:0,passed:false});
@@ -446,6 +449,32 @@
         pixelRect(x+9,y+5,7,2,'#170717');
       }
     }
+    // Layer 1: from 30,000, the forest breathes between deep red and bruised magenta.
+    if(score>=30000){
+      const pulse=.5+.5*Math.sin(elapsed*4.6);
+      ctx.globalAlpha=.72;
+      ctx.fillStyle='rgba(126,0,48,'+(.035+.035*pulse)+')';
+      ctx.fillRect(0,0,W,GROUND);
+      for(let i=0;i<7;i++){
+        const y=(i*79+Math.floor(elapsed*(22+(i%3)*7)))%(GROUND-6);
+        const x=(i*151+Math.floor(elapsed*(i%2?59:37)))%W;
+        ctx.globalAlpha=.16+.10*pulse;
+        pixelRect(x,y,30+(i%3)*17,2,i%2?'#f02c69':'#8b1b58');
+      }
+    }
+    // Layer 2: from 35,000, cold cyan/blue interference cuts across the red scene.
+    if(score>=35000){
+      const pulse=.5+.5*Math.sin(elapsed*7.1);
+      ctx.globalAlpha=.52;
+      ctx.fillStyle='rgba(0,74,112,'+(.025+.035*pulse)+')';
+      ctx.fillRect(0,0,W,GROUND);
+      for(let i=0;i<5;i++){
+        const y=(i*103+Math.floor(elapsed*(39+(i%2)*17)))%(GROUND-5);
+        const x=(i*187+Math.floor(elapsed*(i%2?83:61)))%W;
+        ctx.globalAlpha=.15+.12*pulse;
+        pixelRect(x,y,24+(i%3)*21,2,i%2?'#45d8e8':'#9b72ff');
+      }
+    }
     ctx.globalAlpha=1;ctx.restore();
   }
   function drawEmbers(){
@@ -534,7 +563,7 @@
     glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
     glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
 
-    const targetWorldCorruption=score>=20000?1.42:score>=10000?1:score>=5000?.42:0;
+    const targetWorldCorruption=score>=35000?1.95:score>=30000?1.68:score>=20000?1.42:score>=10000?1:score>=5000?.42:0;
     worldCorruption+=(targetWorldCorruption-worldCorruption)*Math.min(1,dt*.22);
     if(score>=20000){
       emberClock-=dt;
@@ -612,9 +641,10 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
+      if(o.type==='relicgolem')o.phase+=dt*7.2;
       if(o.type==='wyvern'){
         o.phase+=dt*3.4;o.cooldown=Math.max(0,(o.cooldown||0)-dt);
         const wave=Math.sin(o.phase)*18;
@@ -719,8 +749,10 @@
       let oy=o.y;
       if(o.type==='bat')oy+=Math.sin(o.phase)*9;
       if(o.type==='rock')oy+=Math.sin(o.phase)*13;
-      const box=o.type==='wyvern'
-        ? {x:o.x+13,y:oy+9,w:o.w-24,h:o.h-16}
+      const box=o.type==='relicgolem'
+        ? {x:o.x+11,y:oy+8,w:o.w-22,h:o.h-12}
+        : o.type==='wyvern'
+          ? {x:o.x+13,y:oy+9,w:o.w-24,h:o.h-16}
         : o.type==='stalker'
           ? {x:o.x+12,y:oy+8,w:o.w-22,h:o.h-15}
           : o.type==='emberwing'
@@ -735,13 +767,18 @@
       if(rectHit(playerBox,box,5)){
         if(player.flight>0){
           const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325};
-          const objectPoints={spike:55,block:65,bat:75,rock:70};
+          const objectPoints={spike:55,block:65,bat:75,rock:70,relicgolem:135};
           const basePoints=auraPoints[o.type]||objectPoints[o.type]||60;
-          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0'};
+          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff'};
           const colour=colours[o.type]||'#ff526c';
           awardFlightDestroy(basePoints,o.x+o.w/2,oy+o.h/2,colour);
           burst(o.x+o.w/2,oy+o.h/2,colour,o.type in auraPoints?24:13);
           sfx('smash');shake=Math.max(shake,.1);
+          obstacles.splice(i,1);continue;
+        }
+        if(o.type==='relicgolem' && dashTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#b68cff',30);
+          score+=145;sfx('smash');shake=.19;flash=.14;
           obstacles.splice(i,1);continue;
         }
         if(o.type==='emberwing' && dashTimer>0){
@@ -1144,6 +1181,55 @@
       ctx.strokeStyle='#43d9ed';ctx.lineWidth=3;
       ctx.beginPath();ctx.moveTo(x+53,y+56);ctx.lineTo(x+44,y+68);ctx.lineTo(x+37,y+66);ctx.moveTo(x+70,y+56);ctx.lineTo(x+81,y+68);ctx.lineTo(x+88,y+65);ctx.stroke();
       ctx.restore();
+    } else if(o.type==='relicgolem'){
+      const step=Math.sin(o.phase)*8;
+      const bob=Math.abs(Math.sin(o.phase*2))*.9;
+      ctx.save();ctx.translate(0,bob);
+      ctx.lineJoin='miter';ctx.lineCap='square';
+      // Heavy shadow and loose stone pixels sell its weight as it marches forward.
+      ctx.fillStyle='rgba(0,0,0,.42)';
+      ctx.beginPath();ctx.ellipse(x+44,y+86,39,6,0,0,Math.PI*2);ctx.fill();
+      ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#9c61ff';ctx.shadowBlur=13;
+      ctx.strokeStyle='rgba(174,125,255,.55)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+43,y+38);ctx.lineTo(x+48,y+49);ctx.lineTo(x+42,y+59);ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+      // Back arm and legs swing in opposite directions for a readable walking cycle.
+      ctx.strokeStyle='#171522';ctx.lineWidth=15;
+      ctx.beginPath();ctx.moveTo(x+27,y+40);ctx.lineTo(x+13,y+57+step*.35);ctx.lineTo(x+9,y+69+step*.35);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+34,y+68);ctx.lineTo(x+29-step,y+81);ctx.lineTo(x+19-step,y+85);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+57,y+68);ctx.lineTo(x+62+step,y+81);ctx.lineTo(x+73+step,y+85);ctx.stroke();
+      ctx.strokeStyle='#51465d';ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(x+27,y+40);ctx.lineTo(x+13,y+57+step*.35);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+34,y+68);ctx.lineTo(x+29-step,y+81);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+57,y+68);ctx.lineTo(x+62+step,y+81);ctx.stroke();
+      // Broad shoulders, fractured torso and blocky stone head.
+      ctx.fillStyle='#252431';ctx.strokeStyle='#090810';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(x+17,y+35);ctx.lineTo(x+23,y+25);ctx.lineTo(x+65,y+25);ctx.lineTo(x+74,y+40);ctx.lineTo(x+66,y+69);ctx.lineTo(x+24,y+69);ctx.lineTo(x+13,y+51);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#403849';
+      ctx.fillRect(x+22,y+31,10,7);ctx.fillRect(x+58,y+31,10,7);
+      ctx.fillStyle='#302c3c';ctx.strokeStyle='#100c18';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x+26,y+7);ctx.lineTo(x+57,y+5);ctx.lineTo(x+67,y+20);ctx.lineTo(x+61,y+37);ctx.lineTo(x+27,y+37);ctx.lineTo(x+19,y+22);ctx.closePath();ctx.fill();ctx.stroke();
+      // Uneven crown-stones and a chipped jaw make the silhouette less humanoid.
+      ctx.fillStyle='#51435e';
+      ctx.beginPath();ctx.moveTo(x+24,y+13);ctx.lineTo(x+18,y-1);ctx.lineTo(x+34,y+8);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+49,y+7);ctx.lineTo(x+62,y-5);ctx.lineTo(x+60,y+13);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+58,y+29);ctx.lineTo(x+71,y+33);ctx.lineTo(x+62,y+39);ctx.closePath();ctx.fill();
+      // Eye slits and chest rune pulse in violet, with small stone cracks.
+      ctx.shadowColor='#c18aff';ctx.shadowBlur=11;
+      ctx.fillStyle='#c18aff';ctx.fillRect(x+28,y+19,10,4);ctx.fillRect(x+49,y+19,10,4);
+      ctx.fillStyle='#f3e5ff';ctx.fillRect(x+31,y+20,3,2);ctx.fillRect(x+52,y+20,3,2);
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='#b68cff';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x+43,y+40);ctx.lineTo(x+37,y+49);ctx.lineTo(x+46,y+55);ctx.lineTo(x+40,y+64);ctx.stroke();
+      ctx.fillStyle='#a66dff';ctx.fillRect(x+39,y+47,8,8);
+      ctx.fillStyle='#63556c';ctx.fillRect(x+8,y+66,15,7);ctx.fillRect(x+61,y+66,16,7);
+      // Front fist swings as the golem approaches.
+      ctx.strokeStyle='#201c2a';ctx.lineWidth=13;
+      ctx.beginPath();ctx.moveTo(x+61,y+43);ctx.lineTo(x+73,y+54-step*.4);ctx.lineTo(x+75,y+65-step*.4);ctx.stroke();
+      ctx.fillStyle='#51465d';ctx.fillRect(x+68,y+58-step*.4,15,13);
+      ctx.fillStyle='#b68cff';ctx.fillRect(x+73,y+61-step*.4,5,3);
+      ctx.restore();
     } else if(o.type==='blinkwisp'){
       const pulse=.65+.35*Math.sin(o.phase*4);
       ctx.save();ctx.globalCompositeOperation='lighter';
@@ -1225,6 +1311,52 @@
     ctx.globalAlpha=1;
     ctx.restore();
   }
+  function drawHighScoreGlitchLayers(){
+    if(score<30000)return;
+    ctx.save();
+
+    // Layer 1 at 30k: magenta/red channel tearing, kept short so the action stays readable.
+    const pulse30=.5+.5*Math.sin(elapsed*5.3);
+    glitchBufferCtx.clearRect(0,0,W,H);
+    glitchBufferCtx.drawImage(canvas,0,0,W,H);
+    for(let i=0;i<3;i++){
+      const y=(i*137+Math.floor(elapsed*(31+i*9)))%H;
+      const height=2+(i%2)*2;
+      const shift=Math.sin(elapsed*(3.2+i)+i)*(5+pulse30*7);
+      ctx.save();ctx.beginPath();ctx.rect(0,y,W,height);ctx.clip();
+      ctx.globalAlpha=.12+.06*pulse30;
+      ctx.drawImage(glitchBuffer,shift,0);
+      ctx.restore();
+      ctx.globalAlpha=.24;
+      ctx.fillStyle=i%2?'#f12f72':'#a51d62';
+      ctx.fillRect((i*173+Math.floor(elapsed*45))%W,y,46+i*17,1);
+    }
+
+    // Layer 2 at 35k: a separate cyan/violet distortion with a slightly stronger pulse.
+    if(score>=35000){
+      const pulse35=.5+.5*Math.sin(elapsed*8.2);
+      glitchBufferCtx.clearRect(0,0,W,H);
+      glitchBufferCtx.drawImage(canvas,0,0,W,H);
+      for(let i=0;i<5;i++){
+        const y=(i*91+Math.floor(elapsed*(47+i*11)))%H;
+        const height=2+(i%3);
+        const shift=Math.sin(elapsed*(5.4+i*.7)+i*2)*(8+pulse35*13);
+        ctx.save();ctx.beginPath();ctx.rect(0,y,W,height);ctx.clip();
+        ctx.globalAlpha=.16+.09*pulse35;
+        ctx.drawImage(glitchBuffer,-shift,0);
+        ctx.restore();
+        ctx.globalAlpha=.2+.12*pulse35;
+        ctx.fillStyle=i%2?'#39d8ed':'#a878ff';
+        ctx.fillRect((i*211+Math.floor(elapsed*67))%W,y,55+i*13,1);
+      }
+      ctx.globalAlpha=.045+.025*pulse35;
+      ctx.fillStyle='#147aaf';
+      ctx.fillRect(0,0,W,H);
+    }
+    ctx.globalAlpha=1;
+    ctx.restore();
+  }
+
   function draw(){
     ctx.save();
     if(shake>0)ctx.translate((Math.random()-.5)*12,(Math.random()-.5)*8);
@@ -1303,6 +1435,7 @@
     if(bossClearTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,bossClearTimer);ctx.textAlign='center';ctx.fillStyle='#d98cff';ctx.font='bold 24px Consolas, monospace';ctx.fillText('THE HUNTER RETREATED  +1200',W/2,H*.32);ctx.restore();}
     if(flash>0){ctx.fillStyle=`rgba(230,0,35,${flash*.35})`;ctx.fillRect(0,0,W,H);}
     drawGlitchOverlay();
+    drawHighScoreGlitchLayers();
     ctx.restore();
   }
   function loop(now){
