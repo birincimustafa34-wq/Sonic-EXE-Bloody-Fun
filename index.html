@@ -677,7 +677,7 @@
       ctx.lineTo(x+36,y+44);ctx.lineTo(x+51,y+36);ctx.lineTo(x+46,y+53);
       ctx.lineTo(x+16,y+58);ctx.closePath();ctx.fill();
       pixelRect(x+18,y+41,5,4,'#e6bd9d');pixelRect(x+31,y+42,5,4,'#e6bd9d');
-    } else {
+    } else if(hallucinationKind===3){
       // A false after-image of the runner briefly appears far behind the real one.
       const offset=Math.sin(elapsed*17)*4;
       pixelRect(x+5,y+17,26,25,'#090510');
