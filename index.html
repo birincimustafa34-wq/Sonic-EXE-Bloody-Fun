@@ -160,6 +160,13 @@
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let dashTimer=0,dashCharges=3;
+  // Aura creatures can drain at most 40% of one Bloody Flight charge in total.
+  const AURA_FLIGHT_DAMAGE=Object.freeze({
+    wyvern:5, stalker:10, emberwing:20,
+    thornrake:5, riftmanta:10, blinkwisp:10, relicgolem:10
+  });
+  const MAX_AURA_FLIGHT_DRAIN=40;
+  let flightDamageTaken=0;
   let flightComboMultiplier=1,flightComboProgress=0,flightComboTimer=0;
   let embers=[],emberClock=0;
   let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
@@ -226,7 +233,7 @@
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;
     boss=null;bossProjectiles=[];bossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;
-    dashTimer=0;dashCharges=3;
+    dashTimer=0;dashCharges=3;flightDamageTaken=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
     embers=[];emberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
@@ -339,7 +346,7 @@
       particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
     }
   }
-  function activateFlight() { player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
+  function activateFlight() { flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
   function spawnWorldDetail(){
     const type=Math.floor(Math.random()*3);
     const y=type===2?GROUND-70:105+Math.random()*155;
@@ -766,11 +773,27 @@
                   : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
         if(player.flight>0){
+          const auraDamagePercent=AURA_FLIGHT_DAMAGE[o.type]||0;
+          // An active Shadow Dash can break through an aura enemy without draining flight.
+          if(auraDamagePercent>0&&dashTimer<=0){
+            const remainingDrain=Math.max(0,MAX_AURA_FLIGHT_DRAIN-flightDamageTaken);
+            const appliedDrain=Math.min(auraDamagePercent,remainingDrain);
+            if(appliedDrain>0){
+              const fullFlight=Number(CONFIG.flightDuration)||10;
+              flightDamageTaken+=appliedDrain;
+              player.flight=Math.max(0,player.flight-fullFlight*(appliedDrain/100));
+              player.invuln=player.flight;
+              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff'})[o.type]||'#ff526c';
+              burst(o.x+o.w/2,oy+o.h/2,drainColor,12);
+              flash=Math.max(flash,.055);shake=Math.max(shake,.09);
+            }
+          }
           const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325};
           const objectPoints={spike:55,block:65,bat:75,rock:70,relicgolem:135};
           const basePoints=auraPoints[o.type]||objectPoints[o.type]||60;
           const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff'};
           const colour=colours[o.type]||'#ff526c';
+          // Keep the destroy reward and flight combo, even when the enemy also drains energy.
           awardFlightDestroy(basePoints,o.x+o.w/2,oy+o.h/2,colour);
           burst(o.x+o.w/2,oy+o.h/2,colour,o.type in auraPoints?24:13);
           sfx('smash');shake=Math.max(shake,.1);
@@ -786,17 +809,6 @@
           score+=180;sfx('smash');shake=.16;flash=.12;
           obstacles.splice(i,1);continue;
         }
-        if(o.type==='emberwing' && player.flight>0){
-          if(o.cooldown<=0){
-            const lost=player.flight*.40;
-            player.flight=Math.max(0,player.flight-lost);
-            player.invuln=player.flight;
-            o.x+=138;o.cooldown=1.55;
-            burst(o.x+o.w/2,oy+o.h/2,'#ff9b32',28);
-            sfx('smash');shake=.2;flash=.17;
-          }
-          continue;
-        }
         if(o.type==='stalker' && dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#39aaff',24);score+=150;sfx('smash');shake=.14;
           obstacles.splice(i,1);continue;
@@ -804,25 +816,6 @@
         if(o.type==='stalker' && shieldTimer>0){
           shieldTimer=0;score+=80;burst(o.x+o.w/2,oy+o.h/2,'#39aaff',20);
           sfx('shieldBreak');shake=.16;flash=.18;obstacles.splice(i,1);continue;
-        }
-        if(o.type==='stalker' && player.flight>0){
-          if(o.cooldown<=0){
-            player.flight=Math.max(0,player.flight-2.8);player.invuln=player.flight;
-            o.x+=112;o.cooldown=1.35;burst(o.x+o.w/2,oy+o.h/2,'#39aaff',22);
-            sfx('smash');shake=.17;flash=.13;
-          }
-          continue;
-        }
-        if(o.type==='wyvern' && player.flight>0 && dashTimer<=0){
-          if(o.cooldown<=0){
-            player.flight=Math.max(0,player.flight-2.15);
-            player.invuln=player.flight;
-            player.y=Math.min(GROUND-player.h-4,player.y+27);
-            o.x+=92; o.cooldown=1.25; o.trackOffset=-(o.trackOffset||0);
-            burst(o.x+o.w/2,oy+o.h/2,'#a52a62',22);
-            sfx('smash'); shake=.19; flash=.16;
-          }
-          continue;
         }
         if(dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#bd55ff',13);
@@ -1413,7 +1406,17 @@
     if(shieldTimer>0){ctx.fillStyle='#c21b28';ctx.fillText('BLOOD SHIELD  '+shieldTimer.toFixed(1)+'s',W-22,32);}
     if(rushTimer>0){ctx.fillStyle='#e02a32';ctx.fillText('BLOOD RUSH  x2  '+rushTimer.toFixed(1)+'s',W-22,54);}
     ctx.textAlign='left';
-    if(player.flight>0){ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);ctx.fillStyle='#410008';ctx.fillRect(22,113,170,7);ctx.fillStyle='#a90016';ctx.fillRect(22,113,170*(player.flight/10),7);}
+    if(player.flight>0){
+      const fullFlight=Math.max(1,Number(CONFIG.flightDuration)||10);
+      const remainingFlight=Math.max(0,Math.min(1,player.flight/fullFlight));
+      ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';
+      ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);
+      ctx.fillStyle='#410008';ctx.fillRect(22,113,170,7);
+      ctx.fillStyle='#a90016';ctx.fillRect(22,113,170*remainingFlight,7);
+      ctx.fillStyle=flightDamageTaken>=MAX_AURA_FLIGHT_DRAIN?'#ff8199':'#d9a7ff';
+      ctx.font='bold 11px Consolas, monospace';
+      ctx.fillText('AURA DRAIN  '+flightDamageTaken.toFixed(0)+'% / '+MAX_AURA_FLIGHT_DRAIN+'%',22,177);
+    }
     ctx.fillStyle=dashCharges>0?'#c89aff':'#8d7c93';
     ctx.font='bold 13px Consolas, monospace';
     ctx.fillText('SHADOW DASH  x'+dashCharges+'  [X]',22,139);
