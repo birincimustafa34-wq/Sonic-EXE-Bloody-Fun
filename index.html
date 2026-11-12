@@ -725,16 +725,16 @@
   }
   function update(dt) {
     elapsed+=dt; score+=dt*(10+speed*.012); speed=Math.min(Number(CONFIG.maxSpeed)||650,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5));
-    // Starts subtly after 220 points and reaches full intensity around 3,000 points.
+    // Starts subtly after 500 points and reaches full intensity around 3,500 points.
     // Easing prevents sudden jumps when ring combos award a lot of score at once.
-    const targetGlitch = Math.max(0, Math.min(1, (score-220)/(3000-220)));
+    const targetGlitch = Math.max(0, Math.min(1, (score-500)/(3500-500)));
     glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
     glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
 
     const targetWorldCorruption=score>=35000?1.95:score>=30000?1.68:score>=20000?1.42:score>=10000?1:score>=5000?.42:0;
     worldCorruption+=(targetWorldCorruption-worldCorruption)*Math.min(1,dt*.22);
     // Existing right-edge fire stream remains active from 20,000 points.
-    // At 40,000, mirror it from the left edge and add a full-width upward ember field.
+    // At 30,000, add the mirrored left-edge stream; at 40,000, add the full-width upward ember field.
     if(score>=20000){
       emberClock-=dt;
       if(emberClock<=0&&embers.length<180){
@@ -745,7 +745,7 @@
           const vx=14+Math.random()*35;
           const ember={direction:'left',x:W+Math.random()*100,y,vx,vy:-(8+Math.random()*25),life:2.5+Math.random()*2.8,size:1+Math.floor(Math.random()*2),color:palette[Math.floor(Math.random()*palette.length)],phase:Math.random()*6};
           embers.push(ember);
-          if(score>=40000){
+          if(score>=30000){
             embers.push({...ember,direction:'right',x:-Math.random()*100,y:35+Math.random()*(GROUND-65),phase:Math.random()*6});
           }
         }
