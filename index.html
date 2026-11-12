@@ -168,7 +168,7 @@
   const MAX_AURA_FLIGHT_DRAIN=40;
   let flightDamageTaken=0;
   let flightComboMultiplier=1,flightComboProgress=0,flightComboTimer=0;
-  let embers=[],emberClock=0;
+  let embers=[],emberClock=0,verticalEmberClock=0;
   let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
   const player = { x:132, y:GROUND-52, w:46, h:52, vy:0, jumps:0, sliding:false, flight:0, invuln:0 };
 
@@ -235,7 +235,7 @@
     boss=null;bossProjectiles=[];bossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;
     dashTimer=0;dashCharges=3;flightDamageTaken=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
-    embers=[];emberClock=0;
+    embers=[];emberClock=0;verticalEmberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
     player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
@@ -572,17 +572,54 @@
 
     const targetWorldCorruption=score>=35000?1.95:score>=30000?1.68:score>=20000?1.42:score>=10000?1:score>=5000?.42:0;
     worldCorruption+=(targetWorldCorruption-worldCorruption)*Math.min(1,dt*.22);
+    // Existing right-edge fire stream remains active from 20,000 points.
+    // At 40,000, mirror it from the left edge and add a full-width upward ember field.
     if(score>=20000){
       emberClock-=dt;
-      if(emberClock<=0&&embers.length<85){
+      if(emberClock<=0&&embers.length<180){
         const palette=['#ff6245','#ff9a55','#ffce78','#d13d61'];
         const count=Math.random()<.22?2:1;
-        for(let i=0;i<count;i++)embers.push({x:W+Math.random()*100,y:35+Math.random()*(GROUND-65),vx:14+Math.random()*35,vy:-(8+Math.random()*25),life:2.5+Math.random()*2.8,size:1+Math.floor(Math.random()*2),color:palette[Math.floor(Math.random()*palette.length)],phase:Math.random()*6});
+        for(let i=0;i<count;i++){
+          const y=35+Math.random()*(GROUND-65);
+          const vx=14+Math.random()*35;
+          const ember={direction:'left',x:W+Math.random()*100,y,vx,vy:-(8+Math.random()*25),life:2.5+Math.random()*2.8,size:1+Math.floor(Math.random()*2),color:palette[Math.floor(Math.random()*palette.length)],phase:Math.random()*6};
+          embers.push(ember);
+          if(score>=40000){
+            embers.push({...ember,direction:'right',x:-Math.random()*100,y:35+Math.random()*(GROUND-65),phase:Math.random()*6});
+          }
+        }
         emberClock=.09+Math.random()*.15;
       }
     }
-    for(const ember of embers){ember.x-=ember.vx*dt;ember.y+=ember.vy*dt;ember.life-=dt;ember.phase+=dt*8;}
-    embers=embers.filter(e=>e.life>0&&e.x>-8);
+    if(score>=40000){
+      verticalEmberClock-=dt;
+      if(verticalEmberClock<=0&&embers.length<180){
+        const palette=['#ff6245','#ff9a55','#ffce78','#d13d61'];
+        const count=Math.random()<.32?2:1;
+        for(let i=0;i<count;i++){
+          embers.push({
+            direction:'up',
+            x:Math.random()*W,
+            y:H+Math.random()*55,
+            vx:(Math.random()-.5)*14,
+            vy:-(90+Math.random()*75),
+            life:3.5+Math.random()*2.2,
+            size:1+Math.floor(Math.random()*2),
+            color:palette[Math.floor(Math.random()*palette.length)],
+            phase:Math.random()*6
+          });
+        }
+        verticalEmberClock=.055+Math.random()*.075;
+      }
+    }
+    for(const ember of embers){
+      if(ember.direction==='right')ember.x+=ember.vx*dt;
+      else if(ember.direction==='up'){ember.x+=ember.vx*dt;ember.y+=ember.vy*dt;}
+      else ember.x-=ember.vx*dt;
+      if(ember.direction!=='up')ember.y+=ember.vy*dt;
+      ember.life-=dt;ember.phase+=dt*8;
+    }
+    embers=embers.filter(e=>e.life>0&&(e.direction==='left'?e.x>-8:e.direction==='right'?e.x<W+8:e.y>-8));
     if(score>=5000){
       worldDetailClock-=dt;
       if(worldDetailClock<=0){
