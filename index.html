@@ -160,12 +160,13 @@
   let hallucinationTier=0,hallucinationTimer=0,hallucinationCooldown=2,hallucinationDuration=0;
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
-  let boss=null,bossProjectiles=[],bossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
+  let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
+  let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
   // Aura creatures can drain at most 40% of one Bloody Flight charge in total.
   const AURA_FLIGHT_DAMAGE=Object.freeze({
     wyvern:5, stalker:10, emberwing:20,
-    thornrake:5, riftmanta:10, blinkwisp:10, relicgolem:10, prismwraith:15
+    thornrake:5, riftmanta:10, blinkwisp:10, relicgolem:10, prismwraith:15, gravewing:15, gravewing:15
   });
   const MAX_AURA_FLIGHT_DRAIN=40;
   let flightDamageTaken=0;
@@ -234,7 +235,7 @@
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;
-    boss=null;bossProjectiles=[];bossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;
+    boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
     embers=[];emberClock=0;verticalEmberClock=0;
@@ -300,19 +301,51 @@
   }
   function spawnObstacle() {
     const r=Math.random();
-    // A rare late-game visitor appears only after the 42,000-point threshold.
+    // From 47k onward, a dedicated chance creates a paired spike wall.
+    if(score>=47000&&Math.random()<.17){
+      obstacles.push({type:'doubleSpike',x:W+35,y:GROUND-38,w:92,h:38});
+      return;
+    }
+    // From 44k onward, roughly one third of spawns are selected from the flying roster.
+    if(score>=44000&&Math.random()<.34){
+      const air=Math.random();
+      if(score>=45000&&air<.14){
+        const baseY=75+Math.random()*Math.max(35,GROUND-235);
+        obstacles.push({type:'gravewing',x:W+95,y:baseY,baseY,w:116,h:76,phase:Math.random()*6,attackClock:1.0+Math.random()*.8,warning:0,targetY:baseY,diveTime:0,passed:false});
+      }else if(score>=42000&&air<(score>=45000?.26:.13)){
+        const baseY=85+Math.random()*Math.max(35,GROUND-270);
+        obstacles.push({type:'prismwraith',x:W+95,y:baseY,baseY,w:92,h:76,phase:Math.random()*6,shiftTimer:1.2+Math.random()*.8,warning:0,targetY:baseY,passed:false});
+      }else if(air<.42){
+        const high=95+Math.random()*55;
+        obstacles.push({type:'blinkwisp',x:W+75,y:high,targetY:high,w:76,h:70,phase:Math.random()*6,blinkTimer:1.2+Math.random(),warning:0,passed:false});
+      }else if(air<.57){
+        const baseY=GROUND-190;
+        obstacles.push({type:'riftmanta',x:W+85,y:baseY,baseY,w:124,h:70,phase:Math.random()*6,passed:false});
+      }else if(air<.71){
+        const baseY=GROUND-185;
+        obstacles.push({type:'thornrake',x:W+85,y:baseY,baseY,w:102,h:68,phase:Math.random()*6,passed:false});
+      }else if(air<.84){
+        obstacles.push({type:'stalker',x:W+70,y:GROUND-170,w:72,h:54,phase:Math.random()*6,cooldown:0,passed:false});
+      }else if(air<.94){
+        const baseY=GROUND-150-Math.random()*38;
+        obstacles.push({type:'emberwing',x:W+85,y:baseY,baseY,w:104,h:74,phase:Math.random()*6,cooldown:0,passed:false});
+      }else{
+        const baseY=72+Math.random()*118;
+        obstacles.push({type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,phase:Math.random()*6,trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),cooldown:0});
+      }
+      return;
+    }
+    // The Prism Wraith can also appear before the aerial-frequency increase.
     if(score>=42000&&Math.random()<.032){
       const baseY=85+Math.random()*Math.max(35,GROUND-270);
       obstacles.push({type:'prismwraith',x:W+95,y:baseY,baseY,w:92,h:76,phase:Math.random()*6,shiftTimer:1.2+Math.random()*.8,warning:0,targetY:baseY,passed:false});
-    }
-    else if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
+    }else if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
     else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
     else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
     else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
     else if(score>=30000&&r>=.90&&r<.93){
       obstacles.push({type:'relicgolem',x:W+65,y:GROUND-88,w:88,h:88,phase:Math.random()*6,passed:false});
-    }
-    else if(score>=25000&&r>=.985){
+    }else if(score>=25000&&r>=.985){
       const high=95+Math.random()*55;
       obstacles.push({type:'blinkwisp',x:W+75,y:high,targetY:high,w:76,h:70,phase:Math.random()*6,blinkTimer:1.2+Math.random(),warning:0,passed:false});
     }else if(score>=25000&&r>=.970){
@@ -361,11 +394,28 @@
   }
   function startBossEncounter(){
     bossIntroduced=true;
-    boss={x:W+95,y:75,phase:0,timer:23,attackClock:1.35,warning:0,targetY:GROUND-40};
+    boss={kind:'bloodhunter',x:W+95,y:75,phase:0,timer:23,duration:23,attackClock:1.35,warning:0,targetY:GROUND-40};
     bossProjectiles=[];
+    bossIntroMessage='SOMETHING IS HUNTING YOU';
+    bossClearMessage='THE HUNTER RETREATED  +1200';
     bossIntroTimer=2.6;
     shake=.2;flash=.18;
     burst(W-95,120,'#d21c52',28);
+  }
+  function startSecondBossEncounter(){
+    secondBossIntroduced=true;
+    boss={
+      kind:'nullSovereign',x:W+180,y:70,phase:0,
+      timer:32,duration:32,attackClock:1.05,warning:0,
+      targetY:GROUND-105,volleyCount:0
+    };
+    bossProjectiles=[];
+    bossIntroMessage='THE NULL SOVEREIGN HAS AWAKENED';
+    bossClearMessage='NULL SOVEREIGN DEFEATED  +2800';
+    bossIntroTimer=3.4;
+    shake=.28;flash=.28;
+    burst(W-150,120,'#52e7ff',34);
+    burst(W-150,120,'#d477ff',26);
   }
   function awardFlightDestroy(basePoints,x,y,color){
     const earned=Math.round(basePoints*flightComboMultiplier);
@@ -386,30 +436,60 @@
     if(bossIntroTimer>0)bossIntroTimer=Math.max(0,bossIntroTimer-dt);
     if(!boss)return;
     boss.timer-=dt;
-    boss.phase+=dt*1.35;
-    boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0);
-    boss.y=68+Math.sin(boss.phase*1.55)*25;
-    if(boss.warning>0){
-      boss.warning-=dt;
-      if(boss.warning<=0){
-        bossProjectiles.push({
-          x:boss.x-38,y:boss.targetY,baseY:boss.targetY,
-          w:25,h:18,phase:Math.random()*6,speed:500
-        });
-        boss.attackClock=2.55;
+    boss.phase+=dt*(boss.kind==='nullSovereign'?1.8:1.35);
+    if(boss.kind==='nullSovereign'){
+      boss.x+=(W-220-boss.x)*Math.min(1,dt*1.7);
+      boss.y=48+Math.sin(boss.phase*1.15)*39;
+      if(boss.warning>0){
+        boss.warning=Math.max(0,boss.warning-dt);
+        if(boss.warning===0){
+          boss.volleyCount=(boss.volleyCount||0)+1;
+          const offsets=boss.volleyCount%3===0?[-76,-38,0,38,76]:[-58,0,58];
+          const shardColours=['#42eaff','#d477ff','#ff4e9b','#d8ff4a','#ffad45'];
+          const centerY=Math.max(42,Math.min(GROUND-35,boss.targetY));
+          offsets.forEach((offset,index)=>{
+            const y=Math.max(30,Math.min(GROUND-24,centerY+offset));
+            bossProjectiles.push({
+              x:boss.x-22,y,baseY:y,w:24,h:20,phase:Math.random()*6,
+              speed:425+(index%2)*28,kind:'prismShard',
+              colour:shardColours[(index+boss.volleyCount)%shardColours.length]
+            });
+          });
+          boss.attackClock=boss.volleyCount%3===0?2.05:1.55;
+          burst(boss.x-18,centerY,'#d477ff',12);
+        }
+      }else{
+        boss.attackClock-=dt;
+        if(boss.attackClock<=0){
+          boss.warning=.62;
+          boss.targetY=playerBox.y+playerBox.h*.5;
+        }
       }
     }else{
-      boss.attackClock-=dt;
-      if(boss.attackClock<=0){
-        boss.warning=.72;
-        boss.targetY=playerBox.y+playerBox.h*.5;
+      boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0);
+      boss.y=68+Math.sin(boss.phase*1.55)*25;
+      if(boss.warning>0){
+        boss.warning-=dt;
+        if(boss.warning<=0){
+          bossProjectiles.push({
+            x:boss.x-38,y:boss.targetY,baseY:boss.targetY,
+            w:25,h:18,phase:Math.random()*6,speed:500
+          });
+          boss.attackClock=2.55;
+        }
+      }else{
+        boss.attackClock-=dt;
+        if(boss.attackClock<=0){
+          boss.warning=.72;
+          boss.targetY=playerBox.y+playerBox.h*.5;
+        }
       }
     }
     for(let i=bossProjectiles.length-1;i>=0;i--){
       const shot=bossProjectiles[i];
       shot.x-=shot.speed*dt;
       shot.phase+=dt*5.5;
-      shot.y=shot.baseY+Math.sin(shot.phase)*12;
+      shot.y=shot.baseY+Math.sin(shot.phase)*(shot.kind==='prismShard'?17:12);
       const box={x:shot.x-10,y:shot.y-9,w:shot.w+5,h:shot.h+5};
       if(rectHit(playerBox,box,2)){
         if(dashTimer>0){
@@ -439,11 +519,16 @@
       if(shot.x<-40)bossProjectiles.splice(i,1);
     }
     if(boss.timer<=0){
+      const defeatedNullSovereign=boss.kind==='nullSovereign';
       boss=null;bossProjectiles=[];
-      bossClearTimer=3.5;
-      score+=1200;
-      flash=.3;shake=.16;
-      burst(W-150,130,'#bd2d70',32);
+      bossClearTimer=defeatedNullSovereign?4.5:3.5;
+      if(defeatedNullSovereign){
+        score+=2800;bossClearMessage='NULL SOVEREIGN DEFEATED  +2800';
+        flash=.42;shake=.24;burst(W-180,125,'#42eaff',42);burst(W-180,125,'#d477ff',34);
+      }else{
+        score+=1200;bossClearMessage='THE HUNTER RETREATED  +1200';
+        flash=.3;shake=.16;burst(W-150,130,'#bd2d70',32);
+      }
     }
   }
   function drawWorldAtmosphere(){
@@ -530,6 +615,63 @@
   function drawBoss(){
     if(!boss)return;
     const x=Math.round(boss.x),y=Math.round(boss.y);
+    if(boss.kind==='nullSovereign'){
+      const pulse=.65+.35*Math.sin(boss.phase*3);
+      ctx.save();
+      ctx.globalAlpha=.96;
+      ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#42eaff';ctx.shadowBlur=22;
+      ctx.strokeStyle='rgba(66,234,255,'+(.35+.25*pulse)+')';ctx.lineWidth=4;
+      ctx.beginPath();ctx.ellipse(x+82,y+70,91,63,Math.sin(boss.phase)*.08,0,Math.PI*2);ctx.stroke();
+      ctx.shadowColor='#d477ff';ctx.shadowBlur=18;
+      // Crown-like broken wings frame a faceless digital core.
+      ctx.fillStyle='#080711';ctx.strokeStyle='#5c3b85';ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.moveTo(x+55,y+68);ctx.lineTo(x+4,y+7);ctx.lineTo(x+36,y+22);
+      ctx.lineTo(x+23,y-14);ctx.lineTo(x+66,y+24);ctx.lineTo(x+82,y-25);
+      ctx.lineTo(x+99,y+24);ctx.lineTo(x+141,y-14);ctx.lineTo(x+128,y+23);
+      ctx.lineTo(x+164,y+5);ctx.lineTo(x+111,y+72);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+      ctx.fillStyle='#141020';ctx.strokeStyle='#090610';ctx.lineWidth=5;
+      ctx.beginPath();
+      ctx.moveTo(x+49,y+39);ctx.lineTo(x+82,y+21);ctx.lineTo(x+116,y+40);
+      ctx.lineTo(x+131,y+79);ctx.lineTo(x+106,y+112);ctx.lineTo(x+59,y+112);
+      ctx.lineTo(x+34,y+78);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#302044';
+      ctx.beginPath();ctx.moveTo(x+56,y+48);ctx.lineTo(x+82,y+34);ctx.lineTo(x+108,y+48);
+      ctx.lineTo(x+116,y+77);ctx.lineTo(x+82,y+101);ctx.lineTo(x+48,y+77);ctx.closePath();ctx.fill();
+      // Three fractured eyes blink in alternating colours.
+      const eyeCols=['#42eaff','#ff4e9b','#d8ff4a'];
+      for(let i=0;i<3;i++){
+        ctx.shadowColor=eyeCols[i];ctx.shadowBlur=13;
+        ctx.fillStyle=eyeCols[i];
+        ctx.fillRect(x+51+i*23,y+61+(i===1?-3:0),15,6);
+        ctx.fillStyle='#f7f5ff';ctx.fillRect(x+56+i*23,y+62+(i===1?-3:0),4,3);
+      }
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#05040b';
+      ctx.beginPath();ctx.moveTo(x+57,y+88);ctx.lineTo(x+82,y+98);ctx.lineTo(x+108,y+88);ctx.lineTo(x+99,y+108);ctx.lineTo(x+66,y+108);ctx.closePath();ctx.fill();
+      for(let i=0;i<7;i++){
+        const angle=boss.phase*(i%2?-.7:.7)+i*Math.PI*2/7;
+        const sx=x+82+Math.cos(angle)*(91+Math.sin(boss.phase*2+i)*5);
+        const sy=y+68+Math.sin(angle)*60;
+        ctx.globalAlpha=.62+.32*Math.sin(boss.phase*4+i);
+        ctx.fillStyle=eyeCols[i%3];
+        ctx.fillRect(sx,sy,5,5);
+      }
+      ctx.globalAlpha=1;ctx.restore();
+      if(boss.warning>0){
+        ctx.save();ctx.globalAlpha=.24+.22*Math.sin(elapsed*28);
+        ctx.strokeStyle='#d477ff';ctx.lineWidth=2;ctx.setLineDash([7,7]);
+        const center=y+70;
+        for(const offset of [-76,-38,0,38,76]){
+          if(boss.volleyCount%3!==0&&Math.abs(offset)>58)continue;
+          ctx.beginPath();ctx.moveTo(x+10,center);ctx.lineTo(player.x+player.w,Math.max(28,Math.min(GROUND-20,boss.targetY+offset)));ctx.stroke();
+        }
+        ctx.restore();
+      }
+      return;
+    }
     ctx.save();
     ctx.globalAlpha=.92;
     ctx.shadowColor='#c00042';ctx.shadowBlur=18;
@@ -564,6 +706,16 @@
   }
   function drawBossProjectiles(){
     for(const shot of bossProjectiles){
+      if(shot.kind==='prismShard'){
+        ctx.save();ctx.translate(shot.x,shot.y);ctx.rotate(Math.sin(shot.phase)*.22);
+        ctx.shadowColor=shot.colour||'#d477ff';ctx.shadowBlur=16;
+        ctx.fillStyle='#110d1c';ctx.beginPath();
+        ctx.moveTo(-14,0);ctx.lineTo(-4,-10);ctx.lineTo(13,-5);ctx.lineTo(9,8);ctx.lineTo(-5,11);ctx.closePath();ctx.fill();
+        ctx.fillStyle=shot.colour||'#d477ff';
+        ctx.beginPath();ctx.moveTo(-7,0);ctx.lineTo(-1,-6);ctx.lineTo(9,-3);ctx.lineTo(5,5);ctx.lineTo(-4,6);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#fff';ctx.fillRect(-2,-2,4,3);
+        ctx.restore();continue;
+      }
       ctx.save();ctx.shadowColor='#ff194e';ctx.shadowBlur=14;
       ctx.fillStyle='#7c0b32';ctx.beginPath();ctx.ellipse(shot.x,shot.y,15,10,0,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#ff3e6c';ctx.beginPath();ctx.arc(shot.x,shot.y,6,0,Math.PI*2);ctx.fill();
@@ -642,6 +794,7 @@
     }
     worldDetails=worldDetails.filter(d=>d.life>0&&d.x>-90);
     if(score>=15000&&!bossIntroduced)startBossEncounter();
+    if(score>=50000&&!secondBossIntroduced&&!boss)startSecondBossEncounter();
 
     // Hallucinations begin after 5,000 points and become more frequent/intense after 10,000.
     const nextHallucinationTier=score>=10000?2:score>=5000?1:0;
@@ -695,7 +848,7 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='prismwraith'?1.26:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='gravewing'?1.22:o.type==='prismwraith'?1.26:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
       if(o.type==='relicgolem')o.phase+=dt*7.2;
@@ -768,6 +921,33 @@
           o.y+=(o.targetY-o.y)*Math.min(1,dt*2.7);
         }
         if(!o.passed&&o.x+o.w<player.x){o.passed=true;score+=165;burst(o.x+o.w/2,o.y+o.h/2,'#f4edb0',14);}
+      }
+      if(o.type==='gravewing'){
+        o.phase+=dt*4.8;
+        if(o.warning>0){
+          o.warning=Math.max(0,o.warning-dt);
+          if(o.warning===0){
+            o.diveTime=.72;
+            burst(o.x+o.w/2,o.y+o.h/2,'#72e4dc',15);
+          }
+        }else if(o.diveTime>0){
+          o.diveTime=Math.max(0,o.diveTime-dt);
+          if(o.diveTime===0)o.targetY=o.baseY;
+        }else{
+          o.attackClock-=dt;
+          if(o.attackClock<=0&&o.x<W+440){
+            o.targetY=player.flight>0?player.y-12:GROUND-105;
+            o.targetY=Math.max(38,Math.min(GROUND-o.h-8,o.targetY));
+            o.warning=.46;
+            o.attackClock=2.35+Math.random()*.8;
+          }
+        }
+        const target=o.diveTime>0?o.targetY:o.baseY+Math.sin(o.phase*1.2)*42;
+        o.y+=(target-o.y)*Math.min(1,dt*(o.diveTime>0?2.25:.82));
+        if(!o.passed&&o.x+o.w<player.x){
+          o.passed=true;score+=220;
+          burst(o.x+o.w/2,o.y+o.h/2,'#72e4dc',18);
+        }
       }
       if(o.type==='prismwraith'){
         o.phase+=dt*4.6;
@@ -844,7 +1024,11 @@
                   ? {x:o.x+13,y:oy+12,w:o.w-26,h:o.h-24}
                   : o.type==='prismwraith'
                     ? {x:o.x+20,y:oy+14,w:o.w-40,h:o.h-28}
-                    : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+                    : o.type==='gravewing'
+                      ? {x:o.x+19,y:oy+13,w:o.w-38,h:o.h-26}
+                      : o.type==='doubleSpike'
+                        ? {x:o.x+5,y:oy+5,w:o.w-10,h:o.h-5}
+                        : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
         // During the short landing window, let hazards pass through without damage.
         if(landingGrace>0)continue;
@@ -860,15 +1044,15 @@
               player.flight=Math.max(0,player.flight-fullFlight*(appliedDrain/100));
               if(player.flight===0)landingGrace=Math.max(landingGrace,.5);
               player.invuln=player.flight;
-              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff'})[o.type]||'#ff526c';
+              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff',gravewing:'#72e4dc'})[o.type]||'#ff526c';
               burst(o.x+o.w/2,oy+o.h/2,drainColor,12);
               flash=Math.max(flash,.055);shake=Math.max(shake,.09);
             }
           }
-          const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325,prismwraith:390};
-          const objectPoints={spike:55,block:65,bat:75,rock:70,relicgolem:135};
+          const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325,prismwraith:390,gravewing:410};
+          const objectPoints={spike:55,doubleSpike:110,block:65,bat:75,rock:70,relicgolem:135};
           const basePoints=auraPoints[o.type]||objectPoints[o.type]||60;
-          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff'};
+          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff',gravewing:'#72e4dc'};
           const colour=colours[o.type]||'#ff526c';
           // Keep the destroy reward and flight combo, even when the enemy also drains energy.
           awardFlightDestroy(basePoints,o.x+o.w/2,oy+o.h/2,colour);
@@ -884,6 +1068,11 @@
         if(o.type==='prismwraith' && dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#d477ff',34);
           score+=240;sfx('smash');shake=.2;flash=.16;
+          obstacles.splice(i,1);continue;
+        }
+        if(o.type==='gravewing' && dashTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#72e4dc',36);
+          score+=260;sfx('smash');shake=.2;flash=.16;
           obstacles.splice(i,1);continue;
         }
         if(o.type==='emberwing' && dashTimer>0){
@@ -1127,6 +1316,16 @@
     if(o.type==='spike'){
       ctx.fillStyle='#9e1230';ctx.beginPath();ctx.moveTo(x,y+o.h);ctx.lineTo(x+o.w/2,y);ctx.lineTo(x+o.w,y+o.h);ctx.closePath();ctx.fill();
       pixelRect(x+o.w/2-3,y+9,6,o.h-11,'#f04b63');
+    } else if(o.type==='doubleSpike'){
+      for(let i=0;i<2;i++){
+        const sx=x+i*48;
+        ctx.fillStyle='#7d0b2b';ctx.beginPath();
+        ctx.moveTo(sx,y+o.h);ctx.lineTo(sx+20,y+1);ctx.lineTo(sx+43,y+o.h);
+        ctx.closePath();ctx.fill();
+        pixelRect(sx+18,y+9,5,o.h-11,'#ff526f');
+        pixelRect(sx+7,y+o.h-5,29,3,'#3a0719');
+      }
+      pixelRect(x+43,y+o.h-6,6,4,'#b61a40');
     } else if(o.type==='block'){
       pixelRect(x,y,o.w,o.h,'#270d20');pixelRect(x+4,y+4,o.w-8,o.h-8,'#110916');
       ctx.strokeStyle='#ed294e';ctx.lineWidth=3;ctx.strokeRect(x+1,y+1,o.w-2,o.h-2);pixelRect(x+12,y+12,7,5,'#fe455e');
@@ -1216,6 +1415,43 @@
         ctx.globalAlpha=.55+.35*Math.sin(o.phase*3+i);
         ctx.fillStyle=i%2?'#ffd36a':'#ff7b28';
         ctx.fillRect(px,py,3,3);
+      }
+      ctx.globalAlpha=1;ctx.restore();
+    } else if(o.type==='gravewing'){
+      const flap=Math.sin(o.phase*2.35)*18;
+      const bob=Math.sin(o.phase*1.3)*3;
+      ctx.save();ctx.translate(0,bob);ctx.lineJoin='round';ctx.lineCap='round';
+      ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#72e4dc';ctx.shadowBlur=o.warning>0?24:15;
+      ctx.strokeStyle='rgba(114,228,220,.55)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(x+58,y+38,62,32,Math.sin(o.phase)*.05,0,Math.PI*2);ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+      // Six narrow blade-feathers beat in offset pairs.
+      ctx.fillStyle='#080e19';ctx.strokeStyle='#315c68';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+48,y+33);ctx.lineTo(x+22,y-12-flap);ctx.lineTo(x+27,y+17);ctx.lineTo(x+4,y-1-flap*.45);ctx.lineTo(x+18,y+47);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+57,y+30);ctx.lineTo(x+43,y-17-flap*.8);ctx.lineTo(x+49,y+19);ctx.lineTo(x+35,y+43);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+67,y+32);ctx.lineTo(x+94,y-13+flap);ctx.lineTo(x+88,y+18);ctx.lineTo(x+112,y-2+flap*.45);ctx.lineTo(x+98,y+48);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#111c29';ctx.strokeStyle='#050810';ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(x+59,y+39,27,15,-.05,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+73,y+31);ctx.lineTo(x+94,y+34);ctx.lineTo(x+110,y+43);ctx.lineTo(x+92,y+49);ctx.lineTo(x+72,y+46);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#72e4dc';ctx.shadowColor='#72e4dc';ctx.shadowBlur=10;
+      ctx.fillRect(x+78,y+34,7,4);ctx.fillRect(x+88,y+36,4,3);
+      ctx.fillStyle='#f4ffff';ctx.fillRect(x+80,y+35,2,2);
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='#263f53';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(x+40,y+43);ctx.lineTo(x+21,y+57);ctx.lineTo(x+7,y+54);ctx.stroke();
+      ctx.strokeStyle='#72e4dc';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x+34,y+49);ctx.lineTo(x+18,y+66);ctx.moveTo(x+67,y+49);ctx.lineTo(x+77,y+68);ctx.stroke();
+      for(let i=0;i<4;i++){
+        ctx.globalAlpha=.5+.35*Math.sin(o.phase*4+i*1.7);
+        pixelRect(x+25+i*22,y+10+(i%2)*8,4,3,i%2?'#d477ff':'#72e4dc');
+      }
+      if(o.warning>0){
+        ctx.globalAlpha=.65+.25*Math.sin(o.phase*18);
+        ctx.strokeStyle='#d477ff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+        ctx.beginPath();ctx.ellipse(x+58,y+38,69,42,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='#e9dcff';ctx.font='bold 9px Consolas, monospace';
+        ctx.fillText('DIVE',x+46,y-7);
       }
       ctx.globalAlpha=1;ctx.restore();
     } else if(o.type==='thornrake'){
@@ -1577,13 +1813,13 @@
     }
     if(boss){
       ctx.textAlign='center';ctx.fillStyle='#ff6a8c';ctx.font='bold 15px Consolas, monospace';
-      ctx.fillText('BOSS ENCOUNTER — SURVIVE '+Math.ceil(boss.timer)+'s',W/2,31);
+      ctx.fillText((boss.kind==='nullSovereign'?'NULL SOVEREIGN — SURVIVE ':'BOSS ENCOUNTER — SURVIVE ')+Math.ceil(boss.timer)+'s',W/2,31);
       ctx.fillStyle='#390915';ctx.fillRect(W/2-95,40,190,6);
-      ctx.fillStyle='#df2859';ctx.fillRect(W/2-95,40,190*Math.max(0,boss.timer/23),6);
+      ctx.fillStyle='#df2859';ctx.fillRect(W/2-95,40,190*Math.max(0,boss.timer/(boss.duration||23)),6);
       ctx.textAlign='left';
     }
-    if(bossIntroTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,bossIntroTimer);ctx.textAlign='center';ctx.fillStyle='#ff315f';ctx.font='bold 28px Consolas, monospace';ctx.fillText('SOMETHING IS HUNTING YOU',W/2,H*.32);ctx.restore();}
-    if(bossClearTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,bossClearTimer);ctx.textAlign='center';ctx.fillStyle='#d98cff';ctx.font='bold 24px Consolas, monospace';ctx.fillText('THE HUNTER RETREATED  +1200',W/2,H*.32);ctx.restore();}
+    if(bossIntroTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,bossIntroTimer);ctx.textAlign='center';ctx.fillStyle='#ff315f';ctx.font='bold 28px Consolas, monospace';ctx.fillText(bossIntroMessage,W/2,H*.32);ctx.restore();}
+    if(bossClearTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,bossClearTimer);ctx.textAlign='center';ctx.fillStyle='#d98cff';ctx.font='bold 24px Consolas, monospace';ctx.fillText(bossClearMessage,W/2,H*.32);ctx.restore();}
     if(flash>0){ctx.fillStyle=`rgba(230,0,35,${flash*.35})`;ctx.fillRect(0,0,W,H);}
     drawGlitchOverlay();
     drawHighScoreGlitchLayers();
