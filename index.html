@@ -467,7 +467,13 @@
     if(flying)drawFlightAura(x,y,h);
     if(shieldTimer>0)drawShieldField(x,y,h);
     ctx.save();ctx.translate(0,bob);
-    if(CONFIG.usePlayerImage===true && drawAsset('player',x-4,y-4,player.w+8,player.h+8)){ctx.restore();return;}
+    if(CONFIG.usePlayerImage===true && images.player && images.player.complete && images.player.naturalWidth){
+      const smoothing=ctx.imageSmoothingEnabled;
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(images.player,x-12,y-9,70,70);
+      ctx.imageSmoothingEnabled=smoothing;
+      ctx.restore();return;
+    }
 
     // Ground shadow and a lean, side-facing silhouette.
     if(!flying){ctx.fillStyle='rgba(0,0,0,.36)';ctx.beginPath();ctx.ellipse(x+25,y+h+3,23,4,0,0,Math.PI*2);ctx.fill();}
