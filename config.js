@@ -16,7 +16,7 @@ window.BLOODY_FLIGHT_CONFIG = {
   doubleJumpPower: 565,
   flightDuration: 10,
   shieldDuration: 9,
-  ringComboWindow: 2.35,
+  ringComboWindow: 3.35,
   groundHeight: 92,
   music: {
     path: "assets/audio/background.mp3",
