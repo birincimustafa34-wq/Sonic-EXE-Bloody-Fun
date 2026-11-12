@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#09030a">
+<title>Sonic.EXE — Bloody Flight</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { width:100%; height:100%; margin:0; }
+  body {
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:radial-gradient(ellipse at 50% 40%, #210812 0%, #09030a 65%, #030205 100%);
+    color:#f8e9ec; font-family:Consolas, "Courier New", monospace;
+  }
+  #shell { width:min(96vw, 1120px); }
+  #frame {
+    position:relative; width:100%; aspect-ratio:16/9; overflow:hidden;
+    border:2px solid #7d1428; border-radius:8px;
+    box-shadow:0 0 18px #a0003650, 0 0 55px #6d001d45;
+    background:#08030a;
+  }
+  canvas { display:block; width:100%; height:100%; image-rendering:pixelated; }
+  #overlay {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    padding:clamp(12px,3vw,34px); background:rgba(5,2,7,.84);
+  }
+  #overlay.hidden { display:none; }
+  h1 { margin:0 0 10px; color:#bd1025; font-size:clamp(25px,5.3vw,58px); letter-spacing:.12em;
+    text-shadow:3px 3px 0 #3c0008, 0 0 18px #a00012; }
+  #subtitle { margin:0 0 18px; color:#efcbd2; font-size:clamp(11px,1.7vw,16px); line-height:1.65; max-width:700px; }
+  #message { min-height:1.4em; margin:0 0 14px; color:#ff899b; font-size:clamp(11px,1.5vw,14px); }
+  button { font:700 15px Consolas,"Courier New",monospace; cursor:pointer; touch-action:none; }
+  #start {
+    border:2px solid #b92332; background:#76000e; color:#fff; padding:11px 34px;
+    letter-spacing:.12em; box-shadow:0 0 16px #85000d55;
+  }
+  #start:hover { background:#c51c40; }
+  #help { margin-top:12px; color:#a98d96; font-size:11px; }
+  #mobileControls { display:none; justify-content:space-between; gap:10px; margin-top:10px; }
+  .touch {
+    flex:1; min-height:44px; border:1px solid #9e3047; border-radius:5px;
+    background:#260a14; color:#ffe8ec; opacity:.92; font-size:12px;
+  }
+  .touch:active { background:#7d1428; }
+  @media (pointer:coarse), (max-width:700px) {
+    #shell { width:100vw; }
+    #frame { border-left:0; border-right:0; border-radius:0; }
+    #mobileControls { display:flex; padding:0 10px; }
+    #help { display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+  <div id="frame">
+    <canvas id="game" width="960" height="540" aria-label="Sonic.EXE Bloody Flight game"></canvas>
+    <div id="overlay">
+      <h1 id="title">SONIC.EXE</h1>
+      <p id="subtitle">BLOODY FLIGHT EDITION<br>
+        SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide<br>
+        Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>
+        Chain blood-red rings for combo points and collect Blood Shields to survive one hit.
+      </p>
+      <p id="message">The forest is watching.</p>
+      <button id="start">START RUN</button>
+      <div id="help">Press P or ESC to pause during a run. Press M to mute or unmute.</div>
+    </div>
+  </div>
+  <div id="mobileControls" aria-label="Touch controls">
+    <button class="touch" data-key="Space">JUMP / FLY ↑</button>
+    <button class="touch" data-key="ArrowDown">SLIDE / FLY ↓</button>
+  </div>
+</div>
+<script src="config.js"></script>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const titleEl = document.getElementById('title');
+  const subtitleEl = document.getElementById('subtitle');
+  const messageEl = document.getElementById('message');
+  const startBtn = document.getElementById('start');
+
+  const CONFIG = Object.assign({
+    title:'SONIC.EXE', subtitle:'BLOODY FLIGHT EDITION',
+    startMessage:'The blood moon is rising. The forest is watching.',
+    initialSpeed:360, maxSpeed:650, speedRamp:8.5, gravity:1750,
+    jumpPower:650, doubleJumpPower:565, flightDuration:10,
+    shieldDuration:9, ringComboWindow:2.35, groundHeight:92,
+    music:{path:'assets/audio/background.mp3',volume:.45,loop:true},
+    images:{}, sounds:{}, colors:{}
+  }, window.BLOODY_FLIGHT_CONFIG || {});
+  CONFIG.music = Object.assign({path:'',volume:.45,loop:true}, CONFIG.music || {});
+  CONFIG.images = Object.assign({}, CONFIG.images || {});
+  CONFIG.sounds = Object.assign({}, CONFIG.sounds || {});
+  CONFIG.colors = Object.assign({ringOuter:'#760008',ringInner:'#bd0718',accent:'#b41136',ground:'#190713',groundLine:'#9d1230'}, CONFIG.colors || {});
+  document.title = (CONFIG.title || 'SONIC.EXE') + ' — Bloody Flight';
+
+  const W = canvas.width, H = canvas.height;
+  const GROUND = H - Math.max(50, Math.min(150, Number(CONFIG.groundHeight) || 92));
+  // Off-screen snapshot used for brief horizontal glitch/tearing slices.
+  const glitchBuffer = document.createElement('canvas');
+  glitchBuffer.width = W; glitchBuffer.height = H;
+  const glitchBufferCtx = glitchBuffer.getContext('2d');
+  const images = Object.create(null);
+  function loadImageAsset(name, path) {
+    if (!path) return;
+    const img = new Image();
+    img.onload = () => { images[name] = img; };
+    img.onerror = () => { images[name] = null; };
+    img.src = path;
+  }
+  Object.entries(CONFIG.images).forEach(([name,path]) => loadImageAsset(name,path));
+
+  let bgMusic = null, musicFailed = false;
+  if (CONFIG.music.path) {
+    bgMusic = new Audio(CONFIG.music.path);
+    bgMusic.loop = CONFIG.music.loop !== false;
+    bgMusic.volume = Math.max(0,Math.min(1,Number(CONFIG.music.volume ?? .45)));
+    bgMusic.preload = 'auto';
+    bgMusic.addEventListener('error', () => { musicFailed = true; });
+  }
+  const customSfx = Object.create(null);
+  for (const [name,path] of Object.entries(CONFIG.sounds)) {
+    if (!path) continue;
+    const a = new Audio(path); a.preload = 'auto'; a.volume = .8;
+    a.addEventListener('error', () => { customSfx[name] = null; });
+    customSfx[name] = a;
+  }
+  function startMusic() {
+    if (!muted && bgMusic && !musicFailed) {
+      bgMusic.volume = Math.max(0,Math.min(1,Number(CONFIG.music.volume ?? .45)));
+      bgMusic.play().catch(() => {});
+    }
+  }
+  function stopMusic() { if (bgMusic) bgMusic.pause(); }
+  function drawAsset(name,x,y,w,h) {
+    const img = images[name];
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    ctx.drawImage(img,x,y,w,h); return true;
+  }
+  const keys = Object.create(null);
+  let audio = null, muted = false;
+  let state = 'ready';
+  let lastTime = 0, elapsed = 0, score = 0, speed = Number(CONFIG.initialSpeed) || 360;
+  let spawnClock = 0, ringClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0;
+  let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
+  let shake = 0, flash = 0;
+  // Glitch strength follows score smoothly; glitchPulse adds short bursts on top.
+  let glitchLevel = 0, glitchPulse = 0;
+  let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
+  const player = { x:132, y:GROUND-52, w:46, h:52, vy:0, jumps:0, sliding:false, flight:0, invuln:0 };
+
+  function initAudio() {
+    if (muted) { stopMusic(); return; }
+    else if (bgMusic && state==='running') startMusic();
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audio) audio = new AC();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (_) { audio = null; }
+  }
+  function tone(freq, duration, type='square', volume=.07, endFreq=null, delay=0) {
+    if (muted) return;
+    initAudio(); if (!audio) return;
+    const now = audio.currentTime + delay;
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, now);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq), now+duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(.001, now+duration);
+    osc.connect(gain); gain.connect(audio.destination);
+    osc.start(now); osc.stop(now+duration+.01);
+  }
+  function sfx(name) {
+    const custom = customSfx[name];
+    if (!muted && custom && custom.readyState >= 2) {
+      try { const copy = custom.cloneNode(); copy.volume = custom.volume; copy.play().catch(()=>{}); return; } catch (_) {}
+    }
+    if (name==='jump') tone(190,.13,'square',.06,540);
+    if (name==='ring') { tone(880,.12,'triangle',.07,1200); tone(1320,.10,'triangle',.04,1500, .07); }
+    if (name==='emerald') [440,660,880,1320].forEach((n,i)=>tone(n,.22,'sawtooth',.045,n*1.25,i*.07));
+    if (name==='shield') [520,780,1040].forEach((n,i)=>tone(n,.18,'triangle',.06,n*1.3,i*.06));
+    if (name==='shieldBreak') { tone(260,.2,'square',.1,80); tone(120,.28,'sawtooth',.07,35,.05); }
+    if (name==='rush') [660,880,1100].forEach((n,i)=>tone(n,.14,'square',.04,n*1.2,i*.05));
+    if (name==='smash') tone(170,.22,'triangle',.13,38);
+    if (name==='hit') { tone(180,.48,'sawtooth',.12,42); tone(95,.35,'square',.05,30,.08); }
+    if (name==='flight') tone(330,.32,'sawtooth',.07,990);
+  }
+  function setOverlay(mode) {
+    overlay.classList.remove('hidden');
+    if (mode==='ready') {
+      titleEl.textContent=CONFIG.title || 'SONIC.EXE';
+      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
+      messageEl.textContent=CONFIG.startMessage || 'The blood moon is rising. The forest is watching.'; startBtn.textContent='START RUN';
+    } else if (mode==='over') {
+      titleEl.textContent='GAME OVER';
+      subtitleEl.innerHTML='The forest has claimed another runner.';
+      messageEl.textContent='FINAL SCORE: '+Math.floor(score)+'   •   RINGS: '+ringCount+'   •   BEST COMBO: x'+bestCombo;
+      startBtn.textContent='RUN AGAIN';
+    } else if (mode==='paused') {
+      titleEl.textContent='PAUSED';
+      subtitleEl.textContent='Take a breath. The forest can wait.';
+      messageEl.textContent='Press P or ESC, or click RESUME.'; startBtn.textContent='RESUME';
+    }
+  }
+  let ringCount = 0;
+  function reset() {
+    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.4; emeraldClock=10; shieldClock=13; glitchClock=0;
+    shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
+    obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
+    player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
+    trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
+    stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*245,a:.2+Math.random()*.65,size:Math.random()<.8?2:3}));
+  }
+  function begin() {
+    if (state==='paused') { state='running'; lastTime=performance.now(); overlay.classList.add('hidden'); startMusic(); requestAnimationFrame(loop); return; }
+    reset(); state='running'; initAudio(); startMusic(); overlay.classList.add('hidden'); lastTime=performance.now(); requestAnimationFrame(loop);
+  }
+  startBtn.addEventListener('click',begin);
+
+  function pressKey(code, down) {
+    keys[code]=down;
+    if (!down || state!=='running') return;
+    if (code==='Space' || code==='ArrowUp' || code==='KeyW') {
+      if (player.flight>0) return;
+      if (player.jumps<2) {
+        player.vy = player.jumps===0 ? -(Number(CONFIG.jumpPower)||650) : -(Number(CONFIG.doubleJumpPower)||565);
+        player.jumps++; player.sliding=false; sfx('jump');
+      }
+    }
+    if (code==='ArrowDown' || code==='KeyS') player.sliding=true;
+  }
+  window.addEventListener('keydown',e=>{
+    if (['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
+    if (e.repeat) return;
+    if ((e.code==='KeyP'||e.code==='Escape') && (state==='running'||state==='paused')) {
+      if (state==='running') { state='paused'; stopMusic(); setOverlay('paused'); }
+      else begin();
+      return;
+    }
+    if (e.code==='KeyM') { muted=!muted; if (muted) stopMusic(); else { initAudio(); startMusic(); } return; }
+    pressKey(e.code,true);
+  });
+  window.addEventListener('keyup',e=>{
+    pressKey(e.code,false);
+    if (e.code==='ArrowDown'||e.code==='KeyS') player.sliding=false;
+  });
+  window.addEventListener('blur',()=>{ for (const k of Object.keys(keys)) keys[k]=false; player.sliding=false; });
+  document.querySelectorAll('.touch').forEach(btn=>{
+    const code=btn.dataset.key;
+    const down=e=>{ e.preventDefault(); btn.setPointerCapture?.(e.pointerId); pressKey(code,true); };
+    const up=e=>{ e.preventDefault(); pressKey(code,false); if(code==='ArrowDown')player.sliding=false; };
+    btn.addEventListener('pointerdown',down); btn.addEventListener('pointerup',up);
+    btn.addEventListener('pointercancel',up); btn.addEventListener('lostpointercapture',up);
+  });
+
+  function rectHit(a,b,pad=0) {
+    return a.x+pad < b.x+b.w-pad && a.x+a.w-pad > b.x+pad &&
+           a.y+pad < b.y+b.h-pad && a.y+a.h-pad > b.y+pad;
+  }
+  function spawnObstacle() {
+    const r=Math.random();
+    if (r<.39) obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
+    else if (r<.68) obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
+    else if (r<.86) obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
+    else obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42,phase:Math.random()*6});
+  }
+  function addRingGroup() {
+    const high=Math.random()<.5;
+    const base=high ? 75+Math.random()*100 : GROUND-125;
+    for(let i=0;i<5;i++) rings.push({x:W+35+i*42,y:high?base+Math.sin(i*.8)*18:base-Math.sin(i/4*Math.PI)*48,r:12,high});
+  }
+  function addEmerald() {
+    emeralds.push({x:W+35,y:GROUND-150-Math.random()*65,w:28,h:32,phase:Math.random()*6});
+  }
+  function addShield() {
+    shields.push({x:W+35,y:GROUND-145-Math.random()*95,w:30,h:30,phase:Math.random()*6});
+  }
+  function burst(x,y,color,count=12) {
+    for(let i=0;i<count;i++) {
+      const a=Math.random()*Math.PI*2, v=55+Math.random()*220;
+      particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
+    }
+  }
+  function activateFlight() { player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
+  function update(dt) {
+    elapsed+=dt; score+=dt*(10+speed*.012); speed=Math.min(Number(CONFIG.maxSpeed)||650,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5));
+    // Starts subtly after 220 points and reaches full intensity around 3,000 points.
+    // Easing prevents sudden jumps when ring combos award a lot of score at once.
+    const targetGlitch = Math.max(0, Math.min(1, (score-220)/(3000-220)));
+    glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
+    glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
+    spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
+    comboTimer=Math.max(0,comboTimer-dt); if(comboTimer===0) combo=0;
+    rushTimer=Math.max(0,rushTimer-dt); shieldTimer=Math.max(0,shieldTimer-dt);
+    if(spawnClock<=0){spawnObstacle();spawnClock=Math.max(.62,1.25-(speed-360)/700)+Math.random()*.34;}
+    if(ringClock<=0){addRingGroup();ringClock=2.6+Math.random()*1.6;}
+    if(emeraldClock<=0){addEmerald();emeraldClock=14+Math.random()*6;}
+    if(shieldClock<=0){addShield();shieldClock=22+Math.random()*9;}
+    if(player.flight>0){
+      player.flight=Math.max(0,player.flight-dt); player.invuln=player.flight;
+      const up=keys.ArrowUp||keys.KeyW||keys.Space, down=keys.ArrowDown||keys.KeyS;
+      if(up) player.y-=390*dt;
+      if(down) player.y+=390*dt;
+      player.y=Math.max(24,Math.min(GROUND-player.h-4,player.y));
+      if(player.flight===0){player.y=Math.min(player.y,GROUND-player.h);player.vy=0;}
+    } else {
+      player.h=player.sliding?29:52;
+      player.vy+=(Number(CONFIG.gravity)||1750)*dt; player.y+=player.vy*dt;
+      if(player.y>=GROUND-player.h){player.y=GROUND-player.h;player.vy=0;player.jumps=0;}
+    }
+    player.w=46;
+    if(elapsed>0.1 && Math.floor(elapsed*12)%2===0){trail.push({x:player.x-3,y:player.y+8,h:player.h,life:.25,flight:player.flight>0});}
+    for(const t of trail){t.x-=speed*.75*dt;t.life-=dt;}
+    trail=trail.filter(t=>t.life>0);
+    for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
+    for(const o of obstacles){o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:1)*dt;if(o.type==='bat')o.phase+=dt*12;if(o.type==='rock')o.phase+=dt*2;}
+    for(const r of rings)r.x-=speed*dt;
+    for(const em of emeralds){em.x-=speed*dt;em.phase+=dt*4;}
+    for(const sh of shields){sh.x-=speed*dt;sh.phase+=dt*4;}
+    for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;p.life-=dt;}
+    particles=particles.filter(p=>p.life>0);
+    const playerBox={x:player.x+7,y:player.y+5,w:player.w-13,h:player.h-8};
+    rings=rings.filter(r=>{
+      const dx=(player.x+player.w*.5)-r.x,dy=(player.y+player.h*.5)-r.y;
+      if(Math.hypot(dx,dy)<r.r+25){
+        const previousCombo=combo;
+        combo=comboTimer>0?Math.min(5,combo+1):1; comboTimer=Number(CONFIG.ringComboWindow)||2.35; bestCombo=Math.max(bestCombo,combo);
+        const points=(r.high?35:15)*combo*(rushTimer>0?2:1); score+=points; ringCount++; sfx('ring');
+        burst(r.x,r.y,'#97000c',6);
+        if(combo===5 && previousCombo<5){rushTimer=5;score+=75;sfx('rush');burst(r.x,r.y,'#c00016',22);}
+        return false;
+      }
+      return r.x>-35;
+    });
+    emeralds=emeralds.filter(em=>{
+      const box={x:em.x,y:em.y+Math.sin(em.phase)*5,w:em.w,h:em.h};
+      if(rectHit(playerBox,box,2)){activateFlight();return false;}
+      return em.x>-50;
+    });
+    shields=shields.filter(sh=>{
+      const box={x:sh.x,y:sh.y+Math.sin(sh.phase)*6,w:sh.w,h:sh.h};
+      if(rectHit(playerBox,box,3)){shieldTimer=Math.max(1,Number(CONFIG.shieldDuration)||9);sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);return false;}
+      return sh.x>-50;
+    });
+    for(let i=obstacles.length-1;i>=0;i--){
+      const o=obstacles[i];
+      let oy=o.y;
+      if(o.type==='bat')oy+=Math.sin(o.phase)*9;
+      if(o.type==='rock')oy+=Math.sin(o.phase)*13;
+      const box={x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+      if(rectHit(playerBox,box,5)){
+        if(player.flight>0){burst(o.x+o.w/2,oy+o.h/2,'#a80012',14);score+=30;sfx('smash');shake=.12;obstacles.splice(i,1);continue;}
+        if(shieldTimer>0){shieldTimer=0;score+=50;sfx('shieldBreak');shake=.16;flash=.22;burst(player.x+player.w/2,player.y+player.h/2,'#b00015',24);obstacles.splice(i,1);continue;}
+        state='over';stopMusic();flash=.75;shake=.22;sfx('hit');setOverlay('over');return;
+      }
+      if(o.x<-80)obstacles.splice(i,1);
+    }
+    if(shake>0)shake=Math.max(0,shake-dt);
+    if(flash>0)flash=Math.max(0,flash-dt*1.7);
+    if(glitchClock<=0 && glitchLevel>.012){
+      // Higher score means more frequent and more noticeable interference.
+      glitchPulse=Math.max(glitchPulse,(.24+Math.random()*.58)*glitchLevel);
+      glitchClock=.95-glitchLevel*.58+Math.random()*(1.05-glitchLevel*.68);
+    }
+  }
+  function pixelRect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+  function drawTree(t,offset){
+    const x=Math.round(t.x+offset), top=GROUND-t.h;
+    pixelRect(x,top,20,t.h,'#100711');pixelRect(x-13,top+35,16,9,'#160914');pixelRect(x+16,top+58,22,9,'#160914');
+    pixelRect(x-8,top+70,12,7,'#100711');pixelRect(x+8,top+95,16,8,'#100711');
+    if(t.eyes){pixelRect(x+4,top+t.h*.42,4,4,'#ff1f43');pixelRect(x+12,top+t.h*.42,4,4,'#ff1f43');}
+  }
+  function drawPlayer(){
+    const x=Math.round(player.x), y=Math.round(player.y), h=player.h, flying=player.flight>0;
+    if(flying){
+      const pulse=7+Math.sin(elapsed*12)*4;
+      ctx.fillStyle='rgba(255,22,57,.22)';ctx.beginPath();ctx.ellipse(x+24,y+h/2,36+pulse,h/2+14+pulse,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,60,85,.65)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x+24,y+h/2,41+pulse,h/2+18+pulse,0,0,Math.PI*2);ctx.stroke();
+    }
+    if (drawAsset('player',x-4,y-4,player.w+8,player.h+8)) return;
+    // Rear quills and body
+    const body=flying?'#26112f':'#101f58', shade='#070d2d';
+    pixelRect(x+4,y+10,16,10,shade);pixelRect(x-5,y+20,18,9,shade);pixelRect(x-2,y+31,16,9,shade);
+    pixelRect(x+8,y+5,27,Math.max(18,h-12),body);pixelRect(x+12,y+9,17,Math.max(12,h-23),'#1c347b');
+    // Ear, muzzle and face
+    pixelRect(x+28,y+8,10,10,shade);pixelRect(x+31,y+12,4,4,'#d6a7a0');
+    pixelRect(x+29,y+23,18,15,'#c89c87');pixelRect(x+32,y+20,12,5,'#d9b09a');
+    pixelRect(x+27,y+16,16,9,'#05040b');pixelRect(x+31,y+18,6,5,'#ff173d');pixelRect(x+38,y+18,4,4,'#ff173d');
+    pixelRect(x+33,y+32,13,4,'#fff0e7');pixelRect(x+36,y+32,2,4,'#5d071b');pixelRect(x+42,y+32,2,4,'#5d071b');
+    // Running legs and red shoes
+    const step=Math.floor(elapsed*13)%2===0?4:-3;
+    pixelRect(x+9+step,y+h-11,14,8,'#a90027');pixelRect(x+25-step,y+h-11,15,8,'#d31639');
+    pixelRect(x+8+step,y+h-4,16,4,'#ff405d');pixelRect(x+24-step,y+h-4,17,4,'#ff405d');
+  }
+  function drawObstacle(o){
+    const x=Math.round(o.x), y=Math.round(o.y+(o.type==='bat'?Math.sin(o.phase)*9:o.type==='rock'?Math.sin(o.phase)*13:0));
+    if (drawAsset(o.type,x,y,o.w,o.h)) return;
+    if(o.type==='spike'){
+      ctx.fillStyle='#9e1230';ctx.beginPath();ctx.moveTo(x,y+o.h);ctx.lineTo(x+o.w/2,y);ctx.lineTo(x+o.w,y+o.h);ctx.closePath();ctx.fill();
+      pixelRect(x+o.w/2-3,y+9,6,o.h-11,'#f04b63');
+    } else if(o.type==='block'){
+      pixelRect(x,y,o.w,o.h,'#270d20');pixelRect(x+4,y+4,o.w-8,o.h-8,'#110916');
+      ctx.strokeStyle='#ed294e';ctx.lineWidth=3;ctx.strokeRect(x+1,y+1,o.w-2,o.h-2);pixelRect(x+12,y+12,7,5,'#fe455e');
+    } else if(o.type==='bat'){
+      const flap=Math.sin(o.phase*2)*8;
+      pixelRect(x+16,y+9,18,14,'#100916');pixelRect(x+20,y+5,10,8,'#24102b');
+      pixelRect(x+2,y+6+flap,17,8,'#190b20');pixelRect(x+31,y+6-flap,17,8,'#190b20');
+      pixelRect(x+21,y+14,4,4,'#ff2346');pixelRect(x+29,y+14,4,4,'#ff2346');
+    } else {
+      pixelRect(x+9,y+4,25,31,'#29202e');pixelRect(x+4,y+12,34,22,'#19131f');
+      pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
+    }
+  }
+  function drawGlitchOverlay(){
+    const intensity=Math.max(0,Math.min(1,glitchLevel*.72+glitchPulse*.42));
+    if(intensity<.008)return;
+
+    ctx.save();
+    // A low, steady layer of dark-red interference builds as the score rises.
+    ctx.fillStyle=`rgba(42,0,13,${.018+intensity*.045})`;
+    ctx.fillRect(0,0,W,H);
+
+    // Fine scanlines become more visible at higher corruption levels.
+    ctx.fillStyle='#080208';
+    ctx.globalAlpha=.025+intensity*.075;
+    for(let y=2;y<H;y+=5)ctx.fillRect(0,y,W,1);
+    ctx.globalAlpha=1;
+
+    // Short bursts tear narrow strips of the current frame sideways.
+    if(glitchPulse>.035){
+      glitchBufferCtx.clearRect(0,0,W,H);
+      glitchBufferCtx.drawImage(canvas,0,0,W,H);
+      const strips=1+Math.floor(intensity*5);
+      for(let i=0;i<strips;i++){
+        if(Math.random()>(.32+intensity*.48))continue;
+        const y=Math.random()*H;
+        const height=2+Math.random()*(3+intensity*17);
+        const shift=(Math.random()*2-1)*(3+intensity*34);
+        ctx.save();
+        ctx.beginPath();ctx.rect(0,y,W,height);ctx.clip();
+        ctx.globalAlpha=.12+intensity*.22;
+        ctx.drawImage(glitchBuffer,shift,0);
+        ctx.restore();
+        ctx.fillStyle=`rgba(190,0,34,${.06+intensity*.13})`;
+        ctx.fillRect(0,y,W,1);
+      }
+    }
+
+    // Small red data fragments flicker around the frame; their number scales with score.
+    const fragments=1+Math.floor(intensity*10);
+    for(let i=0;i<fragments;i++){
+      if(Math.random()>(.22+intensity*.42))continue;
+      const x=Math.random()*W, y=Math.random()*H;
+      const width=8+Math.random()*(24+intensity*132);
+      const height=1+Math.random()*(1+intensity*2.5);
+      ctx.globalAlpha=.10+Math.random()*.13*intensity;
+      ctx.fillStyle=Math.random()<.82?'#c20b35':'#a9d2dc';
+      ctx.fillRect(x,y,width,height);
+    }
+    ctx.globalAlpha=1;
+    ctx.restore();
+  }
+  function draw(){
+    ctx.save();
+    if(shake>0)ctx.translate((Math.random()-.5)*12,(Math.random()-.5)*8);
+    if (images.background && images.background.complete && images.background.naturalWidth) {
+      ctx.drawImage(images.background,0,0,W,GROUND);
+    } else {
+      const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#08040d');sky.addColorStop(.62,'#260817');sky.addColorStop(1,'#11040c');
+      ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+      for(const s of stars){ctx.globalAlpha=s.a;pixelRect(s.x,s.y,s.size,s.size,'#e8b8c2');}ctx.globalAlpha=1;
+      ctx.fillStyle='rgba(206,0,39,.12)';ctx.beginPath();ctx.arc(735,128,94,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#690b26';ctx.beginPath();ctx.arc(735,128,66,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=CONFIG.colors.accent;ctx.beginPath();ctx.arc(728,122,56,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#7b0b2b';ctx.fillRect(692,108,20,7);ctx.fillRect(745,145,25,6);ctx.fillRect(713,158,13,5);
+      trees.filter(t=>t.layer===0).forEach(t=>drawTree(t,8));
+      trees.filter(t=>t.layer===1).forEach(t=>drawTree(t,0));
+    }
+    // Ground
+    pixelRect(0,GROUND,W,H-GROUND,CONFIG.colors.ground);pixelRect(0,GROUND,W,5,CONFIG.colors.groundLine);
+    for(let i=0;i<24;i++){const x=((i*73-elapsed*speed*.7)%W+W)%W;pixelRect(x,GROUND+15+(i%3)*12,24,3,'#3b1023');}
+    // Motion trail
+    for(const t of trail){ctx.globalAlpha=Math.max(0,t.life/.25)*.35;pixelRect(t.x,t.y,player.w-5,t.h,t.flight?'#ff234d':'#54203a');}ctx.globalAlpha=1;
+    // Collectibles
+    for(const r of rings){
+      if (drawAsset('ring',r.x-r.r,r.y-r.r-2,r.r*2,r.r*2+4)) continue;
+      ctx.save(); ctx.shadowColor=CONFIG.colors.ringOuter; ctx.shadowBlur=9;
+      ctx.strokeStyle=CONFIG.colors.ringOuter; ctx.lineWidth=7; ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r+2,0,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0; ctx.strokeStyle=CONFIG.colors.ringInner; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r+2,0,0,Math.PI*2); ctx.stroke();
+      ctx.restore(); pixelRect(r.x-2,r.y-7,4,4,'#740008');
+    }
+    for(const em of emeralds){const y=em.y+Math.sin(em.phase)*5,x=em.x;if(drawAsset('emerald',x,y,em.w,em.h))continue;ctx.fillStyle='rgba(150,0,18,.28)';ctx.beginPath();ctx.arc(x+14,y+16,27,0,Math.PI*2);ctx.fill();ctx.fillStyle='#a90016';ctx.beginPath();ctx.moveTo(x+14,y);ctx.lineTo(x+28,y+15);ctx.lineTo(x+14,y+32);ctx.lineTo(x,y+15);ctx.closePath();ctx.fill();ctx.strokeStyle='#d01b2b';ctx.lineWidth=2;ctx.stroke();pixelRect(x+11,y+7,5,15,'#c62a34');}
+    for(const sh of shields){const y=sh.y+Math.sin(sh.phase)*6,x=sh.x;if(drawAsset('shield',x,y,sh.w,sh.h))continue;ctx.fillStyle='rgba(112,0,12,.28)';ctx.beginPath();ctx.arc(x+15,y+15,25,0,Math.PI*2);ctx.fill();ctx.fillStyle='#690008';ctx.beginPath();ctx.moveTo(x+15,y);ctx.lineTo(x+29,y+7);ctx.lineTo(x+26,y+23);ctx.lineTo(x+15,y+30);ctx.lineTo(x+4,y+23);ctx.lineTo(x+1,y+7);ctx.closePath();ctx.fill();ctx.strokeStyle='#bd1523';ctx.lineWidth=3;ctx.stroke();pixelRect(x+13,y+7,4,15,'#d02a32');}
+    obstacles.forEach(drawObstacle);
+    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/p.max);pixelRect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;
+    drawPlayer();
+    // HUD
+    ctx.fillStyle='#fff0f3';ctx.font='bold 20px Consolas, monospace';ctx.fillText('SCORE '+Math.floor(score),22,32);
+    ctx.fillStyle='#c34a54';ctx.font='14px Consolas, monospace';ctx.fillText('RINGS '+ringCount,22,54);
+    if(combo>1){ctx.fillStyle='#b50b18';ctx.font='bold 14px Consolas, monospace';ctx.fillText('RING COMBO x'+combo+'  ('+comboTimer.toFixed(1)+'s)',22,76);}
+    ctx.textAlign='right';ctx.font='bold 14px Consolas, monospace';
+    if(shieldTimer>0){ctx.fillStyle='#c21b28';ctx.fillText('BLOOD SHIELD  '+shieldTimer.toFixed(1)+'s',W-22,32);}
+    if(rushTimer>0){ctx.fillStyle='#e02a32';ctx.fillText('BLOOD RUSH  x2  '+rushTimer.toFixed(1)+'s',W-22,54);}
+    ctx.textAlign='left';
+    if(player.flight>0){ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);ctx.fillStyle='#410008';ctx.fillRect(22,113,170,7);ctx.fillStyle='#a90016';ctx.fillRect(22,113,170*(player.flight/10),7);}
+    if(flash>0){ctx.fillStyle=`rgba(230,0,35,${flash*.35})`;ctx.fillRect(0,0,W,H);}
+    drawGlitchOverlay();
+    ctx.restore();
+  }
+  function loop(now){
+    if(state!=='running')return;
+    const dt=Math.min(.033,Math.max(0,(now-lastTime)/1000));lastTime=now;
+    update(dt);draw();
+    if(state==='running')requestAnimationFrame(loop);
+  }
+
+  setOverlay('ready');
+  reset();draw();
+})();
+</script>
+</body>
+</html>
