@@ -163,7 +163,7 @@
   // Aura creatures can drain at most 40% of one Bloody Flight charge in total.
   const AURA_FLIGHT_DAMAGE=Object.freeze({
     wyvern:5, stalker:10, emberwing:20,
-    thornrake:5, riftmanta:10, blinkwisp:10, relicgolem:10
+    thornrake:5, riftmanta:10, blinkwisp:10, relicgolem:10, prismwraith:15
   });
   const MAX_AURA_FLIGHT_DRAIN=40;
   let flightDamageTaken=0;
@@ -298,7 +298,12 @@
   }
   function spawnObstacle() {
     const r=Math.random();
-    if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
+    // A rare late-game visitor appears only after the 42,000-point threshold.
+    if(score>=42000&&Math.random()<.032){
+      const baseY=85+Math.random()*Math.max(35,GROUND-270);
+      obstacles.push({type:'prismwraith',x:W+95,y:baseY,baseY,w:92,h:76,phase:Math.random()*6,shiftTimer:1.2+Math.random()*.8,warning:0,targetY:baseY,passed:false});
+    }
+    else if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
     else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
     else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
     else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
@@ -685,7 +690,7 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
+      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='prismwraith'?1.26:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
       if(o.type==='relicgolem')o.phase+=dt*7.2;
@@ -759,6 +764,31 @@
         }
         if(!o.passed&&o.x+o.w<player.x){o.passed=true;score+=165;burst(o.x+o.w/2,o.y+o.h/2,'#f4edb0',14);}
       }
+      if(o.type==='prismwraith'){
+        o.phase+=dt*4.6;
+        o.shiftTimer-=dt;
+        if(o.warning>0){
+          o.warning=Math.max(0,o.warning-dt);
+          if(o.warning===0){
+            o.y=o.targetY;
+            burst(o.x+o.w/2,o.y+o.h/2,'#d477ff',16);
+            flash=Math.max(flash,.035);
+          }
+        }else{
+          o.y+=Math.sin(o.phase*1.35)*9*dt;
+          if(o.shiftTimer<=0){
+            const isLow=o.y>GROUND-220;
+            o.targetY=isLow?58+Math.random()*68:GROUND-165-Math.random()*38;
+            o.targetY=Math.max(48,Math.min(GROUND-o.h-12,o.targetY));
+            o.warning=.5;
+            o.shiftTimer=2.15+Math.random()*1.05;
+          }
+        }
+        if(!o.passed&&o.x+o.w<player.x){
+          o.passed=true;score+=210;
+          burst(o.x+o.w/2,o.y+o.h/2,'#d477ff',18);
+        }
+      }
     }
     for(const r of rings)r.x-=speed*dt;
     for(const em of emeralds){em.x-=speed*dt;em.phase+=dt*4;}
@@ -807,7 +837,9 @@
                 ? {x:o.x+14,y:oy+12,w:o.w-28,h:o.h-24}
                 : o.type==='blinkwisp'
                   ? {x:o.x+13,y:oy+12,w:o.w-26,h:o.h-24}
-                  : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
+                  : o.type==='prismwraith'
+                    ? {x:o.x+20,y:oy+14,w:o.w-40,h:o.h-28}
+                    : {x:o.x+4,y:oy+3,w:o.w-8,h:o.h-6};
       if(rectHit(playerBox,box,5)){
         if(player.flight>0){
           const auraDamagePercent=AURA_FLIGHT_DAMAGE[o.type]||0;
@@ -820,15 +852,15 @@
               flightDamageTaken+=appliedDrain;
               player.flight=Math.max(0,player.flight-fullFlight*(appliedDrain/100));
               player.invuln=player.flight;
-              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff'})[o.type]||'#ff526c';
+              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff'})[o.type]||'#ff526c';
               burst(o.x+o.w/2,oy+o.h/2,drainColor,12);
               flash=Math.max(flash,.055);shake=Math.max(shake,.09);
             }
           }
-          const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325};
+          const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325,prismwraith:390};
           const objectPoints={spike:55,block:65,bat:75,rock:70,relicgolem:135};
           const basePoints=auraPoints[o.type]||objectPoints[o.type]||60;
-          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff'};
+          const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff'};
           const colour=colours[o.type]||'#ff526c';
           // Keep the destroy reward and flight combo, even when the enemy also drains energy.
           awardFlightDestroy(basePoints,o.x+o.w/2,oy+o.h/2,colour);
@@ -839,6 +871,11 @@
         if(o.type==='relicgolem' && dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#b68cff',30);
           score+=145;sfx('smash');shake=.19;flash=.14;
+          obstacles.splice(i,1);continue;
+        }
+        if(o.type==='prismwraith' && dashTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#d477ff',34);
+          score+=240;sfx('smash');shake=.2;flash=.16;
           obstacles.splice(i,1);continue;
         }
         if(o.type==='emberwing' && dashTimer>0){
@@ -1260,6 +1297,56 @@
       ctx.fillStyle='#51465d';ctx.fillRect(x+68,y+58-step*.4,15,13);
       ctx.fillStyle='#b68cff';ctx.fillRect(x+73,y+61-step*.4,5,3);
       ctx.restore();
+    } else if(o.type==='prismwraith'){
+      const pulse=.65+.35*Math.sin(o.phase*3.2);
+      const flicker=o.warning>0&&Math.sin(o.phase*22)>0;
+      ctx.save();
+      ctx.translate(0,Math.sin(o.phase*1.7)*3);
+      ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#d477ff';ctx.shadowBlur=o.warning>0?25:16;
+      ctx.strokeStyle='rgba(212,119,255,'+(.42+.28*pulse)+')';ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(x+46,y+38,45,33,Math.sin(o.phase)*.08,0,Math.PI*2);ctx.stroke();
+      const shardColours=['#42eaff','#bd6bff','#ff4e9b','#d8ff4a','#ffad45'];
+      for(let i=0;i<5;i++){
+        const angle=o.phase*(i%2?-.72:.72)+i*Math.PI*2/5;
+        const radius=39+Math.sin(o.phase*2+i)*5;
+        const sx=x+46+Math.cos(angle)*radius,sy=y+37+Math.sin(angle)*radius*.72;
+        ctx.fillStyle=shardColours[i];
+        ctx.globalAlpha=.72+.25*Math.sin(o.phase*3+i);
+        ctx.beginPath();
+        ctx.moveTo(sx,sy-7);ctx.lineTo(sx+6,sy-1);ctx.lineTo(sx+1,sy+7);ctx.lineTo(sx-5,sy+2);ctx.closePath();
+        ctx.fill();
+        pixelRect(sx+Math.cos(angle)*5,sy+Math.sin(angle)*5,3,3,shardColours[(i+2)%shardColours.length]);
+      }
+      ctx.globalAlpha=1;
+      ctx.globalCompositeOperation='source-over';
+      ctx.fillStyle='#090812';ctx.strokeStyle='#332044';ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.moveTo(x+46,y+8);ctx.lineTo(x+69,y+22);ctx.lineTo(x+76,y+44);
+      ctx.lineTo(x+58,y+66);ctx.lineTo(x+33,y+66);ctx.lineTo(x+16,y+45);
+      ctx.lineTo(x+23,y+22);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#21142d';
+      ctx.beginPath();ctx.moveTo(x+46,y+14);ctx.lineTo(x+63,y+27);ctx.lineTo(x+67,y+43);
+      ctx.lineTo(x+51,y+58);ctx.lineTo(x+31,y+48);ctx.lineTo(x+29,y+29);ctx.closePath();ctx.fill();
+      ctx.shadowColor='#f5efff';ctx.shadowBlur=11;
+      ctx.fillStyle=flicker?'#42eaff':'#f4eaff';
+      ctx.fillRect(x+34,y+32,25,5);
+      ctx.fillStyle='#ff4e9b';ctx.fillRect(x+42,y+33,9,3);
+      ctx.fillStyle='#ffffff';ctx.fillRect(x+45,y+33,3,2);
+      ctx.shadowBlur=0;
+      for(let i=0;i<4;i++){
+        ctx.globalAlpha=.65+.3*Math.sin(o.phase*5+i*1.8);
+        ctx.fillStyle=shardColours[(i+Math.floor(o.phase*2))%shardColours.length];
+        ctx.fillRect(x+28+i*9,y+51+(i%2)*4,7,3);
+      }
+      if(o.warning>0){
+        ctx.globalAlpha=.7+.25*Math.sin(o.phase*18);
+        ctx.strokeStyle='#f5d8ff';ctx.lineWidth=2;ctx.setLineDash([5,4]);
+        ctx.beginPath();ctx.ellipse(x+46,y+38,53,43,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='#f4d5ff';ctx.font='bold 9px Consolas, monospace';
+        ctx.fillText('SHIFT',x+30,y-7);
+      }
+      ctx.globalAlpha=1;ctx.restore();
     } else if(o.type==='blinkwisp'){
       const pulse=.65+.35*Math.sin(o.phase*4);
       ctx.save();ctx.globalCompositeOperation='lighter';
