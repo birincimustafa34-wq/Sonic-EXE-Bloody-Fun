@@ -154,6 +154,8 @@
   let shake = 0, flash = 0;
   // Glitch strength follows score smoothly; glitchPulse adds short bursts on top.
   let glitchLevel = 0, glitchPulse = 0;
+  let hallucinationTier=0,hallucinationTimer=0,hallucinationCooldown=2,hallucinationDuration=0;
+  let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let trees = [], stars = [], obstacles = [], rings = [], emeralds = [], shields = [], particles = [], trail = [];
   const player = { x:132, y:GROUND-52, w:46, h:52, vy:0, jumps:0, sliding:false, flight:0, invuln:0 };
 
@@ -215,6 +217,7 @@
   function reset() {
     elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.4; emeraldClock=10; shieldClock=13; glitchClock=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
+    hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; particles=[]; trail=[];
     player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
@@ -307,6 +310,24 @@
     const targetGlitch = Math.max(0, Math.min(1, (score-220)/(3000-220)));
     glitchLevel += (targetGlitch-glitchLevel)*Math.min(1,dt*1.45);
     glitchPulse = Math.max(0, glitchPulse-dt*(2.5-glitchLevel*.9));
+
+    // Hallucinations begin after 5,000 points and become more frequent/intense after 10,000.
+    const nextHallucinationTier=score>=10000?2:score>=5000?1:0;
+    if(nextHallucinationTier>hallucinationTier){
+      hallucinationTier=nextHallucinationTier;
+      hallucinationCooldown=1.5;
+    }
+    if(hallucinationCooldown>0)hallucinationCooldown=Math.max(0,hallucinationCooldown-dt);
+    if(hallucinationTimer>0)hallucinationTimer=Math.max(0,hallucinationTimer-dt);
+    if(hallucinationTier>0 && hallucinationTimer<=0 && hallucinationCooldown<=0){
+      hallucinationDuration=hallucinationTier===1?1.35:2.0;
+      hallucinationTimer=hallucinationDuration;
+      hallucinationKind=hallucinationTier===1?Math.floor(Math.random()*2):2+Math.floor(Math.random()*2);
+      hallucinationX=280+Math.random()*560;
+      hallucinationY=90+Math.random()*170;
+      hallucinationCooldown=hallucinationTier===1?24+Math.random()*20:14+Math.random()*13;
+    }
+
     spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
     comboTimer=Math.max(0,comboTimer-dt); if(comboTimer===0) combo=0;
     rushTimer=Math.max(0,rushTimer-dt); shieldTimer=Math.max(0,shieldTimer-dt);
@@ -414,6 +435,59 @@
     pixelRect(x-8,top+70,12,7,'#100711');pixelRect(x+8,top+95,16,8,'#100711');
     if(t.eyes){pixelRect(x+4,top+t.h*.42,4,4,'#ff1f43');pixelRect(x+12,top+t.h*.42,4,4,'#ff1f43');}
   }
+  function drawHallucinations(){
+    if(hallucinationTimer<=0)return;
+    const fadeIn=Math.min(1,(hallucinationDuration-hallucinationTimer)*3.5);
+    const fadeOut=Math.min(1,hallucinationTimer*2.6);
+    const strength=hallucinationTier===1?.22:.34;
+    const alpha=Math.max(0,Math.min(fadeIn,fadeOut))*strength;
+    const x=Math.round(hallucinationX),y=Math.round(hallucinationY);
+    ctx.save();ctx.globalAlpha=alpha;
+
+    if(hallucinationKind===0){
+      // A pair of distant eyes appears between the trees, then blinks away.
+      ctx.shadowColor='#ff123e';ctx.shadowBlur=16;
+      pixelRect(x,y,12,3,'#08030b');pixelRect(x+28,y+2,12,3,'#08030b');
+      pixelRect(x+3,y+1,6,3,'#ff234d');pixelRect(x+31,y+3,6,3,'#ff234d');
+      ctx.shadowBlur=0;
+      pixelRect(x-5,y-5,52,2,'rgba(25,0,15,.65)');
+    } else if(hallucinationKind===1){
+      // A thin, impossible shadow-runner watches from the far edge of the forest.
+      const wobble=Math.sin(elapsed*31)*2;
+      ctx.fillStyle='#05030b';ctx.beginPath();
+      ctx.moveTo(x+9,y+48);ctx.lineTo(x+3,y+35);ctx.lineTo(x-5,y+25);
+      ctx.lineTo(x+8,y+29);ctx.lineTo(x+4,y+12);ctx.lineTo(x+17,y+23);
+      ctx.lineTo(x+22,y+2);ctx.lineTo(x+28,y+23);ctx.lineTo(x+43,y+13);
+      ctx.lineTo(x+38,y+31);ctx.lineTo(x+49,y+35);ctx.lineTo(x+37,y+43);
+      ctx.lineTo(x+34,y+58);ctx.closePath();ctx.fill();
+      pixelRect(x+25+Math.round(wobble),y+29,4,3,'#f51d4c');
+    } else if(hallucinationKind===2){
+      // A larger, faint face shape forms in the mist behind the moon.
+      ctx.fillStyle='rgba(7,2,12,.9)';
+      ctx.beginPath();ctx.ellipse(x+28,y+28,40,34,-.08,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#f01948';
+      pixelRect(x+8,y+20,13,4,'#f01948');pixelRect(x+38,y+19,13,4,'#f01948');
+      ctx.fillStyle='#07020a';
+      ctx.beginPath();ctx.moveTo(x+5,y+38);ctx.lineTo(x+18,y+43);ctx.lineTo(x+27,y+38);
+      ctx.lineTo(x+36,y+44);ctx.lineTo(x+51,y+36);ctx.lineTo(x+46,y+53);
+      ctx.lineTo(x+16,y+58);ctx.closePath();ctx.fill();
+      pixelRect(x+18,y+41,5,4,'#e6bd9d');pixelRect(x+31,y+42,5,4,'#e6bd9d');
+    } else {
+      // A false after-image of the runner briefly appears far behind the real one.
+      const offset=Math.sin(elapsed*17)*4;
+      pixelRect(x+5,y+17,26,25,'#090510');
+      pixelRect(x+10,y+8,19,14,'#15113a');
+      pixelRect(x+3+offset,y+12,12,5,'#21134c');
+      pixelRect(x+21,y+12,8,4,'#ff1c49');
+      pixelRect(x+16,y+29,15,4,'#9b163f');
+      pixelRect(x+5,y+39,11,4,'#08040d');pixelRect(x+24,y+39,12,4,'#08040d');
+    }
+
+    // A short, translucent scanline makes the sighting feel like a visual glitch.
+    ctx.globalAlpha=alpha*.5;
+    pixelRect(x-16,y+64,95,2,'#b50c37');
+    ctx.restore();
+  }
   function drawFlightAura(x,y,h){
     const cx=x+24, cy=y+h*.52, t=elapsed, pulse=Math.sin(t*11);
     ctx.save();
@@ -461,84 +535,92 @@
     }
     ctx.restore();
   }
+  const runnerSprite=document.createElement('canvas');
+  runnerSprite.width=32;runnerSprite.height=28;
+  const runnerCtx=runnerSprite.getContext('2d');
+  function runnerPixel(x,y,w,h,color){
+    runnerCtx.fillStyle=color;
+    runnerCtx.fillRect(x,y,w,h);
+  }
+  function buildRunnerSprite(frame,sliding){
+    runnerCtx.clearRect(0,0,32,28);
+    const p=runnerPixel;
+    if(sliding){
+      // Low, stretched crouch pose: the feet alternate as the slide scrapes along the ground.
+      const kick=frame%2;
+      p(1,11,9,4,'#06050e');p(4,7,8,5,'#111a43');p(2,13,12,3,'#202e69');
+      p(8,9,8,5,'#090713');p(12,7,12,10,'#101b4a');p(14,5,7,5,'#243876');
+      p(20,8,4,3,'#090713');p(21,9,2,2,'#bc173b');
+      p(20,12,9,5,'#a98e91');p(22,13,7,3,'#d3b3a5');
+      p(21,15,9,3,'#08040c');p(23,15,2,2,'#f0d5a7');p(27,15,2,2,'#f0d5a7');
+      p(11,15,11,5,'#080613');p(13,15,8,5,'#172450');
+      p(16,17,2,2,'#c51c48');p(18,17,2,2,'#c51c48');
+      p(8,16,5,3,'#e1dbe1');p(7,18,5,2,'#aaa4b5');
+      p(23,17,5,3,'#e1dbe1');
+      const shoeY=22+kick;
+      p(7-kick,shoeY,12,4,'#05040a');p(9-kick,shoeY-2,8,3,'#9b123c');
+      p(10-kick,shoeY-2,5,1,'#ed4263');
+      p(20+kick,22-kick,10,4,'#05040a');p(21+kick,20-kick,8,3,'#a7153f');
+      p(22+kick,20-kick,5,1,'#ed4263');
+      return;
+    }
+
+    // Four-frame run cycle: shoulders bob while the two shoes trade positions.
+    const gait=[
+      {aX:10,aY:21,bX:20,bY:21,aS:6,bS:18},
+      {aX:8,aY:19,bX:21,bY:22,aS:4,bS:20},
+      {aX:12,aY:22,bX:17,bY:19,aS:8,bS:16},
+      {aX:18,aY:21,bX:8,bY:20,aS:20,bS:4}
+    ][frame%4];
+
+    // Back quills and dark blue head silhouette.
+    p(1,8,9,5,'#06050e');p(4,5,11,5,'#111a43');p(2,12,12,4,'#080713');
+    p(4,12,10,3,'#263875');p(8,9,7,5,'#151f50');
+    p(11,3,5,6,'#080613');p(13,1,5,6,'#18265c');
+    p(17,3,5,5,'#080613');p(18,1,4,5,'#263a7b');
+    p(20,4,5,6,'#080613');p(21,5,3,4,'#172555');
+    p(11,6,13,10,'#080613');p(12,5,12,10,'#17265b');
+    p(14,3,7,5,'#273a7a');p(15,4,4,2,'#5368ae');
+    // Ear and inner ear.
+    p(21,1,5,6,'#080613');p(22,2,3,4,'#17265b');p(23,3,1,2,'#b48e96');
+    // Hollow eyes with a red glint.
+    p(17,7,8,5,'#03030a');p(19,8,3,2,'#ff1e49');p(22,9,2,2,'#c70d37');
+    p(21,7,1,1,'#ffe0e5');
+    // Pale muzzle and crooked grin.
+    p(20,11,10,6,'#927783');p(21,11,8,4,'#c8a6a5');p(23,13,7,4,'#07040b');
+    p(24,13,2,2,'#f2d7a8');p(27,14,2,2,'#f2d7a8');p(23,16,2,1,'#f2d7a8');
+    p(29,14,1,2,'#08040b');
+    // Narrow body with a small, ragged red X mark.
+    p(11,14,12,9,'#070611');p(12,14,10,8,'#111b49');p(14,15,6,6,'#26366c');
+    p(16,17,2,2,'#c41442');p(18,19,2,2,'#c41442');p(17,18,2,2,'#e23a5d');
+    // Arms and oversized pale gloves.
+    p(9,15,5,4,'#080613');p(7,16,5,4,'#d9d5df');p(6,17,3,3,'#f0e9ec');
+    p(19,15,4,4,'#080613');p(21,16,5,4,'#d9d5df');p(24,17,3,3,'#f3e9e9');
+    // Alternating legs, cuffs and chunky red-black shoes.
+    p(gait.aX,gait.aY,4,4,'#080613');p(gait.aX+1,gait.aY+1,2,3,'#1b2a5f');
+    p(gait.bX,gait.bY,4,4,'#080613');p(gait.bX+1,gait.bY+1,2,3,'#263b7b');
+    p(gait.aS,24,9,3,'#05040a');p(gait.aS+1,22,7,3,'#941239');
+    p(gait.aS+2,22,5,1,'#ee4164');p(gait.aS+4,24,3,1,'#d3d1da');
+    p(gait.bS,24,9,3,'#05040a');p(gait.bS+1,22,7,3,'#a4143d');
+    p(gait.bS+2,22,5,1,'#f04a69');p(gait.bS+4,24,3,1,'#d3d1da');
+  }
   function drawPlayer(){
-    const x=Math.round(player.x), y=Math.round(player.y), h=player.h, flying=player.flight>0;
-    const run=elapsed*13, step=Math.sin(run), bob=flying?Math.sin(elapsed*9)*1.5:Math.abs(step)*1.2;
+    const x=Math.round(player.x),y=Math.round(player.y),h=player.h,flying=player.flight>0;
+    const sliding=player.sliding && !flying;
+    const frame=Math.floor(elapsed*(sliding?8:12))%4;
+    const bob=(!sliding&&!flying)?[0,1,0,-1][frame]:0;
     if(flying)drawFlightAura(x,y,h);
     if(shieldTimer>0)drawShieldField(x,y,h);
-    ctx.save();ctx.translate(0,bob);
-    if(CONFIG.usePlayerImage===true && images.player && images.player.complete && images.player.naturalWidth){
-      const smoothing=ctx.imageSmoothingEnabled;
-      ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(images.player,x-12,y-9,70,70);
-      ctx.imageSmoothingEnabled=smoothing;
-      ctx.restore();return;
+    buildRunnerSprite(frame,sliding);
+    if(!flying&&!sliding){
+      ctx.fillStyle='rgba(0,0,0,.32)';
+      ctx.beginPath();ctx.ellipse(x+23,GROUND+2,21,4,0,0,Math.PI*2);ctx.fill();
     }
-
-    // Ground shadow and a lean, side-facing silhouette.
-    if(!flying){ctx.fillStyle='rgba(0,0,0,.36)';ctx.beginPath();ctx.ellipse(x+25,y+h+3,23,4,0,0,Math.PI*2);ctx.fill();}
-    ctx.lineJoin='round';ctx.lineCap='round';
-
-    // Rear quills: long, swept-back shapes give the runner a sharper profile.
-    ctx.fillStyle='#080b1b';ctx.strokeStyle='#03040d';ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(x+29,y+19);ctx.lineTo(x+12,y+12);ctx.lineTo(x+1,y+2);
-    ctx.lineTo(x+8,y+21);ctx.lineTo(x-5,y+25);ctx.lineTo(x+10,y+31);
-    ctx.lineTo(x+3,y+43);ctx.lineTo(x+23,y+38);ctx.lineTo(x+36,y+34);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.fillStyle='#142b69';
-    ctx.beginPath();ctx.moveTo(x+24,y+18);ctx.lineTo(x+11,y+10);ctx.lineTo(x+18,y+22);ctx.lineTo(x+5,y+25);ctx.lineTo(x+19,y+29);ctx.lineTo(x+11,y+38);ctx.lineTo(x+29,y+32);ctx.closePath();ctx.fill();
-
-    // Back spines and crown, shaded in midnight blue with restrained electric highlights.
-    ctx.fillStyle='#101d4d';ctx.strokeStyle='#050817';ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(x+25,y+19);ctx.lineTo(x+17,y+5);ctx.lineTo(x+31,y+12);
-    ctx.lineTo(x+37,y+1);ctx.lineTo(x+41,y+14);ctx.lineTo(x+51,y+9);
-    ctx.lineTo(x+45,y+24);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.strokeStyle='rgba(73,121,214,.75)';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(x+20,y+12);ctx.lineTo(x+29,y+17);ctx.lineTo(x+35,y+7);ctx.stroke();
-
-    // Compact torso and shoulder.
-    ctx.fillStyle='#101b45';ctx.strokeStyle='#050817';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(x+17,y+25);ctx.quadraticCurveTo(x+28,y+19,x+38,y+27);
-    ctx.lineTo(x+38,y+43);ctx.quadraticCurveTo(x+28,y+49,x+16,y+41);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.fillStyle='#294b9c';ctx.beginPath();ctx.moveTo(x+26,y+27);ctx.quadraticCurveTo(x+33,y+30,x+32,y+40);ctx.lineTo(x+24,y+42);ctx.closePath();ctx.fill();
-
-    // Head and angular muzzle. No broad grin: the red eye carries the expression.
-    ctx.fillStyle='#17285e';ctx.strokeStyle='#050817';ctx.lineWidth=2;
-    ctx.beginPath();ctx.ellipse(x+34,y+20,13,12,-.08,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#070916';
-    ctx.beginPath();ctx.moveTo(x+35,y+22);ctx.lineTo(x+49,y+25);ctx.lineTo(x+54,y+30);
-    ctx.lineTo(x+45,y+33);ctx.lineTo(x+34,y+29);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#817c91';
-    ctx.beginPath();ctx.moveTo(x+43,y+27);ctx.lineTo(x+53,y+29);ctx.lineTo(x+47,y+33);ctx.lineTo(x+39,y+31);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#08050e';ctx.fillRect(x+49,y+27,3,3);
-    ctx.fillStyle='#05040b';ctx.fillRect(x+33,y+16,14,6);
-    ctx.fillStyle='#ff234d';ctx.fillRect(x+39,y+17,8,3);
-    ctx.fillStyle='rgba(255,210,220,.9)';ctx.fillRect(x+45,y+17,2,2);
-    ctx.fillStyle='#080b1c';
-    ctx.beginPath();ctx.moveTo(x+25,y+12);ctx.lineTo(x+22,y+3);ctx.lineTo(x+31,y+9);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#53659b';ctx.fillRect(x+25,y+10,3,3);
-
-    // Forward arm and dark glove.
-    ctx.strokeStyle='#080b1b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x+31,y+31);ctx.lineTo(x+42,y+36);ctx.stroke();
-    ctx.fillStyle='#a7b1c9';ctx.beginPath();ctx.arc(x+43,y+36,4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#bd183c';ctx.fillRect(x+34,y+32,5,3);
-
-    // Alternating legs and heavy red-black running shoes.
-    const legA=step*5,legB=-step*5;
-    ctx.strokeStyle='#080b1b';ctx.lineWidth=6;
-    ctx.beginPath();ctx.moveTo(x+23,y+40);ctx.lineTo(x+18+legA,y+h-12);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x+33,y+40);ctx.lineTo(x+32+legB,y+h-12);ctx.stroke();
-    function shoe(sx,sy,flip){
-      ctx.save();ctx.translate(sx,sy);if(flip)ctx.scale(-1,1);
-      ctx.fillStyle='#080710';ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(12,-1);ctx.lineTo(17,4);ctx.lineTo(14,9);ctx.lineTo(-3,8);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#9b1234';ctx.beginPath();ctx.moveTo(1,-3);ctx.lineTo(12,-3);ctx.lineTo(15,3);ctx.lineTo(-1,4);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#ed3659';ctx.fillRect(2,0,9,2);ctx.fillStyle='#c5c9d4';ctx.fillRect(4,3,7,2);
-      ctx.fillStyle='#03040b';ctx.fillRect(-3,7,19,2);
-      ctx.restore();
-    }
-    shoe(x+15+legA,y+h-10,step<0);shoe(x+29+legB,y+h-10,step>0);
-    ctx.restore();
+    const smooth=ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled=false;
+    if(sliding)ctx.drawImage(runnerSprite,x-9,y-1,64,30);
+    else ctx.drawImage(runnerSprite,x-9,y-2+bob,64,56);
+    ctx.imageSmoothingEnabled=smooth;
   }
   function drawObstacle(o){
     const x=Math.round(o.x), y=Math.round(o.y+(o.type==='bat'?Math.sin(o.phase)*9:o.type==='rock'?Math.sin(o.phase)*13:0));
@@ -648,6 +730,7 @@
       trees.filter(t=>t.layer===0).forEach(t=>drawTree(t,8));
       trees.filter(t=>t.layer===1).forEach(t=>drawTree(t,0));
     }
+    drawHallucinations();
     // Ground
     pixelRect(0,GROUND,W,H-GROUND,CONFIG.colors.ground);pixelRect(0,GROUND,W,5,CONFIG.colors.groundLine);
     for(let i=0;i<24;i++){const x=((i*73-elapsed*speed*.7)%W+W)%W;pixelRect(x,GROUND+15+(i%3)*12,24,3,'#3b1023');}
