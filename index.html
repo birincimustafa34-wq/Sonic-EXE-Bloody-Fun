@@ -596,7 +596,8 @@
         else if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){awardScore(45);burst(shot.x,shot.y,'#a875ff',14);}
         else if(EXPANSION.reboundCharges>0){EXPANSION.reboundCharges=0;awardScore(180);burst(shot.x,shot.y,'#ffe17a',20);}
         else if(shieldTimer>0){shieldTimer=0;flash=.24;shake=.17;burst(shot.x,shot.y,'#e04b78',20);}
-        else{state='over';stopMusic();flash=.8;shake=.24;sfx('hit');setOverlay('over');bossProjectiles.splice(i,1);return;}
+        else if(UPGRADE.lastStandTimer>0){burst(shot.x,shot.y,'#ffe17a',18);bossProjectiles.splice(i,1);continue;}
+        else{UPGRADE.runDamageFree=false;state='over';stopMusic();flash=.8;shake=.24;sfx('hit');setOverlay('over');bossProjectiles.splice(i,1);return;}
         bossProjectiles.splice(i,1);continue;
       }
       if(shot.x<-40)bossProjectiles.splice(i,1);
@@ -1146,7 +1147,7 @@
         combo=comboTimer>0?Math.min(5,combo+1):1; comboTimer=Number(CONFIG.ringComboWindow)||2.35; bestCombo=Math.max(bestCombo,combo);
         const points=(r.high?35:15)*combo*(rushTimer>0?2:1); awardScore(points); ringCount++; sfx('ring');
         burst(r.x,r.y,'#97000c',6);
-        if(combo===5 && previousCombo<5){rushTimer=5;awardScore(75);sfx('rush');burst(r.x,r.y,'#c00016',22);}
+        if(combo===5 && previousCombo<5){rushTimer=5;awardScore(275);expansionAchievement('combo-finisher','COMBO FINISHER');sfx('rush');burst(r.x,r.y,'#c00016',26);}
         return false;
       }
       return r.x>-35;
@@ -1277,7 +1278,8 @@
         }
         if(player.flight>0){burst(o.x+o.w/2,oy+o.h/2,'#a80012',14);awardScore(30);sfx('smash');shake=.12;obstacles.splice(i,1);continue;}
         if(shieldTimer>0){shieldTimer=0;awardScore(50);sfx('shieldBreak');shake=.16;flash=.22;burst(player.x+player.w/2,player.y+player.h/2,'#b00015',24);obstacles.splice(i,1);continue;}
-        state='over';stopMusic();flash=.75;shake=.22;sfx('hit');setOverlay('over');return;
+        if(UPGRADE.lastStandTimer>0){awardScore(65);burst(o.x+o.w/2,oy+o.h/2,'#ffe17a',20);obstacles.splice(i,1);continue;}
+        UPGRADE.runDamageFree=false;state='over';stopMusic();flash=.75;shake=.22;sfx('hit');setOverlay('over');return;
       }
       if(o.x<-80)obstacles.splice(i,1);
     }
@@ -2109,7 +2111,7 @@
     emeraldFragments:0,emeraldComplete:false,secretRelics:0,goldenBats:0,
     explosionCooldown:0,explosionTimer:0,counterCooldown:0,decoyCooldown:0,decoyTimer:0,lightningCooldown:0,
     lastStandTimer:0,lastStandUsed:false,selectedSkin:'DEFAULT',skinButton:null,finalBossDefeated:false,
-    runBats:0,runStars:0,runRelics:0,dailyDate:'',dailyType:'',dailyTarget:0,dailyDone:false
+    runBats:0,runStars:0,runRelics:0,runDamageFree:true,dailyDate:'',dailyType:'',dailyTarget:0,dailyDone:false
   };
   const UPGRADE_DAILY=[
     {id:'rings',label:'COLLECT 30 RINGS',target:30},
@@ -2128,7 +2130,7 @@
     UPGRADE.portalX=650;UPGRADE.portalY=100+expansionRandom()*Math.max(60,GROUND-180);UPGRADE.starClock=10+expansionRandom()*8;UPGRADE.fallingStars=[];
     UPGRADE.emeraldFragments=0;UPGRADE.emeraldComplete=false;UPGRADE.secretRelics=0;UPGRADE.goldenBats=0;
     for(const k of ['explosionCooldown','counterCooldown','decoyCooldown','lightningCooldown'])UPGRADE[k]=0;
-    UPGRADE.lastStandUsed=false;UPGRADE.finalBossDefeated=false;UPGRADE.runBats=0;UPGRADE.runStars=0;UPGRADE.runRelics=0;
+    UPGRADE.lastStandUsed=false;UPGRADE.finalBossDefeated=false;UPGRADE.runBats=0;UPGRADE.runStars=0;UPGRADE.runRelics=0;UPGRADE.runDamageFree=true;
     const d=new Date(),date=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(),daily=UPGRADE_DAILY[expansionSeedForToday()%UPGRADE_DAILY.length];
     UPGRADE.dailyDate=date;UPGRADE.dailyType=daily.id;UPGRADE.dailyTarget=daily.target;
     UPGRADE.dailyDone=!!(EXPANSION_STORE.dailyChallenge&&EXPANSION_STORE.dailyChallenge.date===date&&EXPANSION_STORE.dailyChallenge.done);
@@ -2197,9 +2199,9 @@
       const events=['eyes','stalker','distortion','falsePause','abandoned','message','portal'],ev=events[Math.floor(expansionRandom()*events.length)],duration=3.2+expansionRandom()*2.1;
       if(ev==='eyes')UPGRADE.eyesTimer=duration;if(ev==='stalker'){UPGRADE.stalkerTimer=duration;UPGRADE.stalkerX=690+expansionRandom()*170;}
       if(ev==='distortion')UPGRADE.distortionTimer=duration;if(ev==='falsePause')UPGRADE.falsePauseTimer=1.1;
-      if(ev==='abandoned')UPGRADE.abandonedTimer=duration;
+      if(ev==='abandoned'){UPGRADE.abandonedTimer=duration;EXPANSION.soundlessTimer=Math.max(EXPANSION.soundlessTimer,duration);}
       if(ev==='message'){const msgs=['DO NOT FOLLOW THE LIGHT.','YOUR SHADOW IS LATE.','THIS ROUTE WAS NOT HERE.','THE FOREST REMEMBERS.','TURN BACK WHILE YOU CAN.'];UPGRADE.hiddenMessage=msgs[Math.floor(expansionRandom()*msgs.length)];UPGRADE.hiddenMessageTimer=2.8;}
-      if(ev==='portal'){UPGRADE.portalTimer=duration;UPGRADE.portalX=500+expansionRandom()*350;UPGRADE.portalY=65+expansionRandom()*Math.max(50,GROUND-150);}
+      if(ev==='portal'){UPGRADE.portalTimer=duration;UPGRADE.portalX=175+expansionRandom()*190;UPGRADE.portalY=Math.max(65,Math.min(GROUND-45,player.y+player.h/2+(expansionRandom()-.5)*110));}
       UPGRADE.eventClock=23+expansionRandom()*22;
     }}
     if(UPGRADE.portalTimer>0&&rectHit({x:player.x,y:player.y,w:player.w,h:player.h},{x:UPGRADE.portalX-24,y:UPGRADE.portalY-48,w:48,h:96},0)){UPGRADE.portalTimer=0;player.x=player.x<210?330:112;player.invuln=Math.max(player.invuln,.8);awardScore(450);burst(player.x+22,player.y+25,'#d477ff',22);}
@@ -2298,7 +2300,7 @@
     if(EXPANSION.bossesDefeated>=3)expansionAchievement('boss-breaker','BOSS BREAKER');
     if(EXPANSION.nearMisses>=10)expansionAchievement('close-call','CLOSE CALL');
     if(EXPANSION.pickupsCollected>=8)expansionAchievement('collector','COLLECTOR');
-    if(EXPANSION.damageCount===0&&score>=25000)expansionAchievement('survival-medal','SURVIVAL MEDAL');
+    if(UPGRADE.runDamageFree&&score>=25000)expansionAchievement('survival-medal','SURVIVAL MEDAL');
     if(!EXPANSION_STORE.stats)EXPANSION_STORE.stats={};const st=EXPANSION_STORE.stats;st.totalRuns=(st.totalRuns||0)+1;st.totalRings=(st.totalRings||0)+ringCount;st.totalKills=(st.totalKills||0)+EXPANSION.enemyKills;st.totalBats=(st.totalBats||0)+UPGRADE.runBats;st.totalStars=(st.totalStars||0)+UPGRADE.runStars;st.totalRelics=(st.totalRelics||0)+UPGRADE.runRelics;st.bestCombo=Math.max(st.bestCombo||0,bestCombo);st.longestRun=Math.max(st.longestRun||0,Math.floor(elapsed));
     if(UPGRADE.finalBossDefeated&&score>=250000){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('the-unwritten'))EXPANSION_STORE.endings.push('the-unwritten');expansionAchievement('secret-ending','SECRET ENDING');}
     if(UPGRADE.emeraldComplete&&UPGRADE.secretRelics>0){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('emerald-witness'))EXPANSION_STORE.endings.push('emerald-witness');}
@@ -2326,7 +2328,7 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING']],all=labels.concat(extra);
+      const extra=[['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
@@ -2432,7 +2434,7 @@
     }
     if(shieldTimer>0){shieldTimer=0;awardScore(80);burst(x,y,'#ff526c',18);sfx('shieldBreak');return true;}
     if(EXPANSION.hitCooldown>0)return false;
-    EXPANSION.damageCount++;EXPANSION.perfectStreak=0;
+    EXPANSION.damageCount++;UPGRADE.runDamageFree=false;EXPANSION.perfectStreak=0;
     state='over';stopMusic();flash=.8;shake=.26;sfx('hit');setOverlay('over');
     return false;
   }
@@ -2640,7 +2642,7 @@
     const playerBox={x:player.x+5,y:player.y+4,w:player.w-10,h:player.h-7};
     for(let i=EXPANSION.enemies.length-1;i>=0;i--){
       const e=EXPANSION.enemies[i];e.phase+=dt*extScale*3;
-      e.x-=speed*dt*extScale*(e.kind==='dash'?1.48:e.kind==='heavy'?.88:1.16);
+      const pressure=(UPGRADE.bloodMoonTimer>0?1.16:score>=180000?1.12:score>=100000?1.06:1);e.x-=speed*dt*extScale*pressure*(e.kind==='dash'?1.48:e.kind==='heavy'?.88:1.16);
       if(e.kind==='hover')e.y=e.baseY+Math.sin(e.phase)*25;
       if(e.kind==='dash'&&e.x<W+430)e.y+=(player.y+Math.sin(e.phase*2)*35-e.y)*Math.min(1,dt*extScale*.8);
       if(e.kind==='pull'&&e.x<W+390){const target=player.y-12;e.y+=(target-e.y)*Math.min(1,dt*extScale*.28);}
@@ -2736,7 +2738,7 @@
       if(!o.expNearMiss&&o.x+o.w<player.x&&o.x+o.w>player.x-speed*dt*2.2){
         const oy=o.y+(o.h/2),py=player.y+player.h/2;
         if(Math.abs(oy-py)<Math.max(52,o.h*.78)){
-          o.expNearMiss=true;EXPANSION.nearMisses++;awardScore(45);EXPANSION.perfectStreak++;
+          o.expNearMiss=true;EXPANSION.nearMisses++;awardScore(45);EXPANSION.perfectStreak++;if(player.flight>0){awardScore(85);expansionAchievement('perfect-flight','PERFECT FLIGHT');}
         }
       }
     }
@@ -2907,6 +2909,10 @@
       ctx.shadowColor=c;ctx.shadowBlur=24;ctx.strokeStyle=c;ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(b.x,b.y,55+Math.sin(b.phase)*5,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle='#090611';ctx.beginPath();ctx.moveTo(b.x,b.y-50);ctx.lineTo(b.x+47,b.y-15);ctx.lineTo(b.x+39,b.y+39);ctx.lineTo(b.x,b.y+54);ctx.lineTo(b.x-39,b.y+39);ctx.lineTo(b.x-47,b.y-15);ctx.closePath();ctx.fill();ctx.stroke();
+      if(b.kind==='machine'){ctx.strokeStyle='#ff9a58';ctx.lineWidth=5;for(let k=0;k<8;k++){const a=b.phase+k*Math.PI/4;ctx.beginPath();ctx.moveTo(b.x+Math.cos(a)*42,b.y+Math.sin(a)*42);ctx.lineTo(b.x+Math.cos(a)*60,b.y+Math.sin(a)*60);ctx.stroke();}}
+      else if(b.kind==='watcher'){ctx.fillStyle='#fff4d9';ctx.beginPath();ctx.ellipse(b.x,b.y,22,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff315d';ctx.beginPath();ctx.arc(b.x+Math.sin(b.phase)*7,b.y,7,0,Math.PI*2);ctx.fill();}
+      else if(b.kind==='hollowKing'){ctx.fillStyle='#180c24';ctx.beginPath();ctx.moveTo(b.x-33,b.y-33);ctx.lineTo(b.x-54,b.y-75);ctx.lineTo(b.x-12,b.y-53);ctx.moveTo(b.x+33,b.y-33);ctx.lineTo(b.x+54,b.y-75);ctx.lineTo(b.x+12,b.y-53);ctx.fill();}
+      else if(b.kind==='fractured'){ctx.strokeStyle='#ff5279';ctx.lineWidth=2;for(let k=0;k<5;k++){const ox=Math.sin(b.phase*3+k*4)*68,oy=Math.cos(b.phase*2+k*3)*54;ctx.strokeRect(b.x+ox-5,b.y+oy-5,10,10);}}
       for(let k=0;k<3;k++){const a=b.phase*.5+k*Math.PI*2/3;const cx=b.x+Math.cos(a)*31,cy=b.y+Math.sin(a)*31;ctx.fillStyle=k<b.cores?'#ffe17a':'#4b3b55';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();}
       ctx.globalAlpha=.45+.4*Math.sin(b.phase*4);ctx.fillStyle=c;ctx.fillRect(b.x-23,b.y-4,46,7);
       if(b.weaknessTimer>0){ctx.globalAlpha=.9;ctx.strokeStyle='#fff2a3';ctx.lineWidth=4;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(b.x,b.y,68,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
