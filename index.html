@@ -150,7 +150,7 @@
   let audio = null, muted = false;
   let state = 'ready';
   let lastTime = 0, elapsed = 0, score = 0, speed = Number(CONFIG.initialSpeed) || 360;
-  let spawnClock = 0, ringClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0;
+  let spawnClock = 0, ringClock = 0, ringBonusClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
   // Brief landing protection starts when Bloody Flight ends.
   let landingGrace=0;
@@ -232,7 +232,7 @@
   }
   let ringCount = 0;
   function reset() {
-    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.0; ringBonusClock=10+Math.random()*6; emeraldClock=10; shieldClock=13; glitchClock=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;
@@ -394,6 +394,11 @@
     const base=high ? 75+Math.random()*100 : GROUND-125;
     for(let i=0;i<5;i++) rings.push({x:W+35+i*42,y:high?base+Math.sin(i*.8)*18:base-Math.sin(i/4*Math.PI)*48,r:12,high});
   }
+  function addBonusRing() {
+    const high=Math.random()<.5;
+    const y=high?72+Math.random()*95:GROUND-90-Math.random()*48;
+    rings.push({x:W+35,y,r:14,high,bonus:true});
+  }
   function addEmerald() {
     emeralds.push({x:W+35,y:GROUND-150-Math.random()*65,w:28,h:32,phase:Math.random()*6});
   }
@@ -414,7 +419,7 @@
   }
   function startBossEncounter(){
     bossIntroduced=true;
-    boss={kind:'bloodhunter',x:W+95,y:75,phase:0,timer:23,duration:23,attackClock:1.35,warning:0,targetY:GROUND-40};
+    boss={kind:'bloodhunter',x:W+95,y:75,phase:0,timer:25,duration:25,attackClock:1.0,warning:0,targetY:GROUND-40};
     bossProjectiles=[];
     bossIntroMessage='SOMETHING IS HUNTING YOU';
     bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -495,12 +500,12 @@
             x:boss.x-38,y:boss.targetY,baseY:boss.targetY,
             w:25,h:18,phase:Math.random()*6,speed:500
           });
-          boss.attackClock=2.55;
+          boss.attackClock=1.55;
         }
       }else{
         boss.attackClock-=dt;
         if(boss.attackClock<=0){
-          boss.warning=.72;
+          boss.warning=.48;
           boss.targetY=playerBox.y+playerBox.h*.5;
         }
       }
@@ -834,6 +839,13 @@
     }
 
     spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
+    if(score>=50000){
+      ringBonusClock-=dt;
+      if(ringBonusClock<=0&&!rings.some(r=>!r.bonus)&&ringClock>1.1){
+        addBonusRing();
+        ringBonusClock=11+Math.random()*7;
+      }
+    }
     dashTimer=Math.max(0,dashTimer-dt);
     landingGrace=Math.max(0,landingGrace-dt);
     if(flightComboTimer>0){
@@ -1020,6 +1032,11 @@
     rings=rings.filter(r=>{
       const dx=(player.x+player.w*.5)-r.x,dy=(player.y+player.h*.5)-r.y;
       if(Math.hypot(dx,dy)<r.r+25){
+        if(r.bonus){
+          score+=60;ringCount++;sfx('ring');
+          burst(r.x,r.y,'#ff552e',16);
+          return false;
+        }
         const previousCombo=combo;
         combo=comboTimer>0?Math.min(5,combo+1):1; comboTimer=Number(CONFIG.ringComboWindow)||2.35; bestCombo=Math.max(bestCombo,combo);
         const points=(r.high?35:15)*combo*(rushTimer>0?2:1); score+=points; ringCount++; sfx('ring');
@@ -1827,6 +1844,14 @@
     for(const t of trail){ctx.globalAlpha=Math.max(0,t.life/.25)*.35;pixelRect(t.x,t.y,player.w-5,t.h,t.flight?'#ff234d':'#54203a');}ctx.globalAlpha=1;
     // Collectibles
     for(const r of rings){
+      if(r.bonus){
+        const pulse=.78+.22*Math.sin(elapsed*7);
+        ctx.save();ctx.shadowColor='#ff3d26';ctx.shadowBlur=18*pulse;
+        ctx.strokeStyle='#ed241f';ctx.lineWidth=8;ctx.beginPath();ctx.ellipse(r.x,r.y,r.r*pulse,r.r*pulse+2,0,0,Math.PI*2);ctx.stroke();
+        ctx.shadowBlur=0;ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(r.x,r.y,r.r*pulse,r.r*pulse+2,0,0,Math.PI*2);ctx.stroke();
+        ctx.restore();pixelRect(r.x-2,r.y-7,4,4,'#fff0a6');
+        continue;
+      }
       if (drawAsset('ring',r.x-r.r,r.y-r.r-2,r.r*2,r.r*2+4)) continue;
       ctx.save(); ctx.shadowColor=CONFIG.colors.ringOuter; ctx.shadowBlur=9;
       ctx.strokeStyle=CONFIG.colors.ringOuter; ctx.lineWidth=7; ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r+2,0,0,Math.PI*2); ctx.stroke();
