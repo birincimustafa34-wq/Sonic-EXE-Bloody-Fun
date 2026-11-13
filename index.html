@@ -529,13 +529,14 @@
     if(bossClearTimer>0)bossClearTimer=Math.max(0,bossClearTimer-dt);
     if(bossIntroTimer>0)bossIntroTimer=Math.max(0,bossIntroTimer-dt);
     if(!boss)return;
-    boss.timer-=dt;
-    boss.phase+=dt*(boss.kind==='nullSovereign'?1.8:boss.kind==='paradoxRegent'?2.05:boss.kind==='eventHorizon'?2.35:1.35);
+    const bossTimeScale=EXPANSION.timeFractureTimer>0?.58:1;
+    boss.timer-=dt*bossTimeScale;
+    boss.phase+=dt*bossTimeScale*(boss.kind==='nullSovereign'?1.8:boss.kind==='paradoxRegent'?2.05:boss.kind==='eventHorizon'?2.35:1.35);
     if(boss.kind==='nullSovereign'){
-      boss.x+=(W-220-boss.x)*Math.min(1,dt*1.7);
+      boss.x+=(W-220-boss.x)*Math.min(1,dt*1.7*bossTimeScale);
       boss.y=48+Math.sin(boss.phase*1.15)*39;
       if(boss.warning>0){
-        boss.warning=Math.max(0,boss.warning-dt);
+        boss.warning=Math.max(0,boss.warning-dt*bossTimeScale);
         if(boss.warning===0){
           boss.volleyCount=(boss.volleyCount||0)+1;
           const offsets=boss.volleyCount%3===0?[-76,-38,0,38,76]:[-58,0,58];
@@ -544,9 +545,9 @@
           offsets.forEach((offset,index)=>{const y=Math.max(30,Math.min(GROUND-24,centerY+offset));bossProjectiles.push({x:boss.x-22,y,baseY:y,w:24,h:20,phase:Math.random()*6,speed:425+(index%2)*28,kind:'prismShard',colour:cols[(index+boss.volleyCount)%cols.length]});});
           boss.attackClock=boss.volleyCount%3===0?2.05:1.55;burst(boss.x-18,centerY,'#d477ff',12);
         }
-      }else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=.62;boss.targetY=playerBox.y+playerBox.h*.5;}}
+      }else{boss.attackClock-=dt*bossTimeScale;if(boss.attackClock<=0){boss.warning=.62;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }else if(boss.kind==='paradoxRegent'||boss.kind==='eventHorizon'){
-      boss.x+=(W-225-boss.x)*Math.min(1,dt*(boss.kind==='eventHorizon'?2.05:1.8));
+      boss.x+=(W-225-boss.x)*Math.min(1,dt*(boss.kind==='eventHorizon'?2.05:1.8)*bossTimeScale);
       boss.y=(boss.kind==='eventHorizon'?30:42)+Math.sin(boss.phase*(boss.kind==='eventHorizon'?1.55:1.2))*(boss.kind==='eventHorizon'?48:39);
       if(boss.warning>0){
         boss.warning=Math.max(0,boss.warning-dt);
@@ -567,12 +568,12 @@
         }
       }else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=boss.kind==='eventHorizon'?.40:.50;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }else{
-      boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0);boss.y=68+Math.sin(boss.phase*1.55)*25;
+      boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0*bossTimeScale);boss.y=68+Math.sin(boss.phase*1.55)*25;
       if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0){bossProjectiles.push({x:boss.x-38,y:boss.targetY,baseY:boss.targetY,w:25,h:18,phase:Math.random()*6,speed:500});boss.attackClock=1.55;}}
       else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=.48;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }
     for(let i=bossProjectiles.length-1;i>=0;i--){
-      const shot=bossProjectiles[i];shot.x-=shot.speed*dt;shot.phase+=dt*5.5;
+      const shot=bossProjectiles[i];shot.x-=shot.speed*dt*bossTimeScale;shot.phase+=dt*5.5*bossTimeScale;
       const wave=shot.kind==='eventShard'?28:shot.kind==='fractalShard'?22:shot.kind==='prismShard'?17:12;
       shot.y=shot.baseY+Math.sin(shot.phase)*wave;
       const box={x:shot.x-10,y:shot.y-9,w:shot.w+5,h:shot.h+5};
