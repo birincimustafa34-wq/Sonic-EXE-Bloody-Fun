@@ -235,6 +235,7 @@
     osc.start(now); osc.stop(now+duration+.01);
   }
   function sfx(name) {
+    if(EXPANSION.soundlessTimer>0)return;
     const custom = customSfx[name];
     if (!muted && custom && custom.readyState >= 2) {
       try { const copy = custom.cloneNode(); copy.volume = custom.volume; copy.play().catch(()=>{}); return; } catch (_) {}
@@ -260,6 +261,7 @@
       subtitleEl.innerHTML='The forest has claimed another runner.';
       messageEl.textContent='FINAL SCORE: '+Math.floor(score)+'   •   RINGS: '+ringCount+'   •   BEST COMBO: x'+bestCombo;
       startBtn.textContent='RUN AGAIN';
+      finishExpansionRun();
     } else if (mode==='paused') {
       titleEl.textContent='PAUSED';
       subtitleEl.textContent='Take a breath. The forest can wait.';
@@ -275,6 +277,7 @@
     boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;thirdBossIntroduced=false;fourthBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
+    resetExpansion();
     embers=[];emberClock=0;verticalEmberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; scoreSigils=[]; particles=[]; trail=[];
     player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
@@ -298,6 +301,7 @@
   function pressKey(code, down) {
     keys[code]=down;
     if (!down || state!=='running') return;
+    if(handleExpansionKey(code))return;
     if(code==='KeyX'||code==='ShiftLeft'||code==='ShiftRight')activateShadowDash();
     if (code==='Space' || code==='ArrowUp' || code==='KeyW') {
       if (player.flight>0) return;
@@ -456,7 +460,7 @@
       particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
     }
   }
-  function activateFlight() { landingGrace=0; flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
+  function activateFlight() { if(EXPANSION.mode==='NO FLIGHT'){awardScore(125);burst(player.x+20,player.y+20,'#74eaff',12);return;} landingGrace=0; flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
   function spawnWorldDetail(){
     const type=Math.floor(Math.random()*3);
     const y=type===2?GROUND-70:105+Math.random()*155;
@@ -794,6 +798,8 @@
     elapsed+=dt; awardScore(dt*(10+speed*.012));
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
     speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
+    if(EXPANSION.timeFractureTimer>0)speed*=.58;
+    if(EXPANSION.overdriveTimer>0)speed=Math.min(900,speed+38);
     // Starts subtly after 500 points and reaches full intensity around 3,500 points.
     // Easing prevents sudden jumps when ring combos award a lot of score at once.
     const targetGlitch = Math.max(0, Math.min(1, (score-500)/(3500-500)));
@@ -924,6 +930,12 @@
     }
     player.w=46;
     if(elapsed>0.1 && Math.floor(elapsed*12)%2===0){trail.push({x:player.x-3,y:player.y+8,h:player.h,life:.25,flight:player.flight>0});}
+    if(EXPANSION.magnetTimer>0){
+      for(const item of rings.concat(emeralds,shields,scoreSigils)){
+        const tx=player.x+player.w/2,ty=player.y+player.h/2,ix=item.x+(item.r||item.w/2),iy=item.y+(item.h||0)/2;
+        const dx=tx-ix,dy=ty-iy;if(Math.hypot(dx,dy)<250){item.x+=dx*Math.min(1,dt*3.2);item.y+=dy*Math.min(1,dt*3.2);}
+      }
+    }
     for(const t of trail){t.x-=speed*.75*dt;t.life-=dt;}
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
@@ -1126,7 +1138,10 @@
     });
     shields=shields.filter(sh=>{
       const box={x:sh.x,y:sh.y+Math.sin(sh.phase)*6,w:sh.w,h:sh.h};
-      if(rectHit(playerBox,box,3)){shieldTimer=Math.max(1,Number(CONFIG.shieldDuration)||9);sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);return false;}
+      if(rectHit(playerBox,box,3)){
+        if(EXPANSION.mode==='ONE LIFE'){awardScore(175);burst(sh.x+15,sh.y+15,'#ff718b',12);return false;}
+        shieldTimer=Math.max(1,Number(CONFIG.shieldDuration)||9);sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);return false;
+      }
       return sh.x>-50;
     });
     scoreSigils=scoreSigils.filter(sigil=>{const box={x:sigil.x,y:sigil.y+Math.sin(sigil.phase)*5,w:sigil.w,h:sigil.h};if(rectHit(playerBox,box,2)){awardScore(150);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,8);sfx('rush');burst(sigil.x+17,sigil.y+17,'#d477ff',28);flash=Math.max(flash,.12);return false;}return sigil.x>-55;});
@@ -1249,6 +1264,7 @@
       glitchPulse=Math.max(glitchPulse,(.24+Math.random()*.58)*glitchLevel);
       glitchClock=.95-glitchLevel*.58+Math.random()*(1.05-glitchLevel*.68);
     }
+    updateExpansion(dt);
   }
   function pixelRect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
   function drawTree(t,offset){
@@ -1941,6 +1957,7 @@
     for(const em of emeralds){const y=em.y+Math.sin(em.phase)*5,x=em.x;if(drawAsset('emerald',x,y,em.w,em.h))continue;ctx.fillStyle='rgba(150,0,18,.28)';ctx.beginPath();ctx.arc(x+14,y+16,27,0,Math.PI*2);ctx.fill();ctx.fillStyle='#a90016';ctx.beginPath();ctx.moveTo(x+14,y);ctx.lineTo(x+28,y+15);ctx.lineTo(x+14,y+32);ctx.lineTo(x,y+15);ctx.closePath();ctx.fill();ctx.strokeStyle='#d01b2b';ctx.lineWidth=2;ctx.stroke();pixelRect(x+11,y+7,5,15,'#c62a34');}
     for(const sh of shields){const y=sh.y+Math.sin(sh.phase)*6,x=sh.x;if(drawAsset('shield',x,y,sh.w,sh.h))continue;ctx.fillStyle='rgba(112,0,12,.28)';ctx.beginPath();ctx.arc(x+15,y+15,25,0,Math.PI*2);ctx.fill();ctx.fillStyle='#690008';ctx.beginPath();ctx.moveTo(x+15,y);ctx.lineTo(x+29,y+7);ctx.lineTo(x+26,y+23);ctx.lineTo(x+15,y+30);ctx.lineTo(x+4,y+23);ctx.lineTo(x+1,y+7);ctx.closePath();ctx.fill();ctx.strokeStyle='#bd1523';ctx.lineWidth=3;ctx.stroke();pixelRect(x+13,y+7,4,15,'#d02a32');}
     for(const sigil of scoreSigils){const x=sigil.x,y=sigil.y+Math.sin(sigil.phase)*5,pulse=.72+.28*Math.sin(sigil.phase*2);ctx.save();ctx.translate(x+17,y+17);ctx.rotate(sigil.phase*.35);ctx.globalCompositeOperation='lighter';ctx.shadowColor='#d477ff';ctx.shadowBlur=20;ctx.fillStyle='#140b28';ctx.strokeStyle='#d477ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(15*pulse,0);ctx.lineTo(0,17*pulse);ctx.lineTo(-15*pulse,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff1ff';ctx.fillRect(-3,-7,6,14);ctx.fillStyle='#ffdc69';ctx.fillRect(-1,-4,2,8);ctx.restore();ctx.fillStyle='#f2d9ff';ctx.font='bold 9px Consolas, monospace';ctx.textAlign='center';ctx.fillText('x1.5',x+17,y+31);ctx.textAlign='left';}
+    drawExpansionWorld();
     obstacles.forEach(drawObstacle);
     drawBoss();
     drawBossProjectiles();
@@ -1997,8 +2014,663 @@
     if(flash>0){ctx.fillStyle=`rgba(230,0,35,${flash*.35})`;ctx.fillRect(0,0,W,H);}
     drawGlitchOverlay();
     drawHighScoreGlitchLayers();
+    drawExpansionOverlay();
     ctx.restore();
   }
+
+  /* === BLOODY FLIGHT EXPANSION PACK === */
+  // Additive systems are deliberately isolated from the original runner, ring, flight and boss code.
+  const EXPANSION_ENEMIES = [
+    {id:'observer',name:'Observer',unlock:25000,color:'#a9d7ff',w:52,h:58,points:260,kind:'hover'},
+    {id:'falseSonic',name:'False Sonic',unlock:35000,color:'#ff315b',w:58,h:50,points:320,kind:'dash'},
+    {id:'gravityMaw',name:'Gravity Maw',unlock:50000,color:'#b77cff',w:78,h:78,points:390,kind:'pull'},
+    {id:'swarmEntity',name:'Swarm Entity',unlock:65000,color:'#e6f56b',w:64,h:48,points:430,kind:'swarm'},
+    {id:'mimicRelic',name:'Mimic Relic',unlock:80000,color:'#e9b76e',w:54,h:58,points:480,kind:'mimic'},
+    {id:'riftSerpent',name:'Rift Serpent',unlock:100000,color:'#54e4e9',w:112,h:44,points:560,kind:'serpent'},
+    {id:'afterimageHunter',name:'Afterimage Hunter',unlock:120000,color:'#e08cff',w:70,h:62,points:640,kind:'blink'},
+    {id:'corebreaker',name:'Corebreaker',unlock:135000,color:'#ff744c',w:88,h:92,points:760,kind:'heavy'}
+  ];
+  const EXPANSION_HAZARDS = [
+    {id:'laser',name:'Laser Grid',unlock:30000},
+    {id:'collapse',name:'Collapsing Ground',unlock:45000},
+    {id:'gravity',name:'Gravity Zone',unlock:60000},
+    {id:'corridor',name:'Spike Corridor',unlock:80000},
+    {id:'gate',name:'Reality Gate',unlock:100000}
+  ];
+  const EXPANSION_STORAGE_KEY='bloodyFlightExpansion_v1';
+  let EXPANSION_STORE={achievements:[],codex:[],best:0,ghost:[]};
+  try{
+    const saved=JSON.parse(localStorage.getItem(EXPANSION_STORAGE_KEY)||'{}');
+    if(saved&&typeof saved==='object')EXPANSION_STORE=Object.assign(EXPANSION_STORE,saved);
+  }catch(_){}
+  if(!Array.isArray(EXPANSION_STORE.achievements))EXPANSION_STORE.achievements=[];
+  if(!Array.isArray(EXPANSION_STORE.codex))EXPANSION_STORE.codex=[];
+  if(!Array.isArray(EXPANSION_STORE.ghost))EXPANSION_STORE.ghost=[];
+  function saveExpansionStore(){
+    try{localStorage.setItem(EXPANSION_STORAGE_KEY,JSON.stringify(EXPANSION_STORE));}catch(_){}
+  }
+  const EXPANSION={
+    mode:'ENDLESS',dailySeed:0,rng:0,elapsed:0,spawnClock:7,hazardClock:12,pickupClock:18,
+    enemies:[],hazards:[],pickups:[],shots:[],echoWaves:[],boss:null,pursuit:null,
+    phaseTimer:0,phaseCooldown:0,timeFractureTimer:0,timeFractureCooldown:0,
+    echoDashTimer:0,echoDashCooldown:0,magnetTimer:0,magnetCooldown:0,
+    reboundCharges:0,reboundCooldown:0,overdriveTimer:0,overdriveCooldown:0,
+    glitchShieldTimer:0,glitchShieldCooldown:0,voidStepTimer:0,voidStepCooldown:0,
+    soundlessTimer:0,wasSoundless:false,scoreGlitchTimer:0,fakeScore:0,
+    falseOverTimer:0,memoryFlashTimer:0,shadowPursuitClock:0,
+    ringBank:0,lastBankRingCount:0,perfectStreak:0,damageCount:0,
+    nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
+    runSamples:[],ghostSamples:[],ghostClock:0,adaptiveFactor:1,
+    boss150Done:false,boss175Done:false,boss200Done:false,boss250Done:false,
+    collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
+    menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
+  };
+  const EXPANSION_MODE_NAMES=['ENDLESS','DAILY SEED','BOSS RUSH','NO FLIGHT','ONE LIFE','CORRUPTED'];
+  function expansionSeedForToday(){
+    const d=new Date(),str=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    let h=2166136261;
+    for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}
+    return h>>>0;
+  }
+  function expansionRandom(){
+    if(EXPANSION.mode!=='DAILY SEED')return Math.random();
+    let x=EXPANSION.rng>>>0;
+    x^=x<<13;x^=x>>>17;x^=x<<5;EXPANSION.rng=x>>>0;
+    return (EXPANSION.rng>>>0)/4294967296;
+  }
+  function expansionRememberEntity(name){
+    if(!name||EXPANSION_STORE.codex.includes(name))return;
+    EXPANSION_STORE.codex.push(name);saveExpansionStore();
+  }
+  function expansionAchievement(id,label){
+    if(EXPANSION_STORE.achievements.includes(id))return;
+    EXPANSION_STORE.achievements.push(id);
+    EXPANSION.achievementToast=label||id.toUpperCase();
+    EXPANSION.achievementToastTimer=3.2;
+    saveExpansionStore();
+    sfx('rush');
+  }
+  function resetExpansion(){
+    EXPANSION.elapsed=0;EXPANSION.spawnClock=6+expansionRandom()*3;
+    EXPANSION.hazardClock=11+expansionRandom()*5;EXPANSION.pickupClock=17+expansionRandom()*8;
+    EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.shots=[];EXPANSION.echoWaves=[];
+    EXPANSION.boss=null;EXPANSION.pursuit=null;
+    EXPANSION.phaseTimer=0;EXPANSION.phaseCooldown=0;EXPANSION.timeFractureTimer=0;EXPANSION.timeFractureCooldown=0;
+    EXPANSION.echoDashTimer=0;EXPANSION.echoDashCooldown=0;EXPANSION.magnetTimer=0;EXPANSION.magnetCooldown=0;
+    EXPANSION.reboundCharges=0;EXPANSION.reboundCooldown=0;EXPANSION.overdriveTimer=0;EXPANSION.overdriveCooldown=0;
+    EXPANSION.glitchShieldTimer=0;EXPANSION.glitchShieldCooldown=0;EXPANSION.voidStepTimer=0;EXPANSION.voidStepCooldown=0;
+    EXPANSION.soundlessTimer=0;EXPANSION.wasSoundless=false;EXPANSION.scoreGlitchTimer=0;EXPANSION.fakeScore=0;
+    EXPANSION.falseOverTimer=0;EXPANSION.memoryFlashTimer=0;EXPANSION.shadowPursuitClock=28+expansionRandom()*12;
+    EXPANSION.ringBank=0;EXPANSION.lastBankRingCount=0;EXPANSION.perfectStreak=0;EXPANSION.damageCount=0;
+    EXPANSION.nearMisses=0;EXPANSION.enemyKills=0;EXPANSION.pickupsCollected=0;EXPANSION.bossesDefeated=0;
+    EXPANSION.runSamples=[];EXPANSION.ghostClock=0;EXPANSION.ghostSamples=EXPANSION_STORE.ghost.slice(0,1500);
+    EXPANSION.adaptiveFactor=1;EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;
+    EXPANSION.boss200Done=false;EXPANSION.boss250Done=false;EXPANSION.collapseAnnounced=false;
+    EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
+    EXPANSION.dailySeed=expansionSeedForToday();
+    EXPANSION.rng=EXPANSION.dailySeed||1;
+  }
+  function finishExpansionRun(){
+    if(EXPANSION_STORE.best<Math.floor(score))EXPANSION_STORE.best=Math.floor(score);
+    const compact=EXPANSION.runSamples.slice(-1500);
+    if(compact.length>20)EXPANSION_STORE.ghost=compact;
+    if(score>=10000)expansionAchievement('ten-thousand','TEN THOUSAND');
+    if(score>=50000)expansionAchievement('fifty-thousand','FIFTY THOUSAND');
+    if(score>=100000)expansionAchievement('one-hundred-thousand','ONE HUNDRED THOUSAND');
+    if(score>=125000)expansionAchievement('collapse-era','THE COLLAPSE ERA');
+    if(EXPANSION.enemyKills>=25)expansionAchievement('hunter','HUNTER');
+    if(EXPANSION.bossesDefeated>=3)expansionAchievement('boss-breaker','BOSS BREAKER');
+    if(EXPANSION.nearMisses>=10)expansionAchievement('close-call','CLOSE CALL');
+    if(EXPANSION.pickupsCollected>=8)expansionAchievement('collector','COLLECTOR');
+    saveExpansionStore();
+    refreshExpansionMenu();
+  }
+  function expansionPanelShow(kind){
+    const panel=EXPANSION.menuPanel;
+    if(!panel)return;
+    let html='';
+    if(kind==='CODEX'){
+      const rows=EXPANSION_ENEMIES.map(d=>{
+        const unlocked=score>=d.unlock||EXPANSION_STORE.codex.includes(d.name);
+        return '<div style="padding:5px;border-bottom:1px solid #49202d;color:'+(unlocked?d.color:'#8b7880')+'">'+(unlocked?d.name:'???  ('+(d.unlock/1000)+'K)')+'</div>';
+      }).join('');
+      const found=EXPANSION_STORE.codex.map(n=>'<span style="color:#d7b5ff">'+n+'</span>').join(' · ')||'No entries recorded yet.';
+      html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
+    }else if(kind==='ACHIEVEMENTS'){
+      const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['unwritten','THE UNWRITTEN']];
+      html='<b>ACHIEVEMENTS  '+EXPANSION_STORE.achievements.length+'/'+labels.length+'</b>'+labels.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
+    }
+    panel.innerHTML=html;
+    panel.style.display=kind?'block':'none';
+  }
+  function refreshExpansionMenu(){
+    if(!EXPANSION.menuButtons)return;
+    EXPANSION.menuButtons.mode.textContent='MODE: '+EXPANSION_MODE_NAMES[EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode)] ;
+    EXPANSION.menuButtons.mode.title='Cycle through challenge modes';
+    EXPANSION.menuButtons.mode.onclick=()=>{
+      const i=EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode);
+      EXPANSION.mode=EXPANSION_MODE_NAMES[(i+1)%EXPANSION_MODE_NAMES.length];
+      expansionPanelShow(null);refreshExpansionMenu();
+    };
+  }
+  function initExpansionMenu(){
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin:7px 0;max-width:700px;';
+    function makeButton(label){
+      const b=document.createElement('button');b.textContent=label;
+      b.style.cssText='font:700 11px Consolas,monospace;padding:7px 10px;color:#f7dbe5;background:#250d19;border:1px solid #9c435d;border-radius:4px;';
+      wrap.appendChild(b);return b;
+    }
+    const mode=makeButton('MODE: ENDLESS'),codex=makeButton('ENTITY CODEX'),achievements=makeButton('ACHIEVEMENTS');
+    const panel=document.createElement('div');
+    panel.style.cssText='display:none;max-height:145px;overflow:auto;width:min(90%,620px);text-align:left;padding:9px 12px;margin:4px 0 8px;background:rgba(8,3,10,.96);border:1px solid #6f2943;color:#f0dce3;font:11px Consolas,monospace;line-height:1.35;';
+    codex.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'CODEX');
+    achievements.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ACHIEVEMENTS');
+    EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements};
+    overlay.insertBefore(wrap,startBtn);
+    overlay.insertBefore(panel,startBtn);
+    refreshExpansionMenu();
+  }
+  function handleExpansionKey(code){
+    if(state!=='running')return false;
+    if(code==='KeyQ'&&EXPANSION.phaseCooldown<=0){
+      EXPANSION.phaseTimer=.72;EXPANSION.phaseCooldown=8.5;player.y=Math.max(24,player.y-22);
+      burst(player.x+22,player.y+25,'#8be9ff',18);sfx('shield');return true;
+    }
+    if(code==='KeyE'&&EXPANSION.timeFractureCooldown<=0){
+      EXPANSION.timeFractureTimer=3.2;EXPANSION.timeFractureCooldown=13;
+      burst(player.x+22,player.y+25,'#65c9ff',22);sfx('rush');return true;
+    }
+    if(code==='KeyC'&&EXPANSION.echoDashCooldown<=0){
+      EXPANSION.echoDashTimer=.55;EXPANSION.echoDashCooldown=7.5;
+      EXPANSION.echoWaves.push({x:player.x+player.w,y:player.y+player.h*.5,life:1.1});
+      burst(player.x+22,player.y+25,'#d477ff',24);sfx('smash');return true;
+    }
+    if(code==='KeyV'&&EXPANSION.magnetCooldown<=0){
+      EXPANSION.magnetTimer=6;EXPANSION.magnetCooldown=15;sfx('emerald');return true;
+    }
+    if(code==='KeyB'&&EXPANSION.reboundCooldown<=0){
+      EXPANSION.reboundCharges=1;EXPANSION.reboundCooldown=16;burst(player.x+22,player.y+25,'#ffd166',20);sfx('shield');return true;
+    }
+    if(code==='KeyR'&&EXPANSION.overdriveCooldown<=0){
+      EXPANSION.overdriveTimer=7;EXPANSION.overdriveCooldown=18;burst(player.x+22,player.y+25,'#ff754d',24);sfx('rush');return true;
+    }
+    if(code==='KeyG'&&EXPANSION.glitchShieldCooldown<=0){
+      EXPANSION.glitchShieldTimer=5;EXPANSION.glitchShieldCooldown=17;burst(player.x+22,player.y+25,'#53ecdf',22);sfx('shield');return true;
+    }
+    if(code==='KeyF'&&EXPANSION.voidStepCooldown<=0){
+      const target=player.y<GROUND-player.h-90?Math.min(GROUND-player.h,player.y+112):Math.max(28,player.y-112);
+      player.y=target;player.vy=0;EXPANSION.voidStepTimer=.8;EXPANSION.voidStepCooldown=10;
+      burst(player.x+22,player.y+25,'#a36aff',26);sfx('flight');return true;
+    }
+    return false;
+  }
+  function expansionProtected(){
+    return landingGrace>0||EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||
+      EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||
+      player.flight>0||dashTimer>0||shieldTimer>0;
+  }
+  function expansionHit(x,y,color){
+    if(state!=='running'||landingGrace>0)return false;
+    if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||
+       EXPANSION.voidStepTimer>0||player.flight>0||dashTimer>0){
+      awardScore(45);burst(x,y,color||'#b477ff',13);EXPANSION.enemyKills++;return true;
+    }
+    if(EXPANSION.reboundCharges>0){
+      EXPANSION.reboundCharges=0;awardScore(220);burst(x,y,'#ffd166',25);EXPANSION.perfectStreak++;
+      return true;
+    }
+    if(shieldTimer>0){shieldTimer=0;awardScore(80);burst(x,y,'#ff526c',18);sfx('shieldBreak');return true;}
+    if(EXPANSION.hitCooldown>0)return false;
+    EXPANSION.damageCount++;EXPANSION.perfectStreak=0;
+    state='over';stopMusic();flash=.8;shake=.26;sfx('hit');setOverlay('over');
+    return false;
+  }
+  function spawnExpansionEnemy(){
+    const unlocked=EXPANSION_ENEMIES.filter(d=>score>=d.unlock);
+    if(!unlocked.length||EXPANSION.enemies.length>=5)return;
+    const d=unlocked[Math.floor(expansionRandom()*unlocked.length)];
+    const y=GROUND-165-expansionRandom()*Math.max(20,GROUND-245);
+    const bounty=expansionRandom()<.16;
+    const e={id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
+      x:W+70,y:d.kind==='heavy'?GROUND-d.h:y,baseY:y,phase:expansionRandom()*6,
+      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false};
+    EXPANSION.enemies.push(e);expansionRememberEntity(d.name);
+  }
+  function spawnExpansionHazard(){
+    const unlocked=EXPANSION_HAZARDS.filter(d=>score>=d.unlock);
+    if(!unlocked.length||EXPANSION.hazards.length>=3)return;
+    const d=unlocked[Math.floor(expansionRandom()*unlocked.length)];
+    const h={id:d.id,name:d.name,x:W+30,w:150,h:GROUND,phase:0,warning:1.15,active:1.4,passed:false};
+    if(d.id==='collapse'){h.w=116;h.y=GROUND-4;}
+    if(d.id==='gravity'){h.w=170;h.y=75+expansionRandom()*110;h.h=150;h.pull=expansionRandom()<.5?-1:1;}
+    if(d.id==='corridor'){h.w=124;h.gapY=90+expansionRandom()*120;h.gapH=125;}
+    if(d.id==='gate'){h.w=42;h.gapY=70+expansionRandom()*145;h.gapH=100;}
+    EXPANSION.hazards.push(h);
+  }
+  function spawnExpansionPickup(){
+    const kind=expansionRandom()<.68?'riskChest':'jackpotCrystal';
+    const y=80+expansionRandom()*Math.max(60,GROUND-170);
+    EXPANSION.pickups.push({kind,x:W+35,y,w:kind==='riskChest'?38:30,h:kind==='riskChest'?34:34,phase:expansionRandom()*6});
+  }
+  function startExpansionBoss(name,duration,reward,kind){
+    if(EXPANSION.boss||state!=='running')return;
+    EXPANSION.boss={name:name,timer:duration,duration:duration,reward:reward,kind:kind||'standard',
+      phase:0,attackClock:1.3,weaknessTimer:0,weaknessClock:3.8,cores:3,volley:0,summonClock:5.5};
+    EXPANSION.shots=[];
+    bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
+    bossIntroTimer=3.0;shake=.28;flash=.24;
+    burst(W-165,120,'#d477ff',30);sfx('smash');
+  }
+  function updateExpansionBoss(dt,playerBox){
+    const b=EXPANSION.boss;if(!b)return;
+    b.timer-=dt;b.phase+=dt*(b.kind==='final'?2.3:1.65);
+    b.weaknessClock-=dt;
+    if(b.weaknessClock<=0&&b.weaknessTimer<=0){b.weaknessTimer=2.15;b.weaknessClock=7.2;}
+    if(b.weaknessTimer>0)b.weaknessTimer=Math.max(0,b.weaknessTimer-dt);
+    const stage=b.timer<b.duration*.34?3:b.timer<b.duration*.68?2:1;
+    b.stage=stage;
+    b.attackClock-=dt;
+    if(b.attackClock<=0){
+      b.volley++;
+      const center=Math.max(75,Math.min(GROUND-90,playerBox.y+playerBox.h*.5));
+      const offsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
+      const gapIndex=b.volley%offsets.length;
+      offsets.forEach((off,i)=>{
+        if(i===gapIndex)return;
+        const y=Math.max(28,Math.min(GROUND-22,center+off));
+        EXPANSION.shots.push({x:W-115,y:y,w:23,h:20,speed:stage===3?520:stage===2?440:365,phase:0,color:b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':'#ff6d9b'});
+      });
+      b.attackClock=stage===3?1.18:stage===2?1.55:2.0;
+      burst(W-115,b.timer%2?70:130,b.kind==='final'?'#f2edff':'#bd6bff',9);
+    }
+    if(b.kind==='last'||b.kind==='final'){
+      b.summonClock-=dt;
+      if(b.summonClock<=0){spawnExpansionEnemy();b.summonClock=b.kind==='final'?4.3:6.1;}
+    }
+    for(let i=EXPANSION.shots.length-1;i>=0;i--){
+      const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt;sh.phase+=dt*6;sh.y+=Math.sin(sh.phase)*12;
+      const box={x:sh.x,y:sh.y,w:sh.w,h:sh.h};
+      if(rectHit(playerBox,box,3)){
+        if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||player.flight>0||dashTimer>0){
+          if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
+          awardScore(60);burst(sh.x,sh.y,sh.color,12);EXPANSION.shots.splice(i,1);continue;
+        }
+        if(shieldTimer>0){shieldTimer=0;burst(sh.x,sh.y,'#ff526c',15);EXPANSION.shots.splice(i,1);continue;}
+        expansionHit(sh.x,sh.y,sh.color);EXPANSION.shots.splice(i,1);continue;
+      }
+      if(sh.x<-40)EXPANSION.shots.splice(i,1);
+    }
+    for(let i=EXPANSION.echoWaves.length-1;i>=0;i--){
+      const wave=EXPANSION.echoWaves[i];wave.x+=720*dt;wave.life-=dt;
+      if(wave.life<=0){EXPANSION.echoWaves.splice(i,1);continue;}
+      if(b.weaknessTimer>0&&wave.x>b.x-125&&wave.x<b.x+35&&b.cores>0){
+        b.cores--;wave.life=0;awardScore(650);burst(b.x-65,b.y||120,'#ffe17a',28);
+        if(b.cores<=0)b.timer=0.1;
+      }
+    }
+    b.x=W-190;b.y=65+Math.sin(b.phase)*42;
+    if(b.timer<=0){
+      EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.bossesDefeated++;
+      awardScore(b.reward);bossClearMessage=b.name.toUpperCase()+' DEFEATED  +'+b.reward;bossClearTimer=4;
+      flash=.5;shake=.3;burst(W-190,115,'#f4f0ff',42);
+      if(b.kind==='absolute')expansionAchievement('absolute','THE ABSOLUTE');
+      if(b.kind==='last')expansionAchievement('last-signal','LAST SIGNAL');
+      if(b.kind==='final')expansionAchievement('unwritten','THE UNWRITTEN');
+      expansionAchievement('boss-breaker','BOSS BREAKER');
+    }
+  }
+  function updateExpansion(dt){
+    if(state!=='running')return;
+    EXPANSION.elapsed+=dt;
+    EXPANSION.phaseTimer=Math.max(0,EXPANSION.phaseTimer-dt);
+    EXPANSION.phaseCooldown=Math.max(0,EXPANSION.phaseCooldown-dt);
+    EXPANSION.timeFractureTimer=Math.max(0,EXPANSION.timeFractureTimer-dt);
+    EXPANSION.timeFractureCooldown=Math.max(0,EXPANSION.timeFractureCooldown-dt);
+    EXPANSION.echoDashTimer=Math.max(0,EXPANSION.echoDashTimer-dt);
+    EXPANSION.echoDashCooldown=Math.max(0,EXPANSION.echoDashCooldown-dt);
+    EXPANSION.magnetTimer=Math.max(0,EXPANSION.magnetTimer-dt);
+    EXPANSION.magnetCooldown=Math.max(0,EXPANSION.magnetCooldown-dt);
+    EXPANSION.reboundCooldown=Math.max(0,EXPANSION.reboundCooldown-dt);
+    EXPANSION.overdriveTimer=Math.max(0,EXPANSION.overdriveTimer-dt);
+    EXPANSION.overdriveCooldown=Math.max(0,EXPANSION.overdriveCooldown-dt);
+    EXPANSION.glitchShieldTimer=Math.max(0,EXPANSION.glitchShieldTimer-dt);
+    EXPANSION.glitchShieldCooldown=Math.max(0,EXPANSION.glitchShieldCooldown-dt);
+    EXPANSION.voidStepTimer=Math.max(0,EXPANSION.voidStepTimer-dt);
+    EXPANSION.voidStepCooldown=Math.max(0,EXPANSION.voidStepCooldown-dt);
+    EXPANSION.soundlessTimer=Math.max(0,EXPANSION.soundlessTimer-dt);
+    if(EXPANSION.soundlessTimer>0&&!EXPANSION.wasSoundless){stopMusic();EXPANSION.wasSoundless=true;}
+    if(EXPANSION.soundlessTimer===0&&EXPANSION.wasSoundless){EXPANSION.wasSoundless=false;if(!muted)startMusic();}
+    EXPANSION.scoreGlitchTimer=Math.max(0,EXPANSION.scoreGlitchTimer-dt);
+    EXPANSION.falseOverTimer=Math.max(0,EXPANSION.falseOverTimer-dt);
+    EXPANSION.memoryFlashTimer=Math.max(0,EXPANSION.memoryFlashTimer-dt);
+    EXPANSION.achievementToastTimer=Math.max(0,EXPANSION.achievementToastTimer-dt);
+    if(EXPANSION.achievementToastTimer===0)EXPANSION.achievementToast='';
+    EXPANSION.spawnClock-=dt;EXPANSION.hazardClock-=dt;EXPANSION.pickupClock-=dt;
+    if(score>=25000&&EXPANSION.spawnClock<=0){
+      spawnExpansionEnemy();
+      const difficulty=score>=225000?1.0:score>=125000?1.12:1.35;
+      EXPANSION.spawnClock=(7+expansionRandom()*4)*difficulty*EXPANSION.adaptiveFactor;
+    }
+    if(score>=30000&&EXPANSION.hazardClock<=0){
+      spawnExpansionHazard();
+      const difficulty=score>=225000?1.0:score>=125000?1.2:1.55;
+      EXPANSION.hazardClock=(10+expansionRandom()*5)*difficulty;
+    }
+    if(score>=30000&&EXPANSION.pickupClock<=0){
+      spawnExpansionPickup();EXPANSION.pickupClock=23+expansionRandom()*13;
+    }
+    // The Collapse Era begins after 125K and progressively turns the world into a broken signal.
+    if(score>=125000&&!EXPANSION.collapseAnnounced){
+      EXPANSION.collapseAnnounced=true;bossIntroMessage='THE COLLAPSE ERA — REALITY IS UNRAVELING';
+      bossIntroTimer=4;flash=.42;shake=.25;expansionAchievement('collapse-era','THE COLLAPSE ERA');
+    }
+    if(score>=135000&&EXPANSION.shadowPursuitClock<=0&&!EXPANSION.pursuit){
+      EXPANSION.pursuit={x:-90,y:GROUND-74,w:68,h:62,phase:0};
+      EXPANSION.shadowPursuitClock=38;
+    }else EXPANSION.shadowPursuitClock-=dt;
+    if(EXPANSION.pursuit){
+      const p=EXPANSION.pursuit;p.phase+=dt*5;p.x+=(player.x-85-p.x)*Math.min(1,dt*.38);
+      p.y=player.y+Math.sin(p.phase)*18;
+      if(rectHit({x:p.x,y:p.y,w:p.w,h:p.h},{x:player.x,y:player.y,w:player.w,h:player.h},5)){
+        if(expansionProtected()){burst(p.x+30,p.y+30,'#a96aff',20);EXPANSION.pursuit=null;awardScore(300);}
+        else{expansionHit(p.x+30,p.y+30,'#a96aff');if(state==='over')return;}
+      }
+      if(p.x>W+80)EXPANSION.pursuit=null;
+    }
+    // New 2,000-point entities are joined by the Collapse-era roster rather than replacing it.
+    const nextBosses=[
+      {at:150000,key:'boss150Done',name:'THE ABSOLUTE',duration:34,reward:5600,kind:'absolute'},
+      {at:175000,key:'boss175Done',name:'NULL SOVEREIGN — REMATCH',duration:26,reward:4200,kind:'rematch'},
+      {at:200000,key:'boss200Done',name:'THE LAST SIGNAL',duration:38,reward:7600,kind:'last'},
+      {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'}
+    ];
+    for(const b of nextBosses){
+      if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
+        EXPANSION[b.key]=true;startExpansionBoss(b.name,b.duration,b.reward,b.kind);break;
+      }
+    }
+    if(score>=225000&&!EXPANSION.nightmareAnnounced){
+      EXPANSION.nightmareAnnounced=true;bossIntroMessage='225K — THE NIGHTMARE HAS NO HORIZON';
+      bossIntroTimer=3.5;flash=.35;expansionAchievement('nightmare','NIGHTMARE SURVIVOR');
+    }
+    if(EXPANSION.mode==='BOSS RUSH'&&score>=15000&&!EXPANSION.boss&&!EXPANSION.bossRushNext)EXPANSION.bossRushNext=15000;
+    if(EXPANSION.mode==='BOSS RUSH'&&score>=EXPANSION.bossRushNext&&!EXPANSION.boss){
+      startExpansionBoss('BOSS RUSH '+(Math.floor(EXPANSION.bossRushNext/15000)),19,1250,'rush');
+      EXPANSION.bossRushNext=(EXPANSION.bossRushNext||15000)+15000;
+    }
+    // Time Fracture slows the independent expansion hazards/projectiles without altering core physics.
+    const extScale=EXPANSION.timeFractureTimer>0?.48:1;
+    const playerBox={x:player.x+5,y:player.y+4,w:player.w-10,h:player.h-7};
+    for(let i=EXPANSION.enemies.length-1;i>=0;i--){
+      const e=EXPANSION.enemies[i];e.phase+=dt*extScale*3;
+      e.x-=speed*dt*extScale*(e.kind==='dash'?1.48:e.kind==='heavy'?.88:1.16);
+      if(e.kind==='hover')e.y=e.baseY+Math.sin(e.phase)*25;
+      if(e.kind==='dash'&&e.x<W+430)e.y+=(player.y+Math.sin(e.phase*2)*35-e.y)*Math.min(1,dt*extScale*.8);
+      if(e.kind==='pull'&&e.x<W+390){const target=player.y-12;e.y+=(target-e.y)*Math.min(1,dt*extScale*.28);}
+      if(e.kind==='swarm')e.y=e.baseY+Math.sin(e.phase*2.4)*32;
+      if(e.kind==='mimic')e.y=e.baseY+Math.sin(e.phase*.9)*9;
+      if(e.kind==='serpent')e.y=e.baseY+Math.sin(e.phase*1.7)*58;
+      if(e.kind==='blink'&&Math.sin(e.phase*1.25)>.97)e.y=player.y-10;
+      if(e.kind==='heavy')e.y=GROUND-e.h+Math.sin(e.phase)*3;
+      const box={x:e.x+7,y:e.y+6,w:e.w-14,h:e.h-12};
+      if(rectHit(playerBox,box,4)){
+        if(player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){
+          awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;EXPANSION.perfectStreak++;
+          if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
+          burst(e.x+e.w/2,e.y+e.h/2,e.color,25);EXPANSION.enemies.splice(i,1);continue;
+        }
+        if(expansionProtected()){
+          if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
+          burst(e.x+e.w/2,e.y+e.h/2,e.color,16);EXPANSION.enemies.splice(i,1);awardScore(65);continue;
+        }
+        expansionHit(e.x+e.w/2,e.y+e.h/2,e.color);
+        if(state==='over')return;
+      }
+      if(!e.passed&&e.x+e.w<player.x){
+        e.passed=true;EXPANSION.perfectStreak++;EXPANSION.nearMisses++;
+        awardScore(e.bounty?170:65);
+        if(EXPANSION.perfectStreak>=8){awardScore(320);EXPANSION.perfectStreak=0;sfx('rush');}
+      }
+      if(e.x<-160)EXPANSION.enemies.splice(i,1);
+    }
+    for(let i=EXPANSION.hazards.length-1;i>=0;i--){
+      const h=EXPANSION.hazards[i];h.x-=speed*dt*extScale*1.04;h.phase+=dt*4;
+      if(h.warning>0)h.warning=Math.max(0,h.warning-dt);
+      else h.active=Math.max(0,h.active-dt);
+      if(h.id==='gravity'&&h.x<player.x+player.w&&h.x+h.w>player.x&&h.y<player.y+player.h&&h.y+h.h>player.y&&EXPANSION.phaseTimer<=0){
+        player.vy+=Math.sin(h.phase*1.2)*165*dt;
+        player.y=Math.max(25,Math.min(GROUND-player.h,player.y));
+      }
+      let dangerous=false;
+      if(h.id==='laser'&&h.warning<=0&&h.active>0)dangerous=playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+22;
+      if(h.id==='collapse'&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w&&player.y+player.h>=GROUND-17)dangerous=true;
+      if(h.id==='corridor'&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w){
+        dangerous=playerBox.y<h.gapY||playerBox.y+playerBox.h>h.gapY+h.gapH;
+      }
+      if(h.id==='gate'&&h.x<player.x+player.w&&h.x+h.w>player.x){
+        dangerous=playerBox.y<h.gapY||playerBox.y+playerBox.h>h.gapY+h.gapH;
+      }
+      if(dangerous){
+        if(expansionProtected()){burst(h.x+h.w/2,player.y+player.h/2,'#ffb45f',15);h.active=0;}
+        else{expansionHit(h.x+h.w/2,player.y+player.h/2,'#ff7654');if(state==='over')return;}
+      }
+      if(!h.passed&&h.x+h.w<player.x){h.passed=true;EXPANSION.perfectStreak++;}
+      if(h.x<-220||h.active<=0&&h.warning<=0&&h.passed)EXPANSION.hazards.splice(i,1);
+    }
+    // Risk Chest: a large score payout with a chance of briefly corrupting the run.
+    // Jackpot Crystal: a rare bonus with an immediate score burst and multiplier window.
+    for(let i=EXPANSION.pickups.length-1;i>=0;i--){
+      const p=EXPANSION.pickups[i];p.x-=speed*dt*.95;p.phase+=dt*4;
+      if(EXPANSION.magnetTimer>0){
+        const dx=player.x+player.w/2-(p.x+p.w/2),dy=player.y+player.h/2-(p.y+p.h/2);
+        p.x+=dx*Math.min(1,dt*3.5);p.y+=dy*Math.min(1,dt*3.5);
+      }
+      if(rectHit(playerBox,{x:p.x,y:p.y,w:p.w,h:p.h},2)){
+        EXPANSION.pickupsCollected++;
+        if(p.kind==='riskChest'){
+          if(expansionRandom()<.68){awardScore(850+Math.floor(expansionRandom()*1050));scoreMultiplierTimer=Math.max(scoreMultiplierTimer,4);}
+          else{EXPANSION.scoreGlitchTimer=2.4;EXPANSION.soundlessTimer=1.2;glitchPulse=Math.max(glitchPulse,.7);}
+        }else{
+          awardScore(1800);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,9);
+          expansionAchievement('jackpot','JACKPOT');burst(p.x+15,p.y+17,'#ffe17a',30);
+        }
+        burst(p.x+p.w/2,p.y+p.h/2,p.kind==='riskChest'?'#e9b76e':'#ffe17a',22);
+        EXPANSION.pickups.splice(i,1);continue;
+      }
+      if(p.x<-70)EXPANSION.pickups.splice(i,1);
+    }
+    // Ring Bank stores every twentieth collected ring as a separate bonus.
+    if(ringCount-EXPANSION.lastBankRingCount>=20){
+      const banks=Math.floor((ringCount-EXPANSION.lastBankRingCount)/20);
+      EXPANSION.lastBankRingCount+=banks*20;EXPANSION.ringBank+=banks*20;awardScore(banks*350);
+      burst(player.x+20,player.y+15,'#ffd166',18);
+    }
+    // Near-miss scoring also applies to original enemies, without changing their collision rules.
+    for(const o of obstacles){
+      if(!o.expNearMiss&&o.x+o.w<player.x&&o.x+o.w>player.x-speed*dt*2.2){
+        const oy=o.y+(o.h/2),py=player.y+player.h/2;
+        if(Math.abs(oy-py)<Math.max(52,o.h*.78)){
+          o.expNearMiss=true;EXPANSION.nearMisses++;awardScore(45);EXPANSION.perfectStreak++;
+        }
+      }
+    }
+    if(EXPANSION.perfectStreak>=8){EXPANSION.perfectStreak=0;awardScore(300);expansionAchievement('clean-run','PERFECT STREAK');}
+    // Adaptive Difficulty carefully nudges only the expansion spawn cadence.
+    EXPANSION.adaptiveFactor=Math.max(.78,Math.min(1.28,1.12-EXPANSION.nearMisses*.002+EXPANSION.damageCount*.045));
+    // Seven visual horror events: none change the true game state or overwrite the real score.
+    if(score>=35000&&EXPANSION.scoreGlitchTimer<=0&&expansionRandom()<.0015){
+      EXPANSION.scoreGlitchTimer=1.8;EXPANSION.fakeScore=Math.floor(score+(expansionRandom()-.5)*9000);
+    }
+    if(score>=50000&&EXPANSION.falseOverTimer<=0&&expansionRandom()<.0008)EXPANSION.falseOverTimer=.65;
+    if(score>=45000&&EXPANSION.memoryFlashTimer<=0&&expansionRandom()<.00065)EXPANSION.memoryFlashTimer=2.0;
+    if(score>=55000&&EXPANSION.soundlessTimer<=0&&expansionRandom()<.00035)EXPANSION.soundlessTimer=2.2;
+    if(score>=60000&&EXPANSION.elapsed>20&&EXPANSION.ghostSamples.length>0&&expansionRandom()<.00025)EXPANSION.falseOverTimer=Math.max(EXPANSION.falseOverTimer,.45);
+    // Ghost replay capture is capped and stored only at the end of a completed run.
+    EXPANSION.ghostClock-=dt;
+    if(EXPANSION.ghostClock<=0){
+      EXPANSION.runSamples.push([Math.round(EXPANSION.elapsed*10)/10,Math.round(player.y)]);
+      if(EXPANSION.runSamples.length>1500)EXPANSION.runSamples.shift();
+      EXPANSION.ghostClock=.12;
+    }
+    updateExpansionBoss(dt,playerBox);
+  }
+  function drawExpansionWorld(){
+    // Ghost Runner / Ghost Replay: a translucent previous run, never collidable.
+    if(EXPANSION.ghostSamples.length){
+      const t=EXPANSION.elapsed,idx=EXPANSION.ghostSamples.findIndex(p=>p[0]>=t);
+      const sample=idx<0?EXPANSION.ghostSamples[EXPANSION.ghostSamples.length-1]:EXPANSION.ghostSamples[idx];
+      if(sample){
+        ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#8be9ff';
+        pixelRect(player.x-8,sample[1]+7,player.w,Math.max(18,player.h-12),'#8be9ff');
+        pixelRect(player.x+8,sample[1]+17,23,5,'#ffffff');ctx.restore();
+      }
+    }
+    for(const e of EXPANSION.enemies){
+      const x=e.x,y=e.y,pulse=.65+.35*Math.sin(e.phase*3),c=e.color;
+      ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.45+.3*pulse;
+      ctx.shadowColor=c;ctx.shadowBlur=e.bounty?25:14;ctx.strokeStyle=c;ctx.lineWidth=e.bounty?4:2;
+      ctx.beginPath();ctx.ellipse(x+e.w/2,y+e.h/2,e.w*.54,e.h*.42,Math.sin(e.phase)*.12,0,Math.PI*2);ctx.stroke();
+      ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+      if(e.id==='observer'){
+        ctx.fillStyle='#080b17';ctx.fillRect(x+8,y+7,e.w-16,e.h-14);
+        ctx.fillStyle=c;ctx.fillRect(x+15,y+19,e.w-30,7);ctx.fillRect(x+e.w/2-3,y+31,6,12);
+        ctx.fillStyle='#fff';ctx.fillRect(x+e.w/2-2,y+21,4,3);
+      }else if(e.id==='falseSonic'){
+        ctx.fillStyle='#08040a';ctx.fillRect(x+8,y+12,e.w-16,e.h-17);
+        ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x+12,y+14);ctx.lineTo(x-2,y-3);ctx.lineTo(x+25,y+8);ctx.lineTo(x+39,y-5);ctx.lineTo(x+44,y+17);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#fff';ctx.fillRect(x+17,y+24,8,4);ctx.fillRect(x+34,y+24,8,4);
+      }else if(e.id==='gravityMaw'){
+        ctx.fillStyle='#090610';ctx.beginPath();ctx.arc(x+e.w/2,y+e.h/2,e.w*.35,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=c;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x+e.w/2,y+e.h/2,e.w*.42,e.phase,e.phase+Math.PI*1.65);ctx.stroke();
+        ctx.fillStyle='#fff';ctx.fillRect(x+e.w/2-4,y+e.h/2-4,8,8);
+      }else if(e.id==='swarmEntity'){
+        for(let k=0;k<7;k++){const a=e.phase*1.4+k*Math.PI*2/7;ctx.fillStyle=c;ctx.fillRect(x+e.w/2+Math.cos(a)*23,y+e.h/2+Math.sin(a)*16,6,6);}
+        ctx.fillStyle='#fff';ctx.fillRect(x+e.w/2-3,y+e.h/2-3,6,6);
+      }else if(e.id==='mimicRelic'){
+        ctx.fillStyle='#17101a';ctx.fillRect(x+9,y+8,e.w-18,e.h-15);ctx.strokeStyle=c;ctx.lineWidth=3;ctx.strokeRect(x+9,y+8,e.w-18,e.h-15);
+        ctx.fillStyle=c;ctx.fillRect(x+15,y+24,e.w-30,5);ctx.fillStyle='#fff';ctx.fillRect(x+e.w/2-3,y+15,6,6);
+      }else if(e.id==='riftSerpent'){
+        ctx.strokeStyle=c;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(x,y+e.h/2);ctx.bezierCurveTo(x+25,y-15,x+70,y+e.h+15,x+e.w,y+e.h/2);ctx.stroke();
+        for(let k=0;k<4;k++){ctx.fillStyle='#090711';ctx.fillRect(x+15+k*23,y+10+(k%2)*12,17,19);}
+        ctx.fillStyle='#fff';ctx.fillRect(x+e.w-15,y+e.h/2-3,5,5);
+      }else if(e.id==='afterimageHunter'){
+        ctx.globalAlpha=.22;ctx.fillStyle=c;ctx.fillRect(x-12,y+12,e.w-12,e.h-12);ctx.globalAlpha=1;
+        ctx.fillStyle='#08040c';ctx.fillRect(x+10,y+7,e.w-20,e.h-13);ctx.fillStyle=c;ctx.fillRect(x+17,y+23,e.w-34,5);ctx.fillStyle='#fff';ctx.fillRect(x+20,y+24,3,3);ctx.fillRect(x+e.w-23,y+24,3,3);
+      }else{
+        ctx.fillStyle='#171018';ctx.fillRect(x+10,y+11,e.w-20,e.h-18);ctx.strokeStyle=c;ctx.lineWidth=4;ctx.strokeRect(x+10,y+11,e.w-20,e.h-18);
+        ctx.fillStyle=c;ctx.fillRect(x+20,y+29,10,6);ctx.fillRect(x+e.w-30,y+29,10,6);ctx.fillRect(x+e.w/2-4,y+48,8,15);
+      }
+      if(e.bounty){ctx.strokeStyle='#ffe17a';ctx.lineWidth=3;ctx.strokeRect(x-3,y-3,e.w+6,e.h+6);ctx.fillStyle='#ffe17a';ctx.font='bold 10px Consolas,monospace';ctx.fillText('BOUNTY',x+2,y-7);}
+      ctx.restore();
+    }
+    for(const h of EXPANSION.hazards){
+      const x=h.x,y=h.y||0;
+      ctx.save();
+      if(h.id==='laser'){
+        ctx.globalAlpha=h.warning>0?.42:.78;
+        ctx.fillStyle=h.warning>0?'#ffb45f':'#ff315d';
+        ctx.fillRect(x,0,5,GROUND);ctx.fillRect(x+13,0,5,GROUND);
+        ctx.fillStyle='#fff';ctx.fillRect(x-5,0,28,4);ctx.fillRect(x-5,GROUND-4,28,4);
+        if(h.warning>0){ctx.font='bold 10px Consolas,monospace';ctx.fillText('LASER GRID',x-25,24);}
+      }else if(h.id==='collapse'){
+        ctx.fillStyle='#030207';ctx.fillRect(x,GROUND-4,h.w,18);
+        ctx.fillStyle='#ff633d';for(let k=0;k<6;k++)pixelRect(x+k*20,GROUND+2+(k%2)*4,9,3,'#ff633d');
+      }else if(h.id==='gravity'){
+        ctx.globalAlpha=.18+.12*Math.sin(h.phase*2);ctx.fillStyle='#7c65ff';ctx.fillRect(x,y,h.w,h.h);
+        ctx.globalAlpha=.7;ctx.strokeStyle='#bba6ff';ctx.setLineDash([5,5]);ctx.strokeRect(x,y,h.w,h.h);ctx.setLineDash([]);
+        ctx.fillStyle='#e7deff';ctx.font='bold 10px Consolas,monospace';ctx.fillText('GRAVITY',x+8,y+15);
+      }else if(h.id==='corridor'){
+        ctx.fillStyle='#160b18';ctx.fillRect(x,0,h.w,h.gapY);
+        ctx.fillRect(x,h.gapY+h.gapH,h.w,GROUND-(h.gapY+h.gapH));
+        ctx.fillStyle='#ff536b';for(let k=0;k<5;k++){pixelRect(x+k*25,h.gapY-8,12,8,'#ff536b');pixelRect(x+k*25,h.gapY+h.gapH,12,8,'#ff536b');}
+      }else if(h.id==='gate'){
+        ctx.globalAlpha=.35+.22*Math.sin(h.phase*2);ctx.fillStyle='#d477ff';ctx.fillRect(x,0,h.w,h.gapY);ctx.fillRect(x,h.gapY+h.gapH,h.w,GROUND-h.gapY-h.gapH);
+        ctx.strokeStyle='#f3d9ff';ctx.lineWidth=3;ctx.strokeRect(x,0,h.w,GROUND);
+        ctx.fillStyle='#fff';ctx.font='bold 9px Consolas,monospace';ctx.fillText('REALITY',x-10,18);
+      }
+      ctx.restore();
+    }
+    for(const p of EXPANSION.pickups){
+      ctx.save();const pulse=.8+.2*Math.sin(p.phase*2);
+      ctx.shadowColor=p.kind==='riskChest'?'#e9b76e':'#ffe17a';ctx.shadowBlur=18;
+      if(p.kind==='riskChest'){
+        ctx.fillStyle='#24120d';ctx.strokeStyle='#e9b76e';ctx.lineWidth=3;ctx.fillRect(p.x,p.y+8,p.w,p.h-8);ctx.strokeRect(p.x,p.y+8,p.w,p.h-8);
+        ctx.fillStyle='#e9b76e';ctx.fillRect(p.x+3,p.y+14,p.w-6,5);ctx.fillRect(p.x+p.w/2-3,p.y+22,6,9);
+      }else{
+        ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.phase*.5);ctx.fillStyle='#39250b';ctx.strokeStyle='#ffe17a';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(14*pulse,0);ctx.lineTo(0,17*pulse);ctx.lineTo(-14*pulse,0);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.fillStyle='#fff';ctx.fillRect(-3,-4,6,8);
+      }
+      ctx.restore();
+    }
+    if(EXPANSION.pursuit){
+      const p=EXPANSION.pursuit;ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor='#a36aff';ctx.shadowBlur=20;
+      ctx.fillStyle='#08040d';ctx.strokeStyle='#a36aff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x,p.y+10);ctx.lineTo(p.x+20,p.y);ctx.lineTo(p.x+52,p.y+8);ctx.lineTo(p.x+68,p.y+32);ctx.lineTo(p.x+47,p.y+60);ctx.lineTo(p.x+15,p.y+54);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#ff3e72';ctx.fillRect(p.x+20,p.y+24,9,5);ctx.fillRect(p.x+43,p.y+24,9,5);ctx.restore();
+    }
+    if(EXPANSION.boss){
+      const b=EXPANSION.boss;ctx.save();ctx.globalCompositeOperation='lighter';
+      const c=b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':'#d477ff';
+      ctx.shadowColor=c;ctx.shadowBlur=24;ctx.strokeStyle=c;ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(b.x,b.y,55+Math.sin(b.phase)*5,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#090611';ctx.beginPath();ctx.moveTo(b.x,b.y-50);ctx.lineTo(b.x+47,b.y-15);ctx.lineTo(b.x+39,b.y+39);ctx.lineTo(b.x,b.y+54);ctx.lineTo(b.x-39,b.y+39);ctx.lineTo(b.x-47,b.y-15);ctx.closePath();ctx.fill();ctx.stroke();
+      for(let k=0;k<3;k++){const a=b.phase*.5+k*Math.PI*2/3;const cx=b.x+Math.cos(a)*31,cy=b.y+Math.sin(a)*31;ctx.fillStyle=k<b.cores?'#ffe17a':'#4b3b55';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=.45+.4*Math.sin(b.phase*4);ctx.fillStyle=c;ctx.fillRect(b.x-23,b.y-4,46,7);
+      if(b.weaknessTimer>0){ctx.globalAlpha=.9;ctx.strokeStyle='#fff2a3';ctx.lineWidth=4;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(b.x,b.y,68,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+      ctx.globalAlpha=1;ctx.restore();
+    }
+    for(const sh of EXPANSION.shots){ctx.save();ctx.fillStyle=sh.color;ctx.shadowColor=sh.color;ctx.shadowBlur=13;pixelRect(sh.x,sh.y,sh.w,sh.h,sh.color);ctx.restore();}
+    for(const w of EXPANSION.echoWaves){ctx.save();ctx.globalAlpha=Math.max(0,w.life);ctx.strokeStyle='#d477ff';ctx.lineWidth=4;ctx.shadowColor='#d477ff';ctx.shadowBlur=16;ctx.beginPath();ctx.arc(w.x,w.y,18+(1.1-w.life)*35,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  }
+  function drawExpansionOverlay(){
+    ctx.save();
+    if(EXPANSION.mode==='CORRUPTED'&&state==='running'){
+      ctx.globalAlpha=.09+.06*Math.sin(elapsed*21);ctx.fillStyle='#b24cff';ctx.fillRect(0,0,W,H);
+      if(Math.floor(elapsed*8)%4===0){ctx.fillStyle='#fff';ctx.fillRect(0,(Math.floor(elapsed*43)%H),W,2);}
+    }
+    if(EXPANSION.scoreGlitchTimer>0){
+      ctx.textAlign='left';ctx.fillStyle='#ff5a82';ctx.font='bold 12px Consolas,monospace';
+      ctx.fillText('SCORE '+EXPANSION.fakeScore+'  [SIGNAL ERROR]',22,204);
+    }
+    if(EXPANSION.falseOverTimer>0){
+      ctx.globalAlpha=Math.min(.85,EXPANSION.falseOverTimer*1.5);ctx.textAlign='center';ctx.fillStyle='#ff315d';
+      ctx.font='bold 40px Consolas,monospace';ctx.fillText('GAME OVER',W/2,H*.48);
+      ctx.font='bold 14px Consolas,monospace';ctx.fillStyle='#fff';ctx.fillText('...NO. YOU ARE STILL HERE.',W/2,H*.56);
+    }
+    if(EXPANSION.memoryFlashTimer>0){
+      ctx.globalAlpha=Math.min(.85,EXPANSION.memoryFlashTimer*.55);ctx.textAlign='center';
+      ctx.fillStyle='#d9a2ff';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText('YOU HAVE BEEN HERE BEFORE  //  BEST '+EXPANSION_STORE.best,W/2,H*.23);
+    }
+    if(EXPANSION.soundlessTimer>0){
+      ctx.textAlign='center';ctx.fillStyle='#f4f0ff';ctx.font='bold 11px Consolas,monospace';
+      ctx.fillText('SOUND LOST',W/2,H-14);
+    }
+    if(EXPANSION.mode==='DAILY SEED'){
+      ctx.textAlign='right';ctx.fillStyle='#b9eaff';ctx.font='bold 11px Consolas,monospace';
+      ctx.fillText('DAILY RIFT SEED  '+EXPANSION.dailySeed.toString(16).toUpperCase(),W-20,H-14);
+    }
+    if(EXPANSION.mode==='NO FLIGHT') {ctx.textAlign='right';ctx.fillStyle='#b8e8ff';ctx.font='bold 11px Consolas,monospace';ctx.fillText('NO FLIGHT CHALLENGE',W-20,H-30);}
+    if(EXPANSION.mode==='ONE LIFE') {ctx.textAlign='right';ctx.fillStyle='#ff8b9d';ctx.font='bold 11px Consolas,monospace';ctx.fillText('ONE LIFE  //  NO SHIELDS',W-20,H-30);}
+    if(EXPANSION.overdriveTimer>0){ctx.textAlign='right';ctx.fillStyle='#ffb45f';ctx.font='bold 13px Consolas,monospace';ctx.fillText('OVERDRIVE x1.5  '+EXPANSION.overdriveTimer.toFixed(1)+'s',W-20,96);}
+    if(EXPANSION.magnetTimer>0){ctx.textAlign='right';ctx.fillStyle='#7beeff';ctx.font='bold 12px Consolas,monospace';ctx.fillText('MAGNET CORE  '+EXPANSION.magnetTimer.toFixed(1)+'s',W-20,116);}
+    if(EXPANSION.reboundCharges>0){ctx.textAlign='right';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';ctx.fillText('CHAOS REBOUND  READY [B]',W-20,136);}
+    if(EXPANSION.glitchShieldTimer>0){ctx.textAlign='right';ctx.fillStyle='#70f4df';ctx.font='bold 12px Consolas,monospace';ctx.fillText('GLITCH SHIELD  '+EXPANSION.glitchShieldTimer.toFixed(1)+'s',W-20,156);}
+    if(EXPANSION.boss){
+      ctx.textAlign='center';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';
+      ctx.fillText('CORES '+EXPANSION.boss.cores+'/3  '+(EXPANSION.boss.weaknessTimer>0?'WEAKNESS WINDOW — PRESS C':'WEAKNESS IN '+Math.max(0,EXPANSION.boss.weaknessClock).toFixed(1)+'s'),W/2,58);
+    }
+    if(EXPANSION.achievementToastTimer>0){
+      ctx.textAlign='center';ctx.globalAlpha=Math.min(1,EXPANSION.achievementToastTimer);
+      ctx.fillStyle='#ffe17a';ctx.font='bold 14px Consolas,monospace';
+      ctx.fillText('ACHIEVEMENT UNLOCKED: '+EXPANSION.achievementToast,W/2,H-38);
+    }
+    ctx.restore();
+  }
+  initExpansionMenu();
+  /* === END BLOODY FLIGHT EXPANSION PACK === */
+
   function loop(now){
     if(state!=='running')return;
     const dt=Math.min(.033,Math.max(0,(now-lastTime)/1000));lastTime=now;
