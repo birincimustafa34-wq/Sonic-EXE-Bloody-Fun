@@ -2179,7 +2179,7 @@
     return false;
   }
   function updateUltimateSystems(dt){
-    for(const k of ['explosionCooldown','counterCooldown','decoyCooldown','lightningCooldown','lastStandTimer','bloodMoonTimer','portalTimer','eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer'])UPGRADE[k]=Math.max(0,UPGRADE[k]-dt);
+    for(const k of ['explosionCooldown','explosionTimer','counterCooldown','decoyCooldown','decoyTimer','lightningCooldown','lastStandTimer','bloodMoonTimer','portalTimer','eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer'])UPGRADE[k]=Math.max(0,UPGRADE[k]-dt);
     if(UPGRADE.bloodMoonTimer<=0&&score>=45000){UPGRADE.bloodMoonClock-=dt;if(UPGRADE.bloodMoonClock<=0){UPGRADE.bloodMoonTimer=11+expansionRandom()*4;UPGRADE.bloodMoonClock=58+expansionRandom()*24;bossIntroMessage='BLOOD MOON — THE HUNT INTENSIFIES';bossIntroTimer=2.6;flash=.3;shake=.12;}}
     if(UPGRADE.choiceActive){
       UPGRADE.choiceTimer-=dt;
