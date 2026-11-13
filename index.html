@@ -172,6 +172,39 @@
     voidharrier:15, riftseraph:20, nebulashard:10, ashencolossus:15
   });
   const MAX_AURA_FLIGHT_DRAIN=40;
+  const LATE_ENTITY_DEFS = [
+    {unlock:64000,name:"Vesper Talon",role:"flyer",behavior:"dive",color:"#ff6485",w:104,h:66,drain:16,points:560},
+    {unlock:66000,name:"Glass Widow",role:"flyer",behavior:"feint",color:"#e7a6ff",w:96,h:70,drain:18,points:575},
+    {unlock:68000,name:"Signal Leech",role:"flyer",behavior:"track",color:"#55e7d1",w:90,h:62,drain:17,points:590},
+    {unlock:70000,name:"Paradox Crow",role:"flyer",behavior:"shift",color:"#ffb04a",w:102,h:68,drain:18,points:605},
+    {unlock:72000,name:"Static Crown",role:"flyer",behavior:"pulse",color:"#d1ff63",w:98,h:68,drain:19,points:620},
+    {unlock:74000,name:"Null Kite",role:"flyer",behavior:"dive",color:"#7ad9ff",w:110,h:62,drain:18,points:635},
+    {unlock:76000,name:"Hollow Marshal",role:"walker",behavior:"stomp",color:"#bd8cff",w:82,h:88,drain:20,points:650},
+    {unlock:78000,name:"Fracture Moth",role:"flyer",behavior:"blink",color:"#ff6cae",w:94,h:66,drain:19,points:665},
+    {unlock:80000,name:"Redshift Stalker",role:"flyer",behavior:"hunt",color:"#ff554c",w:106,h:70,drain:21,points:680},
+    {unlock:82000,name:"Echo Wyrm",role:"flyer",behavior:"echo",color:"#8cf3ff",w:116,h:64,drain:20,points:695},
+    {unlock:84000,name:"Graviton Idol",role:"walker",behavior:"pulse",color:"#b5a7ff",w:88,h:92,drain:22,points:710},
+    {unlock:86000,name:"Prism Locust",role:"flyer",behavior:"feint",color:"#a7ff68",w:96,h:64,drain:20,points:725},
+    {unlock:88000,name:"Dead Channel",role:"flyer",behavior:"stutter",color:"#ff7d58",w:104,h:66,drain:21,points:740},
+    {unlock:90000,name:"Ashen Revenant",role:"walker",behavior:"stomp",color:"#ff875e",w:84,h:90,drain:23,points:755},
+    {unlock:92000,name:"Rift Harvester",role:"flyer",behavior:"sweep",color:"#7be5ff",w:118,h:70,drain:22,points:770},
+    {unlock:94000,name:"Pale Circuit",role:"flyer",behavior:"blink",color:"#f0edcf",w:92,h:66,drain:22,points:785},
+    {unlock:96000,name:"Bone Satellite",role:"flyer",behavior:"orbit",color:"#d3a4ff",w:100,h:68,drain:23,points:800},
+    {unlock:98000,name:"Wound Engine",role:"walker",behavior:"stomp",color:"#fa6d7a",w:92,h:96,drain:24,points:815},
+    {unlock:100000,name:"Chrono Raven",role:"flyer",behavior:"feint",color:"#ffdc69",w:108,h:70,drain:23,points:830},
+    {unlock:102000,name:"Parallax Serpent",role:"flyer",behavior:"track",color:"#61d8ff",w:122,h:62,drain:24,points:845},
+    {unlock:104000,name:"Static Archon",role:"flyer",behavior:"pulse",color:"#c9ff74",w:104,h:72,drain:24,points:860},
+    {unlock:106000,name:"Crimson Vector",role:"flyer",behavior:"dive",color:"#ff456d",w:112,h:66,drain:25,points:875},
+    {unlock:108000,name:"Hollow Choir",role:"flyer",behavior:"echo",color:"#c8a1ff",w:118,h:74,drain:24,points:890},
+    {unlock:110000,name:"Dread Cartographer",role:"walker",behavior:"feint",color:"#78d9c7",w:94,h:94,drain:25,points:905},
+    {unlock:112000,name:"Broken Halo",role:"flyer",behavior:"shift",color:"#ffe17a",w:108,h:68,drain:25,points:920},
+    {unlock:114000,name:"Chrono Mantis",role:"flyer",behavior:"stutter",color:"#8df2a5",w:102,h:70,drain:26,points:935},
+    {unlock:116000,name:"Black Signal",role:"flyer",behavior:"hunt",color:"#9e91ff",w:116,h:72,drain:26,points:950},
+    {unlock:118000,name:"Ruin Colossus",role:"walker",behavior:"stomp",color:"#ff7654",w:100,h:102,drain:27,points:965},
+    {unlock:120000,name:"Eventide Wisp",role:"flyer",behavior:"blink",color:"#69dfff",w:98,h:66,drain:26,points:980},
+    {unlock:122000,name:"Glitch Revenant",role:"walker",behavior:"pulse",color:"#f06aff",w:96,h:96,drain:28,points:995},
+    {unlock:124000,name:"Final Echo",role:"flyer",behavior:"echo",color:"#f4f0ff",w:124,h:76,drain:28,points:1020}
+  ];
   let flightDamageTaken=0;
   let flightComboMultiplier=1,flightComboProgress=0,flightComboTimer=0;
   let embers=[],emberClock=0,verticalEmberClock=0;
@@ -327,6 +360,8 @@
       }
       return;
     }
+    // A new entity joins the active random roster every 2,000 points from 64k to 124k.
+    if(score>=64000){const lateChance=Math.min(.50,.24+Math.floor((score-64000)/2000)*.008);if(Math.random()<lateChance){spawnLateEntity();return;}}
     // The flying share rises progressively, with a larger increase at 63k.
     const aerialSpawnChance=score>=63000?.58:score>=60000?.48:score>=58000?.42:.34;
     if(score>=44000&&Math.random()<aerialSpawnChance){
@@ -390,6 +425,12 @@
       const baseY=72+Math.random()*118;
       obstacles.push({type:'wyvern',x:W+55,y:baseY,baseY,w:78,h:50,phase:Math.random()*6,trackOffset:(Math.random()<.5?-1:1)*(38+Math.random()*42),cooldown:0});
     }
+  }
+  function spawnLateEntity(){
+    const unlocked=LATE_ENTITY_DEFS.filter(d=>score>=d.unlock);if(!unlocked.length)return;
+    const d=unlocked[Math.floor(Math.random()*unlocked.length)],variant=LATE_ENTITY_DEFS.indexOf(d),tier=Math.floor((d.unlock-64000)/2000);
+    const baseY=55+Math.random()*Math.max(45,GROUND-245),y=d.role==='flyer'?baseY:GROUND-d.h;
+    obstacles.push({type:'lateentity',variant,tier,name:d.name,role:d.role,behavior:d.behavior,color:d.color,drain:d.drain,points:d.points,w:d.w,h:d.h,x:W+95,y,baseY,phase:Math.random()*6,attackClock:.75+Math.random()*.9,shiftTimer:.8+Math.random()*1.1,warning:0,diveTime:0,targetY:baseY,speedFactor:1.18+tier*.006,passed:false});
   }
   function addRingGroup() {
     const high=Math.random()<.5;
@@ -888,7 +929,7 @@
     trail=trail.filter(t=>t.life>0);
     for(const t of trees){t.x-=speed*(t.layer===0?.12:.22)*dt;if(t.x<-65){t.x=W+Math.random()*70;t.h=95+Math.random()*135;t.eyes=Math.random()<.35;}}
     for(const o of obstacles){
-      o.x-=speed*(o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='gravewing'?1.22:o.type==='voidharrier'?1.30:o.type==='riftseraph'?1.18:o.type==='nebulashard'?1.16:o.type==='ashencolossus'?1.36:o.type==='prismwraith'?1.26:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
+      o.x-=speed*(o.type==='lateentity'?(o.speedFactor||1.25):o.type==='bat'||o.type==='rock'?1.22:o.type==='relicgolem'?1.42:o.type==='gravewing'?1.22:o.type==='voidharrier'?1.30:o.type==='riftseraph'?1.18:o.type==='nebulashard'?1.16:o.type==='ashencolossus'?1.36:o.type==='prismwraith'?1.26:o.type==='wyvern'?1.08:o.type==='stalker'?1.16:o.type==='emberwing'?1.14:o.type==='thornrake'?1.19:o.type==='riftmanta'?1.12:o.type==='blinkwisp'?1.08:1)*dt;
       if(o.type==='bat')o.phase+=dt*12;
       if(o.type==='rock')o.phase+=dt*2;
       if(o.type==='relicgolem')o.phase+=dt*7.2;
@@ -1031,6 +1072,30 @@
         if(!o.passed&&o.x+o.w<player.x){o.passed=true;awardScore(155);burst(o.x+o.w/2,o.y+o.h/2,'#ff7654',17);}
       }
     }
+    for(const o of obstacles){if(o.type!=='lateentity')continue;
+      o.phase+=dt*(4.1+o.tier*.055);
+      if(o.role==='flyer'){
+        if(o.behavior==='dive'||o.behavior==='feint'){
+          if(o.warning>0){o.warning=Math.max(0,o.warning-dt);if(o.warning===0){o.diveTime=.46+o.tier*.004;burst(o.x+o.w/2,o.y+o.h/2,o.color,13);}}
+          else if(o.diveTime>0){o.diveTime=Math.max(0,o.diveTime-dt);if(o.diveTime===0)o.targetY=o.baseY;}
+          else{o.attackClock-=dt;if(o.attackClock<=0&&o.x<W+480){const target=o.behavior==='feint'?(player.y<GROUND*.58?GROUND-160:56):player.y-player.h*.12;o.targetY=Math.max(36,Math.min(GROUND-o.h-8,target));o.warning=o.behavior==='feint'?.32:.42;o.attackClock=Math.max(.85,1.75-o.tier*.015)+Math.random()*.35;}}
+          const dest=o.diveTime>0?o.targetY:o.baseY+Math.sin(o.phase*1.2)*24;o.y+=(dest-o.y)*Math.min(1,dt*(o.diveTime>0?2.45:.72));
+        }else if(o.behavior==='shift'||o.behavior==='blink'){
+          if(o.warning>0){o.warning=Math.max(0,o.warning-dt);if(o.warning===0){o.y=o.targetY;burst(o.x+o.w/2,o.y+o.h/2,o.color,12);}}
+          else{o.shiftTimer-=dt;if(o.shiftTimer<=0){const low=o.y>GROUND-215;o.targetY=low?58+Math.random()*62:GROUND-168-Math.random()*36;o.targetY=Math.max(38,Math.min(GROUND-o.h-8,o.targetY));o.warning=o.behavior==='blink'?.18:.34;o.shiftTimer=Math.max(.72,1.65-o.tier*.018)+Math.random()*.35;}o.y+=Math.sin(o.phase*1.3)*5*dt;}
+        }else if(o.behavior==='track'||o.behavior==='hunt'){
+          const target=player.y+(o.behavior==='hunt'?-8:18)+Math.sin(o.phase*1.6)*16,limited=Math.max(35,Math.min(GROUND-o.h-6,target));o.y+=(limited-o.y)*Math.min(1,dt*(o.behavior==='hunt'?1.85:1.25+o.tier*.012));
+        }else if(o.behavior==='pulse'||o.behavior==='orbit'||o.behavior==='sweep'){
+          const amp=o.behavior==='sweep'?Math.max(65,GROUND*.34):o.behavior==='pulse'?44:28;o.y=o.baseY+Math.sin(o.phase*(o.behavior==='pulse'?2.9:1.65))*amp;o.y=Math.max(32,Math.min(GROUND-o.h-5,o.y));
+        }else if(o.behavior==='stutter'){o.speedFactor=(Math.floor(elapsed*5+o.variant)%4===0)?1.72:.68;o.y=o.baseY+Math.sin(o.phase*2.1)*36;}
+        else{o.y=o.baseY+Math.sin(o.phase*1.8)*48;}
+      }else{
+        if(o.behavior==='stomp'){const hop=Math.max(0,Math.sin(o.phase*.72));o.y=GROUND-o.h-hop*18;if(hop>.94&&o.lastStomp!==Math.floor(o.phase*.72)){o.lastStomp=Math.floor(o.phase*.72);burst(o.x+o.w/2,GROUND-5,o.color,5);}}
+        else if(o.behavior==='feint'){o.y=GROUND-o.h+Math.abs(Math.sin(o.phase*1.1))*3;o.speedFactor=Math.sin(o.phase*1.7)>.55?1.68:1.08;}
+        else{o.y=GROUND-o.h+Math.abs(Math.sin(o.phase*.9))*7;}
+      }
+      if(!o.passed&&o.x+o.w<player.x){o.passed=true;awardScore(o.points);burst(o.x+o.w/2,o.y+o.h/2,o.color,16);}
+    }
     for(const r of rings)r.x-=speed*dt;
     for(const em of emeralds){em.x-=speed*dt;em.phase+=dt*4;}
     for(const sh of shields){sh.x-=speed*dt;sh.phase+=dt*4;}
@@ -1095,6 +1160,8 @@
                         ? {x:o.x+20,y:oy+15,w:o.w-40,h:o.h-30}
                       : o.type==='nebulashard'
                         ? {x:o.x+17,y:oy+13,w:o.w-34,h:o.h-26}
+                      : o.type==='lateentity'
+                        ? {x:o.x+o.w*.22,y:oy+o.h*.18,w:o.w*.56,h:o.h*.64}
                       : o.type==='ashencolossus'
                         ? {x:o.x+15,y:oy+10,w:o.w-30,h:o.h-12}
                       : o.type==='doubleSpike'
@@ -1104,7 +1171,7 @@
         // During the short landing window, let hazards pass through without damage.
         if(landingGrace>0)continue;
         if(player.flight>0){
-          const auraDamagePercent=AURA_FLIGHT_DAMAGE[o.type]||0;
+          const auraDamagePercent=o.type==='lateentity'?o.drain:(AURA_FLIGHT_DAMAGE[o.type]||0);
           // An active Shadow Dash can break through an aura enemy without draining flight.
           if(auraDamagePercent>0&&dashTimer<=0){
             const remainingDrain=Math.max(0,MAX_AURA_FLIGHT_DRAIN-flightDamageTaken);
@@ -1115,22 +1182,23 @@
               player.flight=Math.max(0,player.flight-fullFlight*(appliedDrain/100));
               if(player.flight===0)landingGrace=Math.max(landingGrace,.5);
               player.invuln=player.flight;
-              const drainColor=({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff',gravewing:'#72e4dc',voidharrier:'#ff5b78',riftseraph:'#a78bff',nebulashard:'#54d9ff',ashencolossus:'#ff7654'})[o.type]||'#ff526c';
+              const drainColor=o.type==='lateentity'?o.color:(({wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff',gravewing:'#72e4dc',voidharrier:'#ff5b78',riftseraph:'#a78bff',nebulashard:'#54d9ff',ashencolossus:'#ff7654'})[o.type]||'#ff526c');
               burst(o.x+o.w/2,oy+o.h/2,drainColor,12);
               flash=Math.max(flash,.055);shake=Math.max(shake,.09);
             }
           }
           const auraPoints={wyvern:160,stalker:205,emberwing:235,thornrake:265,riftmanta:295,blinkwisp:325,prismwraith:390,gravewing:410,voidharrier:465,riftseraph:520,nebulashard:440,ashencolossus:210};
           const objectPoints={spike:55,doubleSpike:110,block:65,bat:75,rock:70,relicgolem:135};
-          const basePoints=auraPoints[o.type]||objectPoints[o.type]||60;
+          const basePoints=o.type==='lateentity'?o.points:(auraPoints[o.type]||objectPoints[o.type]||60);
           const colours={wyvern:'#b32a69',stalker:'#39aaff',emberwing:'#ff9b32',thornrake:'#78f05a',riftmanta:'#62eaff',blinkwisp:'#f4edb0',relicgolem:'#b68cff',prismwraith:'#d477ff',gravewing:'#72e4dc',voidharrier:'#ff5b78',riftseraph:'#a78bff',nebulashard:'#54d9ff',ashencolossus:'#ff7654'};
-          const colour=colours[o.type]||'#ff526c';
+          const colour=o.type==='lateentity'?o.color:(colours[o.type]||'#ff526c');
           // Keep the destroy reward and flight combo, even when the enemy also drains energy.
           awardFlightDestroy(basePoints,o.x+o.w/2,oy+o.h/2,colour);
-          burst(o.x+o.w/2,oy+o.h/2,colour,o.type in auraPoints?24:13);
+          burst(o.x+o.w/2,oy+o.h/2,colour,(o.type==='lateentity'||o.type in auraPoints)?24:13);
           sfx('smash');shake=Math.max(shake,.1);
           obstacles.splice(i,1);continue;
         }
+        if(o.type==='lateentity'&&dashTimer>0){burst(o.x+o.w/2,oy+o.h/2,o.color,34);awardScore(360+o.tier*18);sfx('smash');shake=.22;flash=.18;obstacles.splice(i,1);continue;}
         if(o.type==='relicgolem' && dashTimer>0){
           burst(o.x+o.w/2,oy+o.h/2,'#b68cff',30);
           awardScore(145);sfx('smash');shake=.19;flash=.14;
@@ -1711,6 +1779,20 @@
       const step=Math.sin(o.phase*1.1)*4;ctx.save();ctx.lineJoin='round';ctx.lineCap='round';ctx.globalCompositeOperation='lighter';ctx.shadowColor='#ff7654';ctx.shadowBlur=15;ctx.strokeStyle='rgba(255,118,84,.42)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x+53,y+92,49,9,0,0,Math.PI*2);ctx.stroke();ctx.globalCompositeOperation='source-over';
       ctx.fillStyle='#17121a';ctx.strokeStyle='#08070c';ctx.lineWidth=3;ctx.fillRect(x+24,y+40,58,42);ctx.strokeRect(x+24,y+40,58,42);ctx.fillStyle='#30232a';ctx.fillRect(x+30,y+12,48,39);ctx.strokeRect(x+30,y+12,48,39);ctx.fillStyle='#51404a';ctx.beginPath();ctx.moveTo(x+31,y+18);ctx.lineTo(x+20,y+5);ctx.lineTo(x+43,y+13);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+69,y+14);ctx.lineTo(x+88,y+2);ctx.lineTo(x+79,y+28);ctx.closePath();ctx.fill();
       ctx.fillStyle='#0b080d';ctx.fillRect(x+38,y+27,12,8);ctx.fillRect(x+60,y+27,12,8);ctx.shadowColor='#ff7654';ctx.shadowBlur=12;ctx.fillStyle='#ff7654';ctx.fillRect(x+42,y+29,6,4);ctx.fillRect(x+64,y+29,6,4);ctx.shadowBlur=0;ctx.fillStyle='#2a1720';ctx.fillRect(x+8,y+43,24,32);ctx.fillRect(x+76,y+43,23,32);ctx.fillStyle='#47303b';ctx.fillRect(x+9,y+43,23,8);ctx.fillRect(x+77,y+43,22,8);ctx.fillStyle='#20151e';ctx.fillRect(x+31,y+79+step,18,20);ctx.fillRect(x+59,y+79-step,18,20);ctx.fillStyle='#ff7654';ctx.fillRect(x+36,y+47,34,7);ctx.fillRect(x+45,y+59,17,5);ctx.fillStyle='#d9a18b';ctx.fillRect(x+18,y+67,8,5);ctx.fillRect(x+82,y+67,8,5);ctx.restore();
+    } else if(o.type==='lateentity'){
+      const c=o.color,pulse=.65+.35*Math.sin(o.phase*3),echo=o.behavior==='echo';
+      ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor=c;ctx.shadowBlur=15+o.tier*.25;ctx.strokeStyle=c;ctx.globalAlpha=.35+.28*pulse;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x+o.w/2,y+o.h/2,o.w*.48,o.h*.34,Math.sin(o.phase)*.12,0,Math.PI*2);ctx.stroke();ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+      if(o.role==='flyer'){
+        if(echo){ctx.globalAlpha=.2;ctx.fillStyle=c;ctx.fillRect(x-15,y+o.h*.32,o.w*.48,o.h*.34);ctx.fillRect(x-29,y+o.h*.4,o.w*.34,o.h*.24);ctx.globalAlpha=1;}
+        ctx.fillStyle='#090711';ctx.strokeStyle=c;ctx.lineWidth=2;
+        if(o.variant%4===0){ctx.beginPath();ctx.moveTo(x+o.w*.5,y+o.h*.12);ctx.lineTo(x+o.w*.88,y+o.h*.46);ctx.lineTo(x+o.w*.5,y+o.h*.9);ctx.lineTo(x+o.w*.12,y+o.h*.46);ctx.closePath();ctx.fill();ctx.stroke();}
+        else if(o.variant%4===1){ctx.beginPath();ctx.moveTo(x+o.w*.46,y+o.h*.45);ctx.lineTo(x+o.w*.08,y+o.h*.06);ctx.lineTo(x+o.w*.2,y+o.h*.62);ctx.lineTo(x+o.w*.43,y+o.h*.78);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(x+o.w*.54,y+o.h*.45);ctx.lineTo(x+o.w*.92,y+o.h*.06);ctx.lineTo(x+o.w*.8,y+o.h*.62);ctx.lineTo(x+o.w*.57,y+o.h*.78);ctx.closePath();ctx.fill();ctx.stroke();}
+        else if(o.variant%4===2){ctx.beginPath();ctx.moveTo(x+o.w*.5,y+o.h*.04);ctx.lineTo(x+o.w*.78,y+o.h*.34);ctx.lineTo(x+o.w*.68,y+o.h*.86);ctx.lineTo(x+o.w*.32,y+o.h*.86);ctx.lineTo(x+o.w*.22,y+o.h*.34);ctx.closePath();ctx.fill();ctx.stroke();for(let q=0;q<4;q++){const a=o.phase*(q%2?-.8:.8)+q*Math.PI/2;ctx.fillStyle=c;ctx.globalAlpha=.65;ctx.fillRect(x+o.w*.5+Math.cos(a)*o.w*.42,y+o.h*.46+Math.sin(a)*o.h*.35,5,5);}ctx.globalAlpha=1;}
+        else{ctx.beginPath();ctx.moveTo(x+o.w*.5,y+o.h*.12);ctx.lineTo(x+o.w*.9,y+o.h*.5);ctx.lineTo(x+o.w*.5,y+o.h*.82);ctx.lineTo(x+o.w*.1,y+o.h*.5);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=c;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+o.w*.12,y+o.h*.28);ctx.lineTo(x+o.w*.03,y+o.h*.05);ctx.moveTo(x+o.w*.88,y+o.h*.28);ctx.lineTo(x+o.w*.97,y+o.h*.05);ctx.stroke();}
+        ctx.fillStyle='#05040b';ctx.fillRect(x+o.w*.32,y+o.h*.38,o.w*.36,o.h*.22);ctx.shadowColor=c;ctx.shadowBlur=12;ctx.fillStyle=c;ctx.fillRect(x+o.w*.37,y+o.h*.43,o.w*.26,Math.max(4,o.h*.07));ctx.fillStyle='#fff';ctx.fillRect(x+o.w*.48,y+o.h*.44,4,3);
+      }else{const step=Math.sin(o.phase*1.1)*5;ctx.fillStyle='#100b14';ctx.strokeStyle=c;ctx.lineWidth=3;ctx.fillRect(x+o.w*.22,y+o.h*.28,o.w*.56,o.h*.48);ctx.strokeRect(x+o.w*.22,y+o.h*.28,o.w*.56,o.h*.48);ctx.fillStyle='#221728';ctx.fillRect(x+o.w*.29,y+o.h*.06,o.w*.42,o.h*.34);ctx.strokeRect(x+o.w*.29,y+o.h*.06,o.w*.42,o.h*.34);ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=10;ctx.fillRect(x+o.w*.36,y+o.h*.2,o.w*.09,5);ctx.fillRect(x+o.w*.55,y+o.h*.2,o.w*.09,5);ctx.shadowBlur=0;ctx.strokeStyle='#08050d';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(x+o.w*.34,y+o.h*.72);ctx.lineTo(x+o.w*.3,y+o.h*.96+step);ctx.moveTo(x+o.w*.65,y+o.h*.72);ctx.lineTo(x+o.w*.7,y+o.h*.96-step);ctx.stroke();ctx.strokeStyle=c;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+o.w*.18,y+o.h*.42);ctx.lineTo(x+o.w*.04,y+o.h*.68);ctx.moveTo(x+o.w*.82,y+o.h*.42);ctx.lineTo(x+o.w*.96,y+o.h*.68);ctx.stroke();ctx.fillStyle='#fff';ctx.fillRect(x+o.w*.42,y+o.h*.21,3,3);ctx.fillRect(x+o.w*.59,y+o.h*.21,3,3);}
+      if(o.warning>0){ctx.globalAlpha=.65+.25*Math.sin(o.phase*18);ctx.strokeStyle=c;ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.ellipse(x+o.w/2,y+o.h/2,o.w*.56,o.h*.55,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.font='bold 9px Consolas, monospace';ctx.fillText(o.behavior.toUpperCase(),x+3,y-5);}
+      ctx.globalAlpha=1;ctx.restore();
     } else {
       pixelRect(x+9,y+4,25,31,'#29202e');pixelRect(x+4,y+12,34,22,'#19131f');
       pixelRect(x+14,y,14,8,'#403341');pixelRect(x+12,y+12,5,5,'#ff2949');
