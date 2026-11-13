@@ -340,6 +340,16 @@
     return a.x+pad < b.x+b.w-pad && a.x+a.w-pad > b.x+pad &&
            a.y+pad < b.y+b.h-pad && a.y+a.h-pad > b.y+pad;
   }
+  function spawnBatFlock() {
+    // Bats remain tiny, but now arrive as a loose flock instead of a lone flyer.
+    const count=Math.random()<.3?2:3;
+    const baseY=112+Math.random()*150;
+    for(let i=0;i<count;i++){
+      const offset=(i%2===0?1:-1)*(22+Math.random()*30);
+      const y=Math.max(88,Math.min(GROUND-125,baseY+offset));
+      obstacles.push({type:'bat',x:W+35+i*82,y,w:48,h:32,phase:Math.random()*6});
+    }
+  }
   function spawnObstacle() {
     const r=Math.random();
     // From 47k onward, a dedicated chance creates a paired spike wall.
@@ -403,7 +413,7 @@
       obstacles.push({type:'prismwraith',x:W+95,y:baseY,baseY,w:92,h:76,phase:Math.random()*6,shiftTimer:1.2+Math.random()*.8,warning:0,targetY:baseY,passed:false});
     }else if(r<.36)obstacles.push({type:'spike',x:W+35,y:GROUND-38,w:40,h:38});
     else if(r<.62)obstacles.push({type:'block',x:W+35,y:GROUND-92,w:54,h:48});
-    else if(r<.78)obstacles.push({type:'bat',x:W+35,y:105+Math.random()*205,w:48,h:32,phase:Math.random()*6});
+    else if(r<.82)spawnBatFlock();
     else if(r<.90)obstacles.push({type:'rock',x:W+35,y:85+Math.random()*220,w:42,h:42});
     else if(score>=30000&&r>=.90&&r<.93){
       obstacles.push({type:'relicgolem',x:W+65,y:GROUND-88,w:88,h:88,phase:Math.random()*6,passed:false});
