@@ -1786,42 +1786,31 @@
       ctx.fillRect((i*173+Math.floor(elapsed*45))%W,y,46+i*17,1);
     }
 
-    // Layer 2 at 40k: two compact but dense, high-intensity multi-colour pixel corruption bursts.
-    // Fewer glitch clusters than the three long red horizontal tears, but each cluster is much stronger.
-    if(score>=40000){
-      const pulse40=.5+.5*Math.sin(elapsed*11.4);
-      const pixelPalette=['#42eaff','#bd6bff','#ff4e9b','#d8ff4a','#ffad45','#f4f0ff'];
-      ctx.save();
-      ctx.globalCompositeOperation='lighter';
-      for(let burstIndex=0;burstIndex<2;burstIndex++){
-        const drift=Math.sin(elapsed*(1.7+burstIndex*.35)+burstIndex*2.4);
-        const centerX=W*(burstIndex===0?.28:.72)+drift*W*.12;
-        const centerY=H*(burstIndex===0?.34:.62)+Math.sin(elapsed*2.3+burstIndex*2)*H*.075;
-        const columns=11,rows=7,cellW=7,cellH=6;
-        for(let row=0;row<rows;row++){
-          for(let col=0;col<columns;col++){
-            const frame=Math.floor(elapsed*13);
-            const pattern=(col*7+row*11+frame*3+burstIndex*5)%17;
-            if(pattern>10)continue;
-            const x=centerX+(col-(columns-1)/2)*cellW+(row%2?2:-2);
-            const y=centerY+(row-(rows-1)/2)*cellH;
-            const colourIndex=(col*3+row*5+frame+burstIndex*2)%pixelPalette.length;
-            const width=3+(pattern%4);
-            const height=2+(pattern%3);
-            ctx.globalAlpha=.68+.25*pulse40;
-            pixelRect(x,y,width,height,pixelPalette[colourIndex]);
-            if(pattern===0||pattern===4){
-              ctx.globalAlpha=.82;
-              pixelRect(x+width+1,y-2,2,2,pixelPalette[(colourIndex+2)%pixelPalette.length]);
-            }
-          }
-        }
-        // A couple of offset pixel fragments give each cluster a sharp digital tear.
-        ctx.globalAlpha=.72+.2*pulse40;
-        pixelRect(centerX-38+drift*8,centerY-25,18,3,pixelPalette[(burstIndex+1)%pixelPalette.length]);
-        pixelRect(centerX+25-drift*6,centerY+19,13,3,pixelPalette[(burstIndex+4)%pixelPalette.length]);
+    // At 70k, the two dense clusters dissolve into fast, screen-wide pixel interference.
+    const pixelPalette=['#42eaff','#bd6bff','#ff4e9b','#d8ff4a','#ffad45','#f4f0ff'];
+    if(score>=70000){
+      const frame=Math.floor(elapsed*24),cols=Math.ceil(W/13),rows=Math.ceil(H/11);
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+        const seed=Math.abs(Math.sin((col+1)*127.1+(row+1)*311.7+frame*74.7)*43758.5453)%1;
+        if(seed<.30)continue;
+        const blink=Math.sin(elapsed*(27+(col%5)*3)+row*1.7+col*.8);if(blink<-.28)continue;
+        const x=col*13+seed*9,y=row*11+((seed*17)%7),colour=pixelPalette[(col*3+row*5+frame+(seed*10|0))%pixelPalette.length];
+        ctx.globalAlpha=.28+.58*((blink+1)/2);pixelRect(x,y,2+(seed*7|0),2+((1-seed)*5|0),colour);
+        if(seed>.77){ctx.globalAlpha=.72;pixelRect(x+5,y-3,2+(seed*4|0),2,pixelPalette[(col+row+3)%pixelPalette.length]);}
       }
+      if(frame%7===0||frame%7===1){ctx.globalAlpha=.13;ctx.fillStyle=pixelPalette[frame%pixelPalette.length];ctx.fillRect(0,(frame*19)%H,W,2);}
       ctx.restore();
+    }else if(score>=40000){
+      const pulse40=.5+.5*Math.sin(elapsed*11.4);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let burstIndex=0;burstIndex<2;burstIndex++){
+        const drift=Math.sin(elapsed*(1.7+burstIndex*.35)+burstIndex*2.4),cx=W*(burstIndex===0?.28:.72)+drift*W*.12,cy=H*(burstIndex===0?.34:.62)+Math.sin(elapsed*2.3+burstIndex*2)*H*.075;
+        for(let row=0;row<7;row++)for(let col=0;col<11;col++){
+          const fr=Math.floor(elapsed*13),pattern=(col*7+row*11+fr*3+burstIndex*5)%17;if(pattern>10)continue;
+          const ci=(col*3+row*5+fr+burstIndex*2)%pixelPalette.length;ctx.globalAlpha=.68+.25*pulse40;
+          pixelRect(cx+(col-5)*7+(row%2?2:-2),cy+(row-3)*6,3+(pattern%4),2+(pattern%3),pixelPalette[ci]);
+        }
+      }ctx.restore();
     }
     ctx.globalAlpha=1;
     ctx.restore();
