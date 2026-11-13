@@ -162,7 +162,7 @@
   let hallucinationTier=0,hallucinationTimer=0,hallucinationCooldown=2,hallucinationDuration=0;
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
-  let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
+  let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
   // Aura creatures can drain at most 40% of one Bloody Flight charge in total.
@@ -271,7 +271,7 @@
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;
-    boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
+    boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;thirdBossIntroduced=false;fourthBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
     embers=[];emberClock=0;verticalEmberClock=0;
@@ -486,6 +486,24 @@
     burst(W-150,120,'#52e7ff',34);
     burst(W-150,120,'#d477ff',26);
   }
+  function startThirdBossEncounter(){
+    thirdBossIntroduced=true;
+    boss={kind:'paradoxRegent',x:W+190,y:58,phase:0,timer:32,duration:32,attackClock:.95,warning:0,targetY:GROUND-110,volleyCount:0};
+    bossProjectiles=[];
+    bossIntroMessage='THE PARADOX REGENT HAS FRACTURED THE PATH';
+    bossClearMessage='PARADOX REGENT DEFEATED  +2400';
+    bossIntroTimer=3.6;shake=.3;flash=.3;
+    burst(W-165,125,'#ff8a48',38);burst(W-165,125,'#cf5cff',32);
+  }
+  function startFourthBossEncounter(){
+    fourthBossIntroduced=true;
+    boss={kind:'eventHorizon',x:W+205,y:45,phase:0,timer:32,duration:32,attackClock:.78,warning:0,targetY:GROUND-110,volleyCount:0};
+    bossProjectiles=[];
+    bossIntroMessage='THE EVENT HORIZON IS CONSUMING REALITY';
+    bossClearMessage='EVENT HORIZON COLLAPSED  +2900';
+    bossIntroTimer=4;shake=.38;flash=.35;
+    burst(W-185,115,'#f4f0ff',46);burst(W-185,115,'#884cff',40);
+  }
   function awardScore(points){const multiplier=scoreMultiplierTimer>0?SCORE_SIGIL_MULTIPLIER:1;const earned=(Number(points)||0)*multiplier;score+=earned;return earned;}
   function awardFlightDestroy(basePoints,x,y,color){
     const earned=Math.round(basePoints*flightComboMultiplier);
@@ -506,7 +524,7 @@
     if(bossIntroTimer>0)bossIntroTimer=Math.max(0,bossIntroTimer-dt);
     if(!boss)return;
     boss.timer-=dt;
-    boss.phase+=dt*(boss.kind==='nullSovereign'?1.8:1.35);
+    boss.phase+=dt*(boss.kind==='nullSovereign'?1.8:boss.kind==='paradoxRegent'?2.05:boss.kind==='eventHorizon'?2.35:1.35);
     if(boss.kind==='nullSovereign'){
       boss.x+=(W-220-boss.x)*Math.min(1,dt*1.7);
       boss.y=48+Math.sin(boss.phase*1.15)*39;
@@ -515,90 +533,59 @@
         if(boss.warning===0){
           boss.volleyCount=(boss.volleyCount||0)+1;
           const offsets=boss.volleyCount%3===0?[-76,-38,0,38,76]:[-58,0,58];
-          const shardColours=['#42eaff','#d477ff','#ff4e9b','#d8ff4a','#ffad45'];
+          const cols=['#42eaff','#d477ff','#ff4e9b','#d8ff4a','#ffad45'];
           const centerY=Math.max(42,Math.min(GROUND-35,boss.targetY));
-          offsets.forEach((offset,index)=>{
-            const y=Math.max(30,Math.min(GROUND-24,centerY+offset));
-            bossProjectiles.push({
-              x:boss.x-22,y,baseY:y,w:24,h:20,phase:Math.random()*6,
-              speed:425+(index%2)*28,kind:'prismShard',
-              colour:shardColours[(index+boss.volleyCount)%shardColours.length]
-            });
-          });
-          boss.attackClock=boss.volleyCount%3===0?2.05:1.55;
-          burst(boss.x-18,centerY,'#d477ff',12);
+          offsets.forEach((offset,index)=>{const y=Math.max(30,Math.min(GROUND-24,centerY+offset));bossProjectiles.push({x:boss.x-22,y,baseY:y,w:24,h:20,phase:Math.random()*6,speed:425+(index%2)*28,kind:'prismShard',colour:cols[(index+boss.volleyCount)%cols.length]});});
+          boss.attackClock=boss.volleyCount%3===0?2.05:1.55;burst(boss.x-18,centerY,'#d477ff',12);
         }
-      }else{
-        boss.attackClock-=dt;
-        if(boss.attackClock<=0){
-          boss.warning=.62;
-          boss.targetY=playerBox.y+playerBox.h*.5;
-        }
-      }
-    }else{
-      boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0);
-      boss.y=68+Math.sin(boss.phase*1.55)*25;
+      }else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=.62;boss.targetY=playerBox.y+playerBox.h*.5;}}
+    }else if(boss.kind==='paradoxRegent'||boss.kind==='eventHorizon'){
+      boss.x+=(W-225-boss.x)*Math.min(1,dt*(boss.kind==='eventHorizon'?2.05:1.8));
+      boss.y=(boss.kind==='eventHorizon'?30:42)+Math.sin(boss.phase*(boss.kind==='eventHorizon'?1.55:1.2))*(boss.kind==='eventHorizon'?48:39);
       if(boss.warning>0){
-        boss.warning-=dt;
-        if(boss.warning<=0){
-          bossProjectiles.push({
-            x:boss.x-38,y:boss.targetY,baseY:boss.targetY,
-            w:25,h:18,phase:Math.random()*6,speed:500
-          });
-          boss.attackClock=1.55;
+        boss.warning=Math.max(0,boss.warning-dt);
+        if(boss.warning===0){
+          boss.volleyCount=(boss.volleyCount||0)+1;
+          let offsets,kind,shotSpeed,cols;
+          if(boss.kind==='paradoxRegent'){
+            offsets=boss.volleyCount%3===0?[-126,-84,-42,0,42,84,126]:[-78,-39,0,39,78];
+            kind='fractalShard';shotSpeed=475;cols=['#ff8a48','#cf5cff','#ffe16d','#ff4c87','#7be5ff'];
+          }else{
+            offsets=boss.volleyCount%2===0?[-144,-108,-72,-36,0,36,72,108,144]:[-120,-80,-40,0,40,80,120];
+            kind='eventShard';shotSpeed=535;cols=['#f4f0ff','#884cff','#fa3155','#69dfff','#ffdc69'];
+          }
+          const centerY=Math.max(45,Math.min(GROUND-35,boss.targetY));
+          offsets.forEach((offset,index)=>{const y=Math.max(28,Math.min(GROUND-22,centerY+offset));bossProjectiles.push({x:boss.x-24,y,baseY:y,w:kind==='eventShard'?27:25,h:kind==='eventShard'?23:20,phase:Math.random()*6,speed:shotSpeed+(index%3)*18,kind,colour:cols[(index+boss.volleyCount)%cols.length]});});
+          boss.attackClock=boss.kind==='eventHorizon'?(boss.volleyCount%2===0?1.12:.92):(boss.volleyCount%3===0?1.55:1.32);
+          burst(boss.x-18,centerY,boss.kind==='eventHorizon'?'#884cff':'#ff8a48',boss.kind==='eventHorizon'?22:17);
         }
-      }else{
-        boss.attackClock-=dt;
-        if(boss.attackClock<=0){
-          boss.warning=.48;
-          boss.targetY=playerBox.y+playerBox.h*.5;
-        }
-      }
+      }else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=boss.kind==='eventHorizon'?.40:.50;boss.targetY=playerBox.y+playerBox.h*.5;}}
+    }else{
+      boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0);boss.y=68+Math.sin(boss.phase*1.55)*25;
+      if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0){bossProjectiles.push({x:boss.x-38,y:boss.targetY,baseY:boss.targetY,w:25,h:18,phase:Math.random()*6,speed:500});boss.attackClock=1.55;}}
+      else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=.48;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }
     for(let i=bossProjectiles.length-1;i>=0;i--){
-      const shot=bossProjectiles[i];
-      shot.x-=shot.speed*dt;
-      shot.phase+=dt*5.5;
-      shot.y=shot.baseY+Math.sin(shot.phase)*(shot.kind==='prismShard'?17:12);
+      const shot=bossProjectiles[i];shot.x-=shot.speed*dt;shot.phase+=dt*5.5;
+      const wave=shot.kind==='eventShard'?28:shot.kind==='fractalShard'?22:shot.kind==='prismShard'?17:12;
+      shot.y=shot.baseY+Math.sin(shot.phase)*wave;
       const box={x:shot.x-10,y:shot.y-9,w:shot.w+5,h:shot.h+5};
       if(rectHit(playerBox,box,2)){
-        if(dashTimer>0){
-          burst(shot.x,shot.y,'#c95cff',16);
-          awardScore(35);
-        }else if(landingGrace>0){
-          burst(shot.x,shot.y,'#d477ff',8);
-        }else if(player.flight>0){
-          awardFlightDestroy(65,shot.x,shot.y,'#ff5478');
-          burst(shot.x,shot.y,'#ff5478',13);
-        }else if(shieldTimer>0){
-          shieldTimer=0;flash=.24;shake=.17;
-          burst(shot.x,shot.y,'#e04b78',20);
-        }else if(player.flight>0){
-          player.flight=Math.max(0,player.flight-2.2);
-          player.invuln=player.flight;
-          flash=.16;shake=.12;
-          burst(shot.x,shot.y,'#e04b78',16);
-        }else{
-          state='over';stopMusic();flash=.8;shake=.24;sfx('hit');setOverlay('over');
-          bossProjectiles.splice(i,1);
-          return;
-        }
-        bossProjectiles.splice(i,1);
-        continue;
+        if(dashTimer>0){burst(shot.x,shot.y,'#c95cff',16);awardScore(35);}
+        else if(landingGrace>0){burst(shot.x,shot.y,'#d477ff',8);}
+        else if(player.flight>0){awardFlightDestroy(shot.kind==='eventShard'?95:shot.kind==='fractalShard'?80:65,shot.x,shot.y,shot.colour||'#ff5478');burst(shot.x,shot.y,shot.colour||'#ff5478',13);}
+        else if(shieldTimer>0){shieldTimer=0;flash=.24;shake=.17;burst(shot.x,shot.y,'#e04b78',20);}
+        else{state='over';stopMusic();flash=.8;shake=.24;sfx('hit');setOverlay('over');bossProjectiles.splice(i,1);return;}
+        bossProjectiles.splice(i,1);continue;
       }
       if(shot.x<-40)bossProjectiles.splice(i,1);
     }
     if(boss.timer<=0){
-      const defeatedNullSovereign=boss.kind==='nullSovereign';
-      boss=null;bossProjectiles=[];
-      bossClearTimer=defeatedNullSovereign?4.5:3.5;
-      if(defeatedNullSovereign){
-        awardScore(2000);bossClearMessage='NULL SOVEREIGN DEFEATED  +2000';
-        flash=.42;shake=.24;burst(W-180,125,'#42eaff',42);burst(W-180,125,'#d477ff',34);
-      }else{
-        awardScore(1200);bossClearMessage='THE HUNTER RETREATED  +1200';
-        flash=.3;shake=.16;burst(W-150,130,'#bd2d70',32);
-      }
+      const completed=boss.kind;boss=null;bossProjectiles=[];bossClearTimer=4.5;
+      if(completed==='eventHorizon'){awardScore(2900);bossClearMessage='EVENT HORIZON COLLAPSED  +2900';flash=.5;shake=.3;burst(W-180,120,'#f4f0ff',52);burst(W-180,120,'#884cff',44);}
+      else if(completed==='paradoxRegent'){awardScore(2400);bossClearMessage='PARADOX REGENT DEFEATED  +2400';flash=.46;shake=.27;burst(W-180,120,'#ff8a48',48);burst(W-180,120,'#cf5cff',38);}
+      else if(completed==='nullSovereign'){awardScore(2000);bossClearMessage='NULL SOVEREIGN DEFEATED  +2000';flash=.42;shake=.24;burst(W-180,125,'#42eaff',42);burst(W-180,125,'#d477ff',34);}
+      else{awardScore(1200);bossClearMessage='THE HUNTER RETREATED  +1200';flash=.3;shake=.16;burst(W-150,130,'#bd2d70',32);}
     }
   }
   function drawWorldAtmosphere(){
@@ -685,17 +672,18 @@
   function drawBoss(){
     if(!boss)return;
     const x=Math.round(boss.x),y=Math.round(boss.y);
-    if(boss.kind==='nullSovereign'){
+    if(boss.kind!=='bloodhunter'){
+      const bossPalette=boss.kind==='paradoxRegent'?['#ff8a48','#cf5cff','#ffe16d']:boss.kind==='eventHorizon'?['#f4f0ff','#884cff','#fa3155']:['#42eaff','#d477ff','#ff4e9b'];
       const pulse=.65+.35*Math.sin(boss.phase*3);
       ctx.save();
       ctx.globalAlpha=.96;
       ctx.globalCompositeOperation='lighter';
-      ctx.shadowColor='#42eaff';ctx.shadowBlur=22;
-      ctx.strokeStyle='rgba(66,234,255,'+(.35+.25*pulse)+')';ctx.lineWidth=4;
+      ctx.shadowColor=bossPalette[0];ctx.shadowBlur=22;
+      ctx.strokeStyle=bossPalette[0];ctx.lineWidth=4;
       ctx.beginPath();ctx.ellipse(x+82,y+70,91,63,Math.sin(boss.phase)*.08,0,Math.PI*2);ctx.stroke();
-      ctx.shadowColor='#d477ff';ctx.shadowBlur=18;
+      ctx.shadowColor=bossPalette[1];ctx.shadowBlur=18;
       // Crown-like broken wings frame a faceless digital core.
-      ctx.fillStyle='#080711';ctx.strokeStyle='#5c3b85';ctx.lineWidth=4;
+      ctx.fillStyle='#080711';ctx.strokeStyle=bossPalette[1];ctx.lineWidth=4;
       ctx.beginPath();
       ctx.moveTo(x+55,y+68);ctx.lineTo(x+4,y+7);ctx.lineTo(x+36,y+22);
       ctx.lineTo(x+23,y-14);ctx.lineTo(x+66,y+24);ctx.lineTo(x+82,y-25);
@@ -711,7 +699,7 @@
       ctx.beginPath();ctx.moveTo(x+56,y+48);ctx.lineTo(x+82,y+34);ctx.lineTo(x+108,y+48);
       ctx.lineTo(x+116,y+77);ctx.lineTo(x+82,y+101);ctx.lineTo(x+48,y+77);ctx.closePath();ctx.fill();
       // Three fractured eyes blink in alternating colours.
-      const eyeCols=['#42eaff','#ff4e9b','#d8ff4a'];
+      const eyeCols=[bossPalette[0],bossPalette[2],bossPalette[1]];
       for(let i=0;i<3;i++){
         ctx.shadowColor=eyeCols[i];ctx.shadowBlur=13;
         ctx.fillStyle=eyeCols[i];
@@ -729,13 +717,21 @@
         ctx.fillStyle=eyeCols[i%3];
         ctx.fillRect(sx,sy,5,5);
       }
+      if(boss.kind==='paradoxRegent'){
+        ctx.save();ctx.translate(x+82,y+68);ctx.rotate(-boss.phase*.55);ctx.strokeStyle=bossPalette[0];ctx.globalAlpha=.65;ctx.lineWidth=3;ctx.setLineDash([8,5]);ctx.beginPath();ctx.ellipse(0,0,122,24,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }else if(boss.kind==='eventHorizon'){
+        ctx.save();ctx.translate(x+82,y+68);ctx.rotate(boss.phase*.32);ctx.globalCompositeOperation='lighter';ctx.strokeStyle=bossPalette[1];ctx.lineWidth=3;ctx.shadowColor=bossPalette[0];ctx.shadowBlur=22;
+        for(let ring=0;ring<3;ring++){ctx.globalAlpha=.68-ring*.15;ctx.beginPath();ctx.ellipse(0,0,105+ring*12,48+ring*8,ring*.7,0,Math.PI*2);ctx.stroke();}
+        ctx.fillStyle='#05030a';ctx.globalAlpha=.92;ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.fill();ctx.restore();
+      }
       ctx.globalAlpha=1;ctx.restore();
       if(boss.warning>0){
         ctx.save();ctx.globalAlpha=.24+.22*Math.sin(elapsed*28);
-        ctx.strokeStyle='#d477ff';ctx.lineWidth=2;ctx.setLineDash([7,7]);
+        ctx.strokeStyle=bossPalette[1];ctx.lineWidth=2;ctx.setLineDash([7,7]);
         const center=y+70;
-        for(const offset of [-76,-38,0,38,76]){
-          if((boss.volleyCount+1)%3!==0&&Math.abs(offset)>58)continue;
+        const nextVolley=(boss.volleyCount||0)+1;
+        const offsets=boss.kind==='eventHorizon'?(nextVolley%2===0?[-144,-108,-72,-36,0,36,72,108,144]:[-120,-80,-40,0,40,80,120]):boss.kind==='paradoxRegent'?(nextVolley%3===0?[-126,-84,-42,0,42,84,126]:[-78,-39,0,39,78]):(nextVolley%3===0?[-76,-38,0,38,76]:[-58,0,58]);
+        for(const offset of offsets){
           ctx.beginPath();ctx.moveTo(x+10,center);ctx.lineTo(player.x+player.w,Math.max(28,Math.min(GROUND-20,boss.targetY+offset)));ctx.stroke();
         }
         ctx.restore();
@@ -776,7 +772,7 @@
   }
   function drawBossProjectiles(){
     for(const shot of bossProjectiles){
-      if(shot.kind==='prismShard'){
+      if(shot.kind==='prismShard'||shot.kind==='fractalShard'||shot.kind==='eventShard'){
         ctx.save();ctx.translate(shot.x,shot.y);ctx.rotate(Math.sin(shot.phase)*.22);
         ctx.shadowColor=shot.colour||'#d477ff';ctx.shadowBlur=16;
         ctx.fillStyle='#110d1c';ctx.beginPath();
@@ -867,6 +863,8 @@
     worldDetails=worldDetails.filter(d=>d.life>0&&d.x>-90);
     if(score>=15000&&!bossIntroduced)startBossEncounter();
     if(score>=50000&&!secondBossIntroduced&&!boss)startSecondBossEncounter();
+    if(score>=70000&&!thirdBossIntroduced&&!boss)startThirdBossEncounter();
+    if(score>=100000&&thirdBossIntroduced&&!fourthBossIntroduced&&!boss)startFourthBossEncounter();
 
     // Hallucinations begin after 5,000 points and become more frequent/intense after 10,000.
     const nextHallucinationTier=score>=10000?2:score>=5000?1:0;
@@ -1987,7 +1985,8 @@
     }
     if(boss){
       ctx.textAlign='center';ctx.fillStyle='#ff6a8c';ctx.font='bold 15px Consolas, monospace';
-      ctx.fillText((boss.kind==='nullSovereign'?'NULL SOVEREIGN — SURVIVE ':'BOSS ENCOUNTER — SURVIVE ')+Math.ceil(boss.timer)+'s',W/2,31);
+      const bossName=({bloodhunter:'BLOODHUNTER',nullSovereign:'NULL SOVEREIGN',paradoxRegent:'PARADOX REGENT',eventHorizon:'EVENT HORIZON'})[boss.kind]||'BOSS';
+      ctx.fillText(bossName+' — SURVIVE '+Math.ceil(boss.timer)+'s',W/2,31);
       ctx.fillStyle='#390915';ctx.fillRect(W/2-95,40,190,6);
       ctx.fillStyle='#df2859';ctx.fillRect(W/2-95,40,190*Math.max(0,boss.timer/(boss.duration||23)),6);
       ctx.textAlign='left';
