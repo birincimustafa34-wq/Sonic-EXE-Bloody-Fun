@@ -2073,7 +2073,7 @@
     falseOverTimer:0,memoryFlashTimer:0,shadowPursuitClock:0,
     ringBank:0,lastBankRingCount:0,perfectStreak:0,damageCount:0,
     nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
-    runSamples:[],ghostSamples:[],ghostClock:0,adaptiveFactor:1,
+    runSamples:[],ghostSamples:[],ghostClock:0,ghostAppearanceTimer:0,ghostAppearanceClock:0,ghostAppearanceCount:0,adaptiveFactor:1,
     boss150Done:false,boss175Done:false,boss200Done:false,boss250Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
     menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
@@ -2120,6 +2120,7 @@
     EXPANSION.ringBank=0;EXPANSION.lastBankRingCount=0;EXPANSION.perfectStreak=0;EXPANSION.damageCount=0;
     EXPANSION.nearMisses=0;EXPANSION.enemyKills=0;EXPANSION.pickupsCollected=0;EXPANSION.bossesDefeated=0;
     EXPANSION.runSamples=[];EXPANSION.ghostClock=0;EXPANSION.ghostSamples=EXPANSION_STORE.ghost.slice(0,1500);
+    EXPANSION.ghostAppearanceTimer=0;EXPANSION.ghostAppearanceClock=5+expansionRandom()*5;EXPANSION.ghostAppearanceCount=0;
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
     EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;
     EXPANSION.boss200Done=false;EXPANSION.boss250Done=false;EXPANSION.collapseAnnounced=false;
@@ -2354,6 +2355,20 @@
   function updateExpansion(dt){
     if(state!=='running')return;
     EXPANSION.elapsed+=dt;
+    // The player's shadow double is a rare hallucination confined to the 20K–30K score band.
+    if(score>=20000&&score<30000){
+      if(EXPANSION.ghostAppearanceTimer>0){
+        EXPANSION.ghostAppearanceTimer=Math.max(0,EXPANSION.ghostAppearanceTimer-dt);
+      }else{
+        EXPANSION.ghostAppearanceClock-=dt;
+        if(EXPANSION.ghostAppearanceClock<=0){
+          EXPANSION.ghostAppearanceTimer=2.4+expansionRandom()*1.2;
+          EXPANSION.ghostAppearanceClock=14+expansionRandom()*8;
+          EXPANSION.ghostAppearanceCount++;
+          flash=Math.max(flash,.025);
+        }
+      }
+    }else EXPANSION.ghostAppearanceTimer=0;
     EXPANSION.phaseTimer=Math.max(0,EXPANSION.phaseTimer-dt);
     EXPANSION.phaseCooldown=Math.max(0,EXPANSION.phaseCooldown-dt);
     EXPANSION.timeFractureTimer=Math.max(0,EXPANSION.timeFractureTimer-dt);
@@ -2589,15 +2604,30 @@
     updateExpansionBoss(dt,playerBox);
   }
   function drawExpansionWorld(){
-    // Ghost Runner / Ghost Replay: a translucent previous run, never collidable.
-    if(EXPANSION.ghostSamples.length){
+    // Ghost Runner: a shadowy duplicate that flickers in briefly from 20K to 30K only.
+    if(EXPANSION.ghostAppearanceTimer>0&&score>=20000&&score<30000){
       const t=EXPANSION.elapsed,idx=EXPANSION.ghostSamples.findIndex(p=>p[0]>=t);
-      const sample=idx<0?EXPANSION.ghostSamples[EXPANSION.ghostSamples.length-1]:EXPANSION.ghostSamples[idx];
-      if(sample){
-        ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#8be9ff';
-        pixelRect(player.x-8,sample[1]+7,player.w,Math.max(18,player.h-12),'#8be9ff');
-        pixelRect(player.x+8,sample[1]+17,23,5,'#ffffff');ctx.restore();
-      }
+      const sample=idx<0?null:EXPANSION.ghostSamples[idx];
+      const gx=player.x+112+Math.sin(t*2.7)*9;
+      const gy=(sample?sample[1]:player.y)+Math.sin(t*5.4)*5;
+      const pulse=.55+.45*Math.sin(t*17);
+      const frame=Math.floor(elapsed*12)%4;
+      buildRunnerSprite(frame,player.sliding&&!player.flight);
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.13+.12*pulse;
+      ctx.shadowColor='#8d173e';ctx.shadowBlur=23;
+      ctx.fillStyle='#17050e';ctx.beginPath();ctx.ellipse(gx+23,gy+28,34,29,0,0,Math.PI*2);ctx.fill();
+      ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.34+.18*pulse;
+      ctx.filter='grayscale(1) brightness(.16)';
+      ctx.drawImage(runnerSprite,gx-9,gy-2,64,56);
+      ctx.filter='none';
+      // Two dim crimson eye-pixels make the silhouette readable without looking like a second player sprite.
+      ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.32+.35*pulse;
+      ctx.shadowColor='#d51d4d';ctx.shadowBlur=9;ctx.fillStyle='#b51b43';
+      pixelRect(gx+31,gy+19,5,2,'#b51b43');pixelRect(gx+43,gy+19,5,2,'#b51b43');
+      ctx.globalAlpha=.12+.12*pulse;ctx.fillStyle='#c9a2b5';
+      pixelRect(gx-14,gy+8,8,3,'#c9a2b5');pixelRect(gx+57,gy+34,7,3,'#c9a2b5');
+      ctx.restore();
     }
     for(const e of EXPANSION.enemies){
       const x=e.x,y=e.y,pulse=.65+.35*Math.sin(e.phase*3),c=e.color;
