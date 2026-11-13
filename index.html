@@ -509,7 +509,7 @@
     bossIntroTimer=4;shake=.38;flash=.35;
     burst(W-185,115,'#f4f0ff',46);burst(W-185,115,'#884cff',40);
   }
-  function awardScore(points){const multiplier=scoreMultiplierTimer>0?SCORE_SIGIL_MULTIPLIER:1;const earned=(Number(points)||0)*multiplier;score+=earned;return earned;}
+  function awardScore(points){const multiplier=(scoreMultiplierTimer>0?SCORE_SIGIL_MULTIPLIER:1)*(EXPANSION.overdriveTimer>0?1.5:1);const earned=(Number(points)||0)*multiplier;score+=earned;return earned;}
   function awardFlightDestroy(basePoints,x,y,color){
     const earned=Math.round(basePoints*flightComboMultiplier);
     awardScore(earned);
@@ -2131,14 +2131,15 @@
     if(!panel)return;
     let html='';
     if(kind==='CODEX'){
-      const rows=EXPANSION_ENEMIES.map(d=>{
+      const codexEntries=EXPANSION_ENEMIES.concat(LATE_ENTITY_DEFS).slice().sort((a,b)=>a.unlock-b.unlock);
+      const rows=codexEntries.map(d=>{
         const unlocked=score>=d.unlock||EXPANSION_STORE.codex.includes(d.name);
-        return '<div style="padding:5px;border-bottom:1px solid #49202d;color:'+(unlocked?d.color:'#8b7880')+'">'+(unlocked?d.name:'???  ('+(d.unlock/1000)+'K)')+'</div>';
+        return '<div style="padding:5px;border-bottom:1px solid #49202d;color:'+(unlocked?(d.color||'#d477ff'):'#8b7880')+'">'+(unlocked?d.name:'???  ('+(d.unlock/1000)+'K)')+'</div>';
       }).join('');
       const found=EXPANSION_STORE.codex.map(n=>'<span style="color:#d7b5ff">'+n+'</span>').join(' · ')||'No entries recorded yet.';
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
-      const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['unwritten','THE UNWRITTEN']];
+      const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
       html='<b>ACHIEVEMENTS  '+EXPANSION_STORE.achievements.length+'/'+labels.length+'</b>'+labels.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }
     panel.innerHTML=html;
@@ -2258,7 +2259,7 @@
     EXPANSION.hazards.push(h);
   }
   function spawnExpansionPickup(){
-    const kind=expansionRandom()<.68?'riskChest':'jackpotCrystal';
+    const kind=expansionRandom()<.14?'jackpotCrystal':'riskChest';
     const y=80+expansionRandom()*Math.max(60,GROUND-170);
     EXPANSION.pickups.push({kind,x:W+35,y,w:kind==='riskChest'?38:30,h:kind==='riskChest'?34:34,phase:expansionRandom()*6});
   }
@@ -2273,13 +2274,14 @@
   }
   function updateExpansionBoss(dt,playerBox){
     const b=EXPANSION.boss;if(!b)return;
-    b.timer-=dt;b.phase+=dt*(b.kind==='final'?2.3:1.65);
+    const slowFactor=EXPANSION.timeFractureTimer>0?.58:1;
+    b.timer-=dt;b.phase+=dt*(b.kind==='final'?2.3:1.65)*slowFactor;
     b.weaknessClock-=dt;
     if(b.weaknessClock<=0&&b.weaknessTimer<=0){b.weaknessTimer=2.15;b.weaknessClock=7.2;}
     if(b.weaknessTimer>0)b.weaknessTimer=Math.max(0,b.weaknessTimer-dt);
     const stage=b.timer<b.duration*.34?3:b.timer<b.duration*.68?2:1;
     b.stage=stage;
-    b.attackClock-=dt;
+    b.attackClock-=dt*slowFactor;
     if(b.attackClock<=0){
       b.volley++;
       const center=Math.max(75,Math.min(GROUND-90,playerBox.y+playerBox.h*.5));
@@ -2298,7 +2300,7 @@
       if(b.summonClock<=0){spawnExpansionEnemy();b.summonClock=b.kind==='final'?4.3:6.1;}
     }
     for(let i=EXPANSION.shots.length-1;i>=0;i--){
-      const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt;sh.phase+=dt*6;sh.y+=Math.sin(sh.phase)*12;
+      const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;sh.y+=Math.sin(sh.phase)*12;
       const box={x:sh.x,y:sh.y,w:sh.w,h:sh.h};
       if(rectHit(playerBox,box,3)){
         if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||player.flight>0||dashTimer>0){
@@ -2309,14 +2311,6 @@
         expansionHit(sh.x,sh.y,sh.color);EXPANSION.shots.splice(i,1);continue;
       }
       if(sh.x<-40)EXPANSION.shots.splice(i,1);
-    }
-    for(let i=EXPANSION.echoWaves.length-1;i>=0;i--){
-      const wave=EXPANSION.echoWaves[i];wave.x+=720*dt;wave.life-=dt;
-      if(wave.life<=0){EXPANSION.echoWaves.splice(i,1);continue;}
-      if(b.weaknessTimer>0&&wave.x>b.x-125&&wave.x<b.x+35&&b.cores>0){
-        b.cores--;wave.life=0;awardScore(650);burst(b.x-65,b.y||120,'#ffe17a',28);
-        if(b.cores<=0)b.timer=0.1;
-      }
     }
     b.x=W-190;b.y=65+Math.sin(b.phase)*42;
     if(b.timer<=0){
@@ -2412,7 +2406,7 @@
       EXPANSION.bossRushNext=(EXPANSION.bossRushNext||15000)+15000;
     }
     // Time Fracture slows the independent expansion hazards/projectiles without altering core physics.
-    const extScale=EXPANSION.timeFractureTimer>0?.48:1;
+    const extScale=1;
     const playerBox={x:player.x+5,y:player.y+4,w:player.w-10,h:player.h-7};
     for(let i=EXPANSION.enemies.length-1;i>=0;i--){
       const e=EXPANSION.enemies[i];e.phase+=dt*extScale*3;
@@ -2452,16 +2446,16 @@
       if(h.warning>0)h.warning=Math.max(0,h.warning-dt);
       else h.active=Math.max(0,h.active-dt);
       if(h.id==='gravity'&&h.x<player.x+player.w&&h.x+h.w>player.x&&h.y<player.y+player.h&&h.y+h.h>player.y&&EXPANSION.phaseTimer<=0){
-        player.vy+=Math.sin(h.phase*1.2)*165*dt;
+        player.vy+=h.pull*165*dt;
         player.y=Math.max(25,Math.min(GROUND-player.h,player.y));
       }
       let dangerous=false;
       if(h.id==='laser'&&h.warning<=0&&h.active>0&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w){dangerous=playerBox.y<h.gapY||playerBox.y+playerBox.h>h.gapY+h.gapH;}
-      if(h.id==='collapse'&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w&&player.y+player.h>=GROUND-17)dangerous=true;
-      if(h.id==='corridor'&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w){
+      if(h.id==='collapse'&&h.active>0&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w&&player.y+player.h>=GROUND-17)dangerous=true;
+      if(h.id==='corridor'&&h.active>0&&playerBox.x+playerBox.w>h.x&&playerBox.x<h.x+h.w){
         dangerous=playerBox.y<h.gapY||playerBox.y+playerBox.h>h.gapY+h.gapH;
       }
-      if(h.id==='gate'&&h.x<player.x+player.w&&h.x+h.w>player.x){
+      if(h.id==='gate'&&h.active>0&&h.x<player.x+player.w&&h.x+h.w>player.x){
         dangerous=playerBox.y<h.gapY||playerBox.y+playerBox.h>h.gapY+h.gapH;
       }
       if(dangerous){
@@ -2523,11 +2517,31 @@
     if(score>=55000&&EXPANSION.soundlessTimer<=0&&expansionRandom()<.00035)EXPANSION.soundlessTimer=2.2;
     if(score>=60000&&EXPANSION.elapsed>20&&EXPANSION.ghostSamples.length>0&&expansionRandom()<.00025)EXPANSION.falseOverTimer=Math.max(EXPANSION.falseOverTimer,.45);
     // Ghost replay capture is capped and stored only at the end of a completed run.
+    if(EXPANSION.hudCorruptTimer===undefined)EXPANSION.hudCorruptTimer=0;
+    if(EXPANSION.hudCorruptClock===undefined)EXPANSION.hudCorruptClock=31;
+    EXPANSION.hudCorruptTimer=Math.max(0,EXPANSION.hudCorruptTimer-dt);EXPANSION.hudCorruptClock-=dt;
+    if(score>=80000&&EXPANSION.hudCorruptClock<=0){EXPANSION.hudCorruptTimer=1.35;EXPANSION.hudCorruptClock=27+expansionRandom()*21;}
     EXPANSION.ghostClock-=dt;
     if(EXPANSION.ghostClock<=0){
       EXPANSION.runSamples.push([Math.round(EXPANSION.elapsed*10)/10,Math.round(player.y)]);
       if(EXPANSION.runSamples.length>1500)EXPANSION.runSamples.shift();
       EXPANSION.ghostClock=.12;
+    }
+    for(let i=EXPANSION.echoWaves.length-1;i>=0;i--){
+      const wave=EXPANSION.echoWaves[i];wave.x+=720*dt;wave.life-=dt;
+      let consumed=wave.life<=0;
+      for(let j=EXPANSION.enemies.length-1;j>=0&&!consumed;j--){
+        const e=EXPANSION.enemies[j];
+        if(wave.x>e.x-10&&wave.x<e.x+e.w+20&&Math.abs(wave.y-(e.y+e.h/2))<e.h*.8){
+          awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
+          burst(e.x+e.w/2,e.y+e.h/2,e.color,22);EXPANSION.enemies.splice(j,1);consumed=true;
+        }
+      }
+      const b=EXPANSION.boss;
+      if(!consumed&&b&&b.weaknessTimer>0&&b.cores>0&&wave.x>b.x-125&&wave.x<b.x+35){
+        b.cores--;consumed=true;awardScore(650);burst(b.x-65,b.y||120,'#ffe17a',28);if(b.cores<=0)b.timer=.1;
+      }
+      if(consumed)EXPANSION.echoWaves.splice(i,1);
     }
     updateExpansionBoss(dt,playerBox);
   }
@@ -2642,9 +2656,17 @@
   }
   function drawExpansionOverlay(){
     ctx.save();
+    if(score>=125000&&state==='running'){
+      ctx.globalAlpha=.045+.035*Math.sin(elapsed*5);ctx.fillStyle='#6412a4';ctx.fillRect(0,0,W,H);
+      if(score>=225000&&Math.floor(elapsed*14)%5===0){ctx.globalAlpha=.12;ctx.fillStyle='#c85cff';ctx.fillRect(0,(Math.floor(elapsed*37)%H),W,3);}
+    }
     if(EXPANSION.mode==='CORRUPTED'&&state==='running'){
       ctx.globalAlpha=.09+.06*Math.sin(elapsed*21);ctx.fillStyle='#b24cff';ctx.fillRect(0,0,W,H);
       if(Math.floor(elapsed*8)%4===0){ctx.fillStyle='#fff';ctx.fillRect(0,(Math.floor(elapsed*43)%H),W,2);}
+    }
+    if(EXPANSION.hudCorruptTimer>0){
+      ctx.globalAlpha=.45;ctx.textAlign='right';ctx.fillStyle='#ff4c9b';ctx.font='bold 11px Consolas,monospace';
+      ctx.fillText('RING BUFFER // '+(ringCount+Math.floor(EXPANSION.hudCorruptTimer*91))+' ?',W-22,183);
     }
     if(EXPANSION.scoreGlitchTimer>0){
       ctx.textAlign='left';ctx.fillStyle='#ff5a82';ctx.font='bold 12px Consolas,monospace';
