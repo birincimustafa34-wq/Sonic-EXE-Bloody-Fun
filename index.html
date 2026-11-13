@@ -173,6 +173,7 @@
   });
   const MAX_AURA_FLIGHT_DRAIN=40;
   const LATE_ENTITY_DEFS = [
+    {unlock:62000,name:"Cipher Wasp",role:"flyer",behavior:"stutter",color:"#f6dd54",w:100,h:62,drain:16,points:545},
     {unlock:64000,name:"Vesper Talon",role:"flyer",behavior:"dive",color:"#ff6485",w:104,h:66,drain:16,points:560},
     {unlock:66000,name:"Glass Widow",role:"flyer",behavior:"feint",color:"#e7a6ff",w:96,h:70,drain:18,points:575},
     {unlock:68000,name:"Signal Leech",role:"flyer",behavior:"track",color:"#55e7d1",w:90,h:62,drain:17,points:590},
@@ -360,8 +361,8 @@
       }
       return;
     }
-    // A new entity joins the active random roster every 2,000 points from 64k to 124k.
-    if(score>=64000){const lateChance=Math.min(.50,.24+Math.floor((score-64000)/2000)*.008);if(Math.random()<lateChance){spawnLateEntity();return;}}
+    // A new entity joins the active random roster every 2,000 points from 62k to 124k.
+    if(score>=62000){const lateChance=Math.min(.50,.24+Math.floor((score-62000)/2000)*.008);if(Math.random()<lateChance){spawnLateEntity();return;}}
     // The flying share rises progressively, with a larger increase at 63k.
     const aerialSpawnChance=score>=63000?.58:score>=60000?.48:score>=58000?.42:.34;
     if(score>=44000&&Math.random()<aerialSpawnChance){
@@ -428,7 +429,7 @@
   }
   function spawnLateEntity(){
     const unlocked=LATE_ENTITY_DEFS.filter(d=>score>=d.unlock);if(!unlocked.length)return;
-    const d=unlocked[Math.floor(Math.random()*unlocked.length)],variant=LATE_ENTITY_DEFS.indexOf(d),tier=Math.floor((d.unlock-64000)/2000);
+    const d=unlocked[Math.floor(Math.random()*unlocked.length)],variant=LATE_ENTITY_DEFS.indexOf(d),tier=Math.floor((d.unlock-62000)/2000);
     const baseY=55+Math.random()*Math.max(45,GROUND-245),y=d.role==='flyer'?baseY:GROUND-d.h;
     obstacles.push({type:'lateentity',variant,tier,name:d.name,role:d.role,behavior:d.behavior,color:d.color,drain:d.drain,points:d.points,w:d.w,h:d.h,x:W+95,y,baseY,phase:Math.random()*6,attackClock:.75+Math.random()*.9,shiftTimer:.8+Math.random()*1.1,warning:0,diveTime:0,targetY:baseY,speedFactor:1.18+tier*.006,passed:false});
   }
