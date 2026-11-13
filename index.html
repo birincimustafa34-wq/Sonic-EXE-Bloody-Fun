@@ -580,6 +580,8 @@
         if(dashTimer>0){burst(shot.x,shot.y,'#c95cff',16);awardScore(35);}
         else if(landingGrace>0){burst(shot.x,shot.y,'#d477ff',8);}
         else if(player.flight>0){awardFlightDestroy(shot.kind==='eventShard'?95:shot.kind==='fractalShard'?80:65,shot.x,shot.y,shot.colour||'#ff5478');burst(shot.x,shot.y,shot.colour||'#ff5478',13);}
+        else if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){awardScore(45);burst(shot.x,shot.y,'#a875ff',14);}
+        else if(EXPANSION.reboundCharges>0){EXPANSION.reboundCharges=0;awardScore(180);burst(shot.x,shot.y,'#ffe17a',20);}
         else if(shieldTimer>0){shieldTimer=0;flash=.24;shake=.17;burst(shot.x,shot.y,'#e04b78',20);}
         else{state='over';stopMusic();flash=.8;shake=.24;sfx('hit');setOverlay('over');bossProjectiles.splice(i,1);return;}
         bossProjectiles.splice(i,1);continue;
@@ -869,10 +871,10 @@
       detail.life-=dt;
     }
     worldDetails=worldDetails.filter(d=>d.life>0&&d.x>-90);
-    if(score>=15000&&!bossIntroduced)startBossEncounter();
-    if(score>=50000&&!secondBossIntroduced&&!boss)startSecondBossEncounter();
-    if(score>=70000&&!thirdBossIntroduced&&!boss)startThirdBossEncounter();
-    if(score>=100000&&thirdBossIntroduced&&!fourthBossIntroduced&&!boss)startFourthBossEncounter();
+    if(EXPANSION.mode!=='BOSS RUSH'&&score>=15000&&!bossIntroduced)startBossEncounter();
+    if(EXPANSION.mode!=='BOSS RUSH'&&score>=50000&&!secondBossIntroduced&&!boss&&!EXPANSION.boss)startSecondBossEncounter();
+    if(EXPANSION.mode!=='BOSS RUSH'&&score>=70000&&!thirdBossIntroduced&&!boss&&!EXPANSION.boss)startThirdBossEncounter();
+    if(EXPANSION.mode!=='BOSS RUSH'&&score>=100000&&thirdBossIntroduced&&!fourthBossIntroduced&&!boss&&!EXPANSION.boss)startFourthBossEncounter();
 
     // Hallucinations begin after 5,000 points and become more frequent/intense after 10,000.
     const nextHallucinationTier=score>=10000?2:score>=5000?1:0;
@@ -926,7 +928,8 @@
       if(player.flight===0){player.y=Math.min(player.y,GROUND-player.h);player.vy=0;landingGrace=.5;}
     } else {
       player.h=player.sliding?29:52;
-      player.vy+=(Number(CONFIG.gravity)||1750)*dt; player.y+=player.vy*dt;
+      const gravityScale=score>=160000&&EXPANSION.gravityShiftTimer>0?EXPANSION.gravityShiftScale:1;
+      player.vy+=(Number(CONFIG.gravity)||1750)*gravityScale*dt; player.y+=player.vy*dt;
       if(player.y>=GROUND-player.h){player.y=GROUND-player.h;player.vy=0;player.jumps=0;}
     }
     player.w=46;
@@ -1212,6 +1215,12 @@
           burst(o.x+o.w/2,oy+o.h/2,colour,(o.type==='lateentity'||o.type in auraPoints)?24:13);
           sfx('smash');shake=Math.max(shake,.1);
           obstacles.splice(i,1);continue;
+        }
+        if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){
+          burst(o.x+o.w/2,oy+o.h/2,'#a875ff',20);awardScore(45);obstacles.splice(i,1);continue;
+        }
+        if(EXPANSION.reboundCharges>0){
+          EXPANSION.reboundCharges=0;burst(o.x+o.w/2,oy+o.h/2,'#ffe17a',24);awardScore(180);obstacles.splice(i,1);continue;
         }
         if(o.type==='lateentity'&&dashTimer>0){burst(o.x+o.w/2,oy+o.h/2,o.color,34);awardScore(360+o.tier*18);sfx('smash');shake=.22;flash=.18;obstacles.splice(i,1);continue;}
         if(o.type==='relicgolem' && dashTimer>0){
@@ -2055,6 +2064,7 @@
     mode:'ENDLESS',dailySeed:0,rng:0,elapsed:0,spawnClock:7,hazardClock:12,pickupClock:18,
     enemies:[],hazards:[],pickups:[],shots:[],echoWaves:[],boss:null,pursuit:null,
     phaseTimer:0,phaseCooldown:0,timeFractureTimer:0,timeFractureCooldown:0,
+    gravityShiftTimer:0,gravityShiftClock:0,gravityShiftScale:1,
     echoDashTimer:0,echoDashCooldown:0,magnetTimer:0,magnetCooldown:0,
     reboundCharges:0,reboundCooldown:0,overdriveTimer:0,overdriveCooldown:0,
     glitchShieldTimer:0,glitchShieldCooldown:0,voidStepTimer:0,voidStepCooldown:0,
@@ -2100,6 +2110,7 @@
     EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.shots=[];EXPANSION.echoWaves=[];
     EXPANSION.boss=null;EXPANSION.pursuit=null;
     EXPANSION.phaseTimer=0;EXPANSION.phaseCooldown=0;EXPANSION.timeFractureTimer=0;EXPANSION.timeFractureCooldown=0;
+    EXPANSION.gravityShiftTimer=0;EXPANSION.gravityShiftClock=18+expansionRandom()*8;EXPANSION.gravityShiftScale=1;
     EXPANSION.echoDashTimer=0;EXPANSION.echoDashCooldown=0;EXPANSION.magnetTimer=0;EXPANSION.magnetCooldown=0;
     EXPANSION.reboundCharges=0;EXPANSION.reboundCooldown=0;EXPANSION.overdriveTimer=0;EXPANSION.overdriveCooldown=0;
     EXPANSION.glitchShieldTimer=0;EXPANSION.glitchShieldCooldown=0;EXPANSION.voidStepTimer=0;EXPANSION.voidStepCooldown=0;
@@ -2183,6 +2194,14 @@
     codex.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'CODEX');
     achievements.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ACHIEVEMENTS');
     EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements};
+    const mobileControls=document.getElementById('mobileControls');
+    if(mobileControls&&!mobileControls.querySelector('[data-expansion-power]')){
+      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP']];
+      const powerButton=document.createElement('button');powerButton.className='touch';powerButton.dataset.expansionPower='true';let powerIndex=0;
+      powerButton.textContent='POWER: '+powers[powerIndex][1];
+      powerButton.addEventListener('click',()=>{handleExpansionKey(powers[powerIndex][0]);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
+      mobileControls.appendChild(powerButton);
+    }
     overlay.insertBefore(wrap,startBtn);
     overlay.insertBefore(panel,startBtn);
     refreshExpansionMenu();
@@ -2337,6 +2356,16 @@
     EXPANSION.phaseCooldown=Math.max(0,EXPANSION.phaseCooldown-dt);
     EXPANSION.timeFractureTimer=Math.max(0,EXPANSION.timeFractureTimer-dt);
     EXPANSION.timeFractureCooldown=Math.max(0,EXPANSION.timeFractureCooldown-dt);
+    EXPANSION.gravityShiftTimer=Math.max(0,EXPANSION.gravityShiftTimer-dt);
+    if(score>=160000){
+      EXPANSION.gravityShiftClock-=dt;
+      if(EXPANSION.gravityShiftClock<=0&&EXPANSION.gravityShiftTimer<=0){
+        EXPANSION.gravityShiftTimer=2.8;EXPANSION.gravityShiftScale=expansionRandom()<.5?.58:1.48;
+        EXPANSION.gravityShiftClock=21+expansionRandom()*13;
+        bossIntroMessage=EXPANSION.gravityShiftScale<1?'GRAVITY FIELD: LIGHT PHASE':'GRAVITY FIELD: HEAVY PHASE';
+        bossIntroTimer=1.5;flash=Math.max(flash,.12);
+      }
+    }
     EXPANSION.echoDashTimer=Math.max(0,EXPANSION.echoDashTimer-dt);
     EXPANSION.echoDashCooldown=Math.max(0,EXPANSION.echoDashCooldown-dt);
     EXPANSION.magnetTimer=Math.max(0,EXPANSION.magnetTimer-dt);
@@ -2702,6 +2731,7 @@
     if(EXPANSION.mode==='NO FLIGHT') {ctx.textAlign='right';ctx.fillStyle='#b8e8ff';ctx.font='bold 11px Consolas,monospace';ctx.fillText('NO FLIGHT CHALLENGE',W-20,H-30);}
     if(EXPANSION.mode==='ONE LIFE') {ctx.textAlign='right';ctx.fillStyle='#ff8b9d';ctx.font='bold 11px Consolas,monospace';ctx.fillText('ONE LIFE  //  NO SHIELDS',W-20,H-30);}
     if(EXPANSION.overdriveTimer>0){ctx.textAlign='right';ctx.fillStyle='#ffb45f';ctx.font='bold 13px Consolas,monospace';ctx.fillText('OVERDRIVE x1.5  '+EXPANSION.overdriveTimer.toFixed(1)+'s',W-20,96);}
+    if(EXPANSION.gravityShiftTimer>0){ctx.textAlign='center';ctx.fillStyle='#bca3ff';ctx.font='bold 12px Consolas,monospace';ctx.fillText('GRAVITY FIELD  '+(EXPANSION.gravityShiftScale<1?'LIGHT':'HEAVY'),W/2,H-30);ctx.globalAlpha=.12;ctx.strokeStyle='#a77cff';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(W*.72,H*.45,100+Math.sin(elapsed*4)*18,60,elapsed*.18,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;}
     if(EXPANSION.magnetTimer>0){ctx.textAlign='right';ctx.fillStyle='#7beeff';ctx.font='bold 12px Consolas,monospace';ctx.fillText('MAGNET CORE  '+EXPANSION.magnetTimer.toFixed(1)+'s',W-20,116);}
     if(EXPANSION.reboundCharges>0){ctx.textAlign='right';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';ctx.fillText('CHAOS REBOUND  READY [B]',W-20,136);}
     if(EXPANSION.glitchShieldTimer>0){ctx.textAlign='right';ctx.fillStyle='#70f4df';ctx.font='bold 12px Consolas,monospace';ctx.fillText('GLITCH SHIELD  '+EXPANSION.glitchShieldTimer.toFixed(1)+'s',W-20,156);}
