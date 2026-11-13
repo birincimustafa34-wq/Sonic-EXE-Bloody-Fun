@@ -39,9 +39,9 @@
   }
   #start:hover { background:#c51c40; }
   #help { margin-top:12px; color:#a98d96; font-size:11px; }
-  #mobileControls { display:none; justify-content:space-between; gap:10px; margin-top:10px; }
+  #mobileControls { display:none; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .touch {
-    flex:1; min-height:44px; border:1px solid #9e3047; border-radius:5px;
+    flex:1 1 calc(33.333% - 8px); min-width:88px; min-height:44px; border:1px solid #9e3047; border-radius:5px;
     background:#260a14; color:#ffe8ec; opacity:.92; font-size:12px;
   }
   .touch:active { background:#7d1428; }
@@ -60,17 +60,19 @@
     <div id="overlay">
       <h1 id="title">SONIC.EXE</h1>
       <p id="subtitle">BLOODY FLIGHT EDITION<br>
-        SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide<br>
+        SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; ← / →: Back / Forward<br>
         Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>
         Chain blood-red rings for combo points and collect Blood Shields to survive one hit.
       </p>
       <p id="message">The forest is watching.</p>
       <button id="start">START RUN</button>
-      <div id="help">SPACE / ↑: Jump · ↓: Slide · X / SHIFT: Shadow Dash · P / ESC: Pause · M: Mute</div>
+      <div id="help">← / A: Back · → / D: Forward · SPACE / ↑: Jump · ↓: Slide · X: Shadow Dash · P: Pause · M: Mute</div>
     </div>
   </div>
   <div id="mobileControls" aria-label="Touch controls">
+    <button class="touch" data-key="ArrowLeft">◀ BACK</button>
     <button class="touch" data-key="Space">JUMP / FLY ↑</button>
+    <button class="touch" data-key="ArrowRight">FORWARD ▶</button>
     <button class="touch" data-key="ArrowDown">SLIDE / FLY ↓</button>
     <button class="touch" data-key="KeyX">SHADOW DASH x3 ✦</button>
   </div>
@@ -254,7 +256,7 @@
     overlay.classList.remove('hidden');
     if (mode==='ready') {
       titleEl.textContent=CONFIG.title || 'SONIC.EXE';
-      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; X: Shadow Dash (3 uses)<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
+      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; ← / →: Move Back / Forward &nbsp; | &nbsp; X: Shadow Dash<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
       messageEl.textContent=CONFIG.startMessage || 'The blood moon is rising. The forest is watching.'; startBtn.textContent='START RUN';
     } else if (mode==='over') {
       titleEl.textContent='GAME OVER';
@@ -280,7 +282,7 @@
     resetExpansion();
     embers=[];emberClock=0;verticalEmberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; scoreSigils=[]; particles=[]; trail=[];
-    player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
+    player.x=132; player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
     stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*245,a:.2+Math.random()*.65,size:Math.random()<.8?2:3}));
   }
@@ -301,7 +303,7 @@
   function pressKey(code, down) {
     keys[code]=down;
     if (!down || state!=='running') return;
-    if(handleExpansionKey(code))return;
+    if(handleExpansionKey(code)||handleUltimateKey(code))return;
     if(code==='KeyX'||code==='ShiftLeft'||code==='ShiftRight')activateShadowDash();
     if (code==='Space' || code==='ArrowUp' || code==='KeyW') {
       if (player.flight>0) return;
@@ -313,7 +315,7 @@
     if (code==='ArrowDown' || code==='KeyS') player.sliding=true;
   }
   window.addEventListener('keydown',e=>{
-    if (['Space','ArrowUp','ArrowDown','KeyX','ShiftLeft','ShiftRight'].includes(e.code)) e.preventDefault();
+    if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyX','ShiftLeft','ShiftRight','KeyK','KeyJ','KeyH','KeyT','KeyL'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if ((e.code==='KeyP'||e.code==='Escape') && (state==='running'||state==='paused')) {
       if (state==='running') { state='paused'; stopMusic(); setOverlay('paused'); }
@@ -944,6 +946,9 @@
       if(player.y>=GROUND-player.h){player.y=GROUND-player.h;player.vy=0;player.jumps=0;}
     }
     player.w=46;
+    // Duck Life 4-inspired horizontal control: retreat or push forward.
+    const horizontalAxis=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
+    if(horizontalAxis)player.x=Math.max(74,Math.min(370,player.x+horizontalAxis*(285+Math.min(85,score/1800))*dt));
     if(elapsed>0.1 && Math.floor(elapsed*12)%2===0){trail.push({x:player.x-3,y:player.y+8,h:player.h,life:.25,flight:player.flight>0});}
     if(EXPANSION.magnetTimer>0){
       for(const item of rings.concat(emeralds,shields,scoreSigils)){
@@ -1485,9 +1490,9 @@
     }
     const smooth=ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled=false;
-    if(sliding)ctx.drawImage(runnerSprite,x-9,y-1,64,30);
-    else ctx.drawImage(runnerSprite,x-9,y-2+bob,64,56);
-    ctx.imageSmoothingEnabled=smooth;
+    const skinFilter=UPGRADE.selectedSkin==='BLOODSTAINED'?'hue-rotate(325deg) saturate(1.5)':UPGRADE.selectedSkin==='VOID'?'grayscale(1) brightness(.72) contrast(1.4)':UPGRADE.selectedSkin==='EMERALD'?'hue-rotate(105deg) saturate(1.7)':'none';ctx.filter=skinFilter;
+    if(sliding)ctx.drawImage(runnerSprite,x-9,y-1,64,30);else ctx.drawImage(runnerSprite,x-9,y-2+bob,64,56);
+    ctx.filter='none';ctx.imageSmoothingEnabled=smooth;
   }
   function drawObstacle(o){
     const x=Math.round(o.x), y=Math.round(o.y+(o.type==='bat'?Math.sin(o.phase)*9:o.type==='rock'?Math.sin(o.phase)*13:0));
@@ -1979,6 +1984,7 @@
     for(const sh of shields){const y=sh.y+Math.sin(sh.phase)*6,x=sh.x;if(drawAsset('shield',x,y,sh.w,sh.h))continue;ctx.fillStyle='rgba(112,0,12,.28)';ctx.beginPath();ctx.arc(x+15,y+15,25,0,Math.PI*2);ctx.fill();ctx.fillStyle='#690008';ctx.beginPath();ctx.moveTo(x+15,y);ctx.lineTo(x+29,y+7);ctx.lineTo(x+26,y+23);ctx.lineTo(x+15,y+30);ctx.lineTo(x+4,y+23);ctx.lineTo(x+1,y+7);ctx.closePath();ctx.fill();ctx.strokeStyle='#bd1523';ctx.lineWidth=3;ctx.stroke();pixelRect(x+13,y+7,4,15,'#d02a32');}
     for(const sigil of scoreSigils){const x=sigil.x,y=sigil.y+Math.sin(sigil.phase)*5,pulse=.72+.28*Math.sin(sigil.phase*2);ctx.save();ctx.translate(x+17,y+17);ctx.rotate(sigil.phase*.35);ctx.globalCompositeOperation='lighter';ctx.shadowColor='#d477ff';ctx.shadowBlur=20;ctx.fillStyle='#140b28';ctx.strokeStyle='#d477ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(15*pulse,0);ctx.lineTo(0,17*pulse);ctx.lineTo(-15*pulse,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff1ff';ctx.fillRect(-3,-7,6,14);ctx.fillStyle='#ffdc69';ctx.fillRect(-1,-4,2,8);ctx.restore();ctx.fillStyle='#f2d9ff';ctx.font='bold 9px Consolas, monospace';ctx.textAlign='center';ctx.fillText('x1.5',x+17,y+31);ctx.textAlign='left';}
     drawExpansionWorld();
+    drawUltimateWorld();
     obstacles.forEach(drawObstacle);
     drawBoss();
     drawBossProjectiles();
@@ -2049,7 +2055,12 @@
     {id:'mimicRelic',name:'Mimic Relic',unlock:80000,color:'#e9b76e',w:54,h:58,points:480,kind:'mimic'},
     {id:'riftSerpent',name:'Rift Serpent',unlock:100000,color:'#54e4e9',w:112,h:44,points:560,kind:'serpent'},
     {id:'afterimageHunter',name:'Afterimage Hunter',unlock:120000,color:'#e08cff',w:70,h:62,points:640,kind:'blink'},
-    {id:'corebreaker',name:'Corebreaker',unlock:135000,color:'#ff744c',w:88,h:92,points:760,kind:'heavy'}
+    {id:'corebreaker',name:'Corebreaker',unlock:135000,color:'#ff744c',w:88,h:92,points:760,kind:'heavy'},
+    {id:'batSwarm',name:'Bat Swarm',unlock:28000,color:'#c28cff',w:96,h:58,points:310,kind:'swarm'},
+    {id:'shadowBat',name:'Shadow Bat',unlock:42000,color:'#9c6cff',w:68,h:48,points:360,kind:'blink'},
+    {id:'alphaBat',name:'Alpha Bat',unlock:56000,color:'#ff647d',w:108,h:72,points:520,kind:'hover'},
+    {id:'phantomBats',name:'Phantom Bats',unlock:76000,color:'#80d9ff',w:92,h:62,points:580,kind:'blink'},
+    {id:'bloodwing',name:'Bloodwing',unlock:95000,color:'#ff315d',w:90,h:60,points:690,kind:'dash'}
   ];
   const EXPANSION_HAZARDS = [
     {id:'laser',name:'Laser Grid',unlock:30000},
@@ -2084,10 +2095,147 @@
     ringBank:0,lastBankRingCount:0,perfectStreak:0,damageCount:0,
     nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
     runSamples:[],ghostSamples:[],ghostClock:0,ghostAppearanceTimer:0,ghostAppearanceClock:0,ghostAppearanceCount:0,adaptiveFactor:1,
+    boss85Done:false,boss110Done:false,boss135Done:false,boss165Done:false,
     boss150Done:false,boss175Done:false,boss200Done:false,boss250Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
     menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
   };
+
+  const UPGRADE={
+    eventClock:20,eyesTimer:0,stalkerTimer:0,stalkerX:760,stalkerPhase:0,distortionTimer:0,
+    falsePauseTimer:0,abandonedTimer:0,hiddenMessageTimer:0,hiddenMessage:'',
+    bloodMoonTimer:0,bloodMoonClock:40,choiceClock:50,choiceTimer:0,choiceActive:false,choiceDirection:0,
+    portalTimer:0,portalX:650,portalY:180,starClock:12,fallingStars:[],
+    emeraldFragments:0,emeraldComplete:false,secretRelics:0,goldenBats:0,
+    explosionCooldown:0,explosionTimer:0,counterCooldown:0,decoyCooldown:0,decoyTimer:0,lightningCooldown:0,
+    lastStandTimer:0,lastStandUsed:false,selectedSkin:'DEFAULT',skinButton:null,finalBossDefeated:false,
+    runBats:0,runStars:0,runRelics:0,dailyDate:'',dailyType:'',dailyTarget:0,dailyDone:false
+  };
+  const UPGRADE_DAILY=[
+    {id:'rings',label:'COLLECT 30 RINGS',target:30},
+    {id:'kills',label:'DEFEAT 6 SPECIAL ENTITIES',target:6},
+    {id:'score',label:'REACH 60,000 SCORE',target:60000},
+    {id:'near',label:'MAKE 12 NEAR MISSES',target:12}
+  ];
+  const UPGRADE_BOSSES=[
+    ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE FRACTURED',165000],
+    ['THE ABSOLUTE',150000],['NULL SOVEREIGN REMATCH',175000],['THE LAST SIGNAL',200000],['THE UNWRITTEN',250000]
+  ];
+  function resetUltimateSystems(){
+    for(const k of ['eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer','bloodMoonTimer','choiceTimer','portalTimer','explosionTimer','decoyTimer','lastStandTimer'])UPGRADE[k]=0;
+    UPGRADE.eventClock=18+expansionRandom()*12;UPGRADE.stalkerX=760;UPGRADE.stalkerPhase=0;UPGRADE.hiddenMessage='';
+    UPGRADE.bloodMoonClock=40+expansionRandom()*18;UPGRADE.choiceClock=48+expansionRandom()*20;UPGRADE.choiceActive=false;UPGRADE.choiceDirection=0;
+    UPGRADE.portalX=650;UPGRADE.portalY=100+expansionRandom()*Math.max(60,GROUND-180);UPGRADE.starClock=10+expansionRandom()*8;UPGRADE.fallingStars=[];
+    UPGRADE.emeraldFragments=0;UPGRADE.emeraldComplete=false;UPGRADE.secretRelics=0;UPGRADE.goldenBats=0;
+    for(const k of ['explosionCooldown','counterCooldown','decoyCooldown','lightningCooldown'])UPGRADE[k]=0;
+    UPGRADE.lastStandUsed=false;UPGRADE.finalBossDefeated=false;UPGRADE.runBats=0;UPGRADE.runStars=0;UPGRADE.runRelics=0;
+    const d=new Date(),date=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(),daily=UPGRADE_DAILY[expansionSeedForToday()%UPGRADE_DAILY.length];
+    UPGRADE.dailyDate=date;UPGRADE.dailyType=daily.id;UPGRADE.dailyTarget=daily.target;
+    UPGRADE.dailyDone=!!(EXPANSION_STORE.dailyChallenge&&EXPANSION_STORE.dailyChallenge.date===date&&EXPANSION_STORE.dailyChallenge.done);
+  }
+  function upgradeDailyProgress(){
+    if(UPGRADE.dailyType==='rings')return ringCount;
+    if(UPGRADE.dailyType==='kills')return EXPANSION.enemyKills;
+    if(UPGRADE.dailyType==='score')return Math.floor(score);
+    return EXPANSION.nearMisses;
+  }
+  function finishUpgradeDaily(){
+    if(UPGRADE.dailyDone||upgradeDailyProgress()<UPGRADE.dailyTarget)return;
+    UPGRADE.dailyDone=true;EXPANSION_STORE.dailyChallenge={date:UPGRADE.dailyDate,done:true,id:UPGRADE.dailyType};
+    awardScore(2500);expansionAchievement('daily-champion','DAILY CHAMPION');saveExpansionStore();
+  }
+  function upgradeCycleSkin(){
+    const skins=[['DEFAULT',true],['BLOODSTAINED',EXPANSION_STORE.best>=50000],['VOID',EXPANSION_STORE.best>=100000],['EMERALD',(EXPANSION_STORE.endings||[]).includes('emerald-witness')]];
+    const available=skins.filter(x=>x[1]).map(x=>x[0]),i=available.indexOf(UPGRADE.selectedSkin);
+    UPGRADE.selectedSkin=available[(i+1)%available.length];
+    if(UPGRADE.skinButton)UPGRADE.skinButton.textContent='SKIN: '+UPGRADE.selectedSkin;
+    refreshExpansionMenu();
+  }
+  function handleUltimateKey(code){
+    if(state!=='running')return false;
+    if(code==='KeyK'&&UPGRADE.explosionCooldown<=0){
+      UPGRADE.explosionCooldown=22;UPGRADE.explosionTimer=.65;let hits=0;
+      for(let i=EXPANSION.enemies.length-1;i>=0&&hits<4;i--){const e=EXPANSION.enemies[i];if(Math.abs(e.x-player.x)<430){awardScore(e.points+120);EXPANSION.enemyKills++;burst(e.x+e.w/2,e.y+e.h/2,'#ff9b59',20);EXPANSION.enemies.splice(i,1);hits++;}}
+      for(let i=EXPANSION.shots.length-1;i>=0;i--)if(Math.abs(EXPANSION.shots[i].x-player.x)<420)EXPANSION.shots.splice(i,1);
+      burst(player.x+player.w/2,player.y+player.h/2,'#ff8a45',34);sfx('smash');return true;
+    }
+    if(code==='KeyJ'&&UPGRADE.counterCooldown<=0){
+      if(player.flight<=0&&player.y>=GROUND-player.h-8)return true;
+      UPGRADE.counterCooldown=13.5;const b=EXPANSION.boss;
+      if(b&&b.weaknessTimer>0&&b.cores>0){b.cores--;awardScore(550);burst(b.x-45,b.y,'#7ff5ed',24);if(b.cores<=0)b.timer=.1;}
+      else{let target=-1,best=260;for(let i=0;i<EXPANSION.enemies.length;i++){const d=Math.hypot(EXPANSION.enemies[i].x-player.x,EXPANSION.enemies[i].y-player.y);if(d<best){best=d;target=i;}}
+        if(target>=0){const e=EXPANSION.enemies.splice(target,1)[0];awardScore(e.points+260);EXPANSION.enemyKills++;burst(e.x+e.w/2,e.y+e.h/2,'#7ff5ed',24);}else awardScore(90);}
+      burst(player.x+player.w/2,player.y+player.h/2,'#7ff5ed',20);return true;
+    }
+    if(code==='KeyH'&&UPGRADE.decoyCooldown<=0){UPGRADE.decoyCooldown=19;UPGRADE.decoyTimer=4.5;burst(player.x+155,player.y+24,'#d477ff',18);return true;}
+    if(code==='KeyT'&&UPGRADE.lightningCooldown<=0){
+      UPGRADE.lightningCooldown=20;let hit=0;
+      for(let i=EXPANSION.enemies.length-1;i>=0&&hit<3;i--){const e=EXPANSION.enemies[i];if(Math.abs(e.x-player.x)<520){const x=e.x+e.w/2,y=e.y+e.h/2;awardScore(e.points+180);EXPANSION.enemyKills++;burst(x,y,'#72eaff',20);EXPANSION.enemies.splice(i,1);hit++;}}
+      burst(player.x+player.w/2,player.y+player.h/2,'#72eaff',25);return true;
+    }
+    if(code==='KeyL'&&!UPGRADE.lastStandUsed){UPGRADE.lastStandUsed=true;UPGRADE.lastStandTimer=3.6;player.invuln=Math.max(player.invuln,3.6);burst(player.x+23,player.y+25,'#ffe17a',28);sfx('shield');return true;}
+    return false;
+  }
+  function updateUltimateSystems(dt){
+    for(const k of ['explosionCooldown','counterCooldown','decoyCooldown','lightningCooldown','lastStandTimer','bloodMoonTimer','portalTimer','eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer'])UPGRADE[k]=Math.max(0,UPGRADE[k]-dt);
+    if(UPGRADE.bloodMoonTimer<=0&&score>=45000){UPGRADE.bloodMoonClock-=dt;if(UPGRADE.bloodMoonClock<=0){UPGRADE.bloodMoonTimer=11+expansionRandom()*4;UPGRADE.bloodMoonClock=58+expansionRandom()*24;bossIntroMessage='BLOOD MOON — THE HUNT INTENSIFIES';bossIntroTimer=2.6;flash=.3;shake=.12;}}
+    if(UPGRADE.choiceActive){
+      UPGRADE.choiceTimer-=dt;
+      if(keys.ArrowLeft||keys.KeyA)UPGRADE.choiceDirection=-1;
+      if(keys.ArrowRight||keys.KeyD)UPGRADE.choiceDirection=1;
+      if(UPGRADE.choiceTimer<=0){
+        UPGRADE.choiceActive=false;
+        if(UPGRADE.choiceDirection<0){awardScore(1900);UPGRADE.bloodMoonTimer=Math.max(UPGRADE.bloodMoonTimer,10);EXPANSION.hazardClock=Math.min(EXPANSION.hazardClock,1.4);bossIntroMessage='RISK ROUTE: BLOOD PRICE PAID';}
+        else if(UPGRADE.choiceDirection>0){shieldTimer=Math.max(shieldTimer,4.5);awardScore(500);EXPANSION.hazardClock=Math.min(EXPANSION.hazardClock,2.2);bossIntroMessage='DEFENSE ROUTE: THE TRAP IS SET';}
+        else{awardScore(250);bossIntroMessage='RIFT ROUTE: NO COMMITMENT';}
+        bossIntroTimer=2.7;flash=.16;UPGRADE.choiceClock=62+expansionRandom()*22;
+      }
+    }else if(score>=55000){UPGRADE.choiceClock-=dt;if(UPGRADE.choiceClock<=0){UPGRADE.choiceActive=true;UPGRADE.choiceTimer=7.5;UPGRADE.choiceDirection=0;bossIntroMessage='RIFT CHOICE — HOLD LEFT OR RIGHT';bossIntroTimer=2.2;flash=.1;}}
+    if(score>=30000){UPGRADE.starClock-=dt;if(UPGRADE.starClock<=0&&UPGRADE.fallingStars.length<3){UPGRADE.fallingStars.push({x:W+20,y:50+expansionRandom()*Math.max(60,GROUND-140),vy:80+expansionRandom()*120,phase:expansionRandom()*6});UPGRADE.starClock=13+expansionRandom()*12;}}
+    for(let i=UPGRADE.fallingStars.length-1;i>=0;i--){const st=UPGRADE.fallingStars[i];st.x-=speed*.72*dt;st.y+=st.vy*dt;st.phase+=dt*5;if(rectHit({x:player.x+5,y:player.y+4,w:player.w-10,h:player.h-8},{x:st.x-10,y:st.y-10,w:20,h:20},0)){UPGRADE.runStars++;awardScore(350);burst(st.x,st.y,'#fff0a6',18);UPGRADE.fallingStars.splice(i,1);if(UPGRADE.runStars>=10)expansionAchievement('star-catcher','STAR CATCHER');}else if(st.x<-30||st.y>GROUND+20)UPGRADE.fallingStars.splice(i,1);}
+    if(score>=22000){UPGRADE.eventClock-=dt;if(UPGRADE.eventClock<=0){
+      const events=['eyes','stalker','distortion','falsePause','abandoned','message','portal'],ev=events[Math.floor(expansionRandom()*events.length)],duration=3.2+expansionRandom()*2.1;
+      if(ev==='eyes')UPGRADE.eyesTimer=duration;if(ev==='stalker'){UPGRADE.stalkerTimer=duration;UPGRADE.stalkerX=690+expansionRandom()*170;}
+      if(ev==='distortion')UPGRADE.distortionTimer=duration;if(ev==='falsePause')UPGRADE.falsePauseTimer=1.1;
+      if(ev==='abandoned')UPGRADE.abandonedTimer=duration;
+      if(ev==='message'){const msgs=['DO NOT FOLLOW THE LIGHT.','YOUR SHADOW IS LATE.','THIS ROUTE WAS NOT HERE.','THE FOREST REMEMBERS.','TURN BACK WHILE YOU CAN.'];UPGRADE.hiddenMessage=msgs[Math.floor(expansionRandom()*msgs.length)];UPGRADE.hiddenMessageTimer=2.8;}
+      if(ev==='portal'){UPGRADE.portalTimer=duration;UPGRADE.portalX=500+expansionRandom()*350;UPGRADE.portalY=65+expansionRandom()*Math.max(50,GROUND-150);}
+      UPGRADE.eventClock=23+expansionRandom()*22;
+    }}
+    if(UPGRADE.portalTimer>0&&rectHit({x:player.x,y:player.y,w:player.w,h:player.h},{x:UPGRADE.portalX-24,y:UPGRADE.portalY-48,w:48,h:96},0)){UPGRADE.portalTimer=0;player.x=player.x<210?330:112;player.invuln=Math.max(player.invuln,.8);awardScore(450);burst(player.x+22,player.y+25,'#d477ff',22);}
+    if(UPGRADE.dailyType&&!UPGRADE.dailyDone)finishUpgradeDaily();
+    if(UPGRADE.decoyTimer>0){const box={x:player.x+118,y:player.y+4,w:player.w,h:player.h-8};for(let i=EXPANSION.enemies.length-1;i>=0;i--){const e=EXPANSION.enemies[i];if(rectHit(box,{x:e.x+7,y:e.y+6,w:e.w-14,h:e.h-12},4)){awardScore(e.points);EXPANSION.enemyKills++;burst(e.x+e.w/2,e.y+e.h/2,'#d477ff',18);EXPANSION.enemies.splice(i,1);UPGRADE.decoyTimer=Math.max(0,UPGRADE.decoyTimer-.6);}}}
+  }
+  function drawUpgradeBat(x,y,scale,color,phase,alpha){ctx.save();ctx.globalAlpha=alpha===undefined?1:alpha;ctx.translate(x,y);ctx.scale(scale,scale);const flap=Math.sin(phase)*6;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-12,-5-flap);ctx.lineTo(-23,-13-flap);ctx.lineTo(-19,1);ctx.lineTo(-8,7);ctx.lineTo(0,3);ctx.lineTo(8,7);ctx.lineTo(19,1);ctx.lineTo(23,-13+flap);ctx.lineTo(12,-5+flap);ctx.closePath();ctx.fill();ctx.fillStyle='#ff466d';ctx.fillRect(-2,-2,2,2);ctx.fillRect(1,-2,2,2);ctx.restore();}
+  function drawUltimateWorld(){
+    ctx.save();
+    if(score>=30000&&score<55000){ctx.globalAlpha=.12;ctx.fillStyle='#274a24';ctx.fillRect(0,0,W,GROUND);for(let i=0;i<8;i++){const x=(i*137-elapsed*speed*.12)%W;ctx.fillStyle='#45603b';ctx.fillRect((x+W)%W,GROUND-112-(i%3)*19,25,112+(i%3)*19);}}
+    else if(score>=55000&&score<100000){ctx.globalAlpha=.25;ctx.fillStyle='#171126';ctx.fillRect(0,GROUND-175,W,175);for(let i=0;i<9;i++){const x=(i*119-elapsed*speed*.18)%W;ctx.fillStyle='#3c2c4c';ctx.fillRect((x+W)%W,GROUND-75-(i%4)*24,34,75+(i%4)*24);ctx.fillStyle='#b77cff';ctx.fillRect((x+W)%W+7,GROUND-70-(i%4)*24,3,30);}}
+    else if(score>=100000&&score<160000){ctx.globalAlpha=.12;ctx.fillStyle='#283a74';ctx.fillRect(0,0,W,GROUND);for(let i=0;i<12;i++){const x=(i*91+Math.sin(elapsed+i)*25)%W;ctx.fillStyle='#a77cff';ctx.fillRect(x,45+(i*53)%230,2,2);}}
+    else if(score>=160000){ctx.globalAlpha=.11;ctx.fillStyle='#80142f';ctx.fillRect(0,0,W,GROUND);for(let i=0;i<12;i++){const x=(i*87+elapsed*(60+i*4))%W;ctx.fillStyle='#ff654f';ctx.fillRect(x,(i*71+elapsed*145)%GROUND,2,15+(i%4)*7);}}
+    ctx.globalAlpha=1;
+    for(const st of UPGRADE.fallingStars){ctx.save();ctx.translate(st.x,st.y);ctx.rotate(st.phase);ctx.shadowColor='#fff0a6';ctx.shadowBlur=15;ctx.fillStyle='#fff0a6';ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(4,-3);ctx.lineTo(13,0);ctx.lineTo(4,3);ctx.lineTo(0,12);ctx.lineTo(-4,3);ctx.lineTo(-13,0);ctx.lineTo(-4,-3);ctx.closePath();ctx.fill();ctx.restore();}
+    if(UPGRADE.eyesTimer>0){const pulse=.65+.35*Math.sin(elapsed*16);ctx.globalAlpha=.35*pulse;ctx.shadowColor='#ff174d';ctx.shadowBlur=15;ctx.fillStyle='#ff315d';for(let i=0;i<4;i++){const x=90+i*215,y=80+(i%2)*88;ctx.fillRect(x,y,7,3);ctx.fillRect(x+17,y,7,3);}}
+    if(UPGRADE.stalkerTimer>0){const x=UPGRADE.stalkerX;ctx.globalAlpha=.76;ctx.fillStyle='#05030a';ctx.beginPath();ctx.moveTo(x-26,GROUND-5);ctx.lineTo(x-18,GROUND-82);ctx.lineTo(x-7,GROUND-111);ctx.lineTo(x+10,GROUND-107);ctx.lineTo(x+21,GROUND-73);ctx.lineTo(x+29,GROUND-5);ctx.closePath();ctx.fill();ctx.fillStyle='#ff315d';ctx.fillRect(x-9,GROUND-90,5,3);ctx.fillRect(x+7,GROUND-90,5,3);}
+    if(UPGRADE.portalTimer>0){ctx.globalAlpha=.48+.2*Math.sin(elapsed*12);ctx.strokeStyle='#d477ff';ctx.lineWidth=5;ctx.shadowColor='#d477ff';ctx.shadowBlur=20;ctx.beginPath();ctx.ellipse(UPGRADE.portalX,UPGRADE.portalY,19,45,0,0,Math.PI*2);ctx.stroke();}
+    if(UPGRADE.decoyTimer>0){ctx.globalAlpha=.28;ctx.filter='grayscale(1) brightness(.8)';buildRunnerSprite(Math.floor(elapsed*12)%4,false);ctx.drawImage(runnerSprite,player.x+118,player.y-2,55,53);ctx.filter='none';}
+    if(UPGRADE.explosionTimer>0){const p=1-UPGRADE.explosionTimer/.65;ctx.globalAlpha=1-p;ctx.strokeStyle='#ff9256';ctx.lineWidth=7;ctx.shadowColor='#ff633d';ctx.shadowBlur=22;ctx.beginPath();ctx.arc(player.x+23,player.y+26,35+p*330,0,Math.PI*2);ctx.stroke();}
+    if(UPGRADE.choiceActive){ctx.globalAlpha=.93;ctx.fillStyle='rgba(8,3,12,.82)';ctx.fillRect(W/2-215,70,430,84);ctx.strokeStyle='#d477ff';ctx.lineWidth=2;ctx.strokeRect(W/2-215,70,430,84);ctx.textAlign='center';ctx.fillStyle='#fff0f3';ctx.font='bold 13px Consolas,monospace';ctx.fillText('RIFT CHOICE // '+UPGRADE.choiceTimer.toFixed(1)+'s',W/2,91);ctx.fillStyle='#ff718a';ctx.fillText('← LEFT: RISK / MORE POINTS',W/2,113);ctx.fillStyle='#9ce9ff';ctx.fillText('RIGHT →: SHIELD / DEFENSE',W/2,135);}
+    if(UPGRADE.bloodMoonTimer>0){ctx.globalAlpha=.28+.12*Math.sin(elapsed*5);ctx.fillStyle='#b10b2a';ctx.beginPath();ctx.arc(770,118,64,0,Math.PI*2);ctx.fill();ctx.globalAlpha=.85;ctx.fillStyle='#ff315d';ctx.beginPath();ctx.arc(770,118,44,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  function drawUltimateOverlay(){
+    ctx.save();
+    if(UPGRADE.distortionTimer>0){for(let i=0;i<9;i++){ctx.globalAlpha=.15;ctx.fillStyle=i%2?'#65eaff':'#ff315d';ctx.fillRect(Math.sin(elapsed*19+i)*35,(i*61+elapsed*43)%H,W,2);}}
+    if(UPGRADE.falsePauseTimer>0){ctx.globalAlpha=.82;ctx.fillStyle='rgba(3,2,8,.76)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 24px Consolas,monospace';ctx.fillText('PAUSED',W/2,H/2-7);ctx.fillStyle='#ff5279';ctx.font='bold 11px Consolas,monospace';ctx.fillText('SIGNAL INTERRUPTION // NOT A REAL PAUSE',W/2,H/2+18);}
+    if(UPGRADE.abandonedTimer>0){ctx.globalAlpha=.3;ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);}
+    if(UPGRADE.hiddenMessageTimer>0){ctx.globalAlpha=Math.min(1,UPGRADE.hiddenMessageTimer);ctx.textAlign='center';ctx.fillStyle='#e8c9f5';ctx.font='bold 13px Consolas,monospace';ctx.fillText(UPGRADE.hiddenMessage,W/2,H*.22);}
+    if(UPGRADE.bloodMoonTimer>0){ctx.textAlign='center';ctx.fillStyle='#ff7188';ctx.font='bold 12px Consolas,monospace';ctx.fillText('BLOOD MOON // DANGER + REWARD '+UPGRADE.bloodMoonTimer.toFixed(1)+'s',W/2,36);}
+    const daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
+    if(daily){ctx.textAlign='left';ctx.fillStyle=UPGRADE.dailyDone?'#ffe17a':'#b9d7e8';ctx.font='bold 10px Consolas,monospace';ctx.fillText('DAILY: '+daily.label+' '+Math.min(UPGRADE.dailyTarget,upgradeDailyProgress())+'/'+UPGRADE.dailyTarget+(UPGRADE.dailyDone?' ✓':''),22,222);}
+    if(UPGRADE.lastStandTimer>0){ctx.textAlign='right';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';ctx.fillText('LAST STAND '+UPGRADE.lastStandTimer.toFixed(1)+'s',W-20,176);}
+    ctx.restore();
+  }
   const EXPANSION_MODE_NAMES=['ENDLESS','DAILY SEED','BOSS RUSH','NO FLIGHT','ONE LIFE','CORRUPTED'];
   function expansionSeedForToday(){
     const d=new Date(),str=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
@@ -2132,8 +2280,10 @@
     EXPANSION.runSamples=[];EXPANSION.ghostClock=0;EXPANSION.ghostSamples=EXPANSION_STORE.ghost.slice(0,1500);
     EXPANSION.ghostAppearanceTimer=0;EXPANSION.ghostAppearanceClock=5+expansionRandom()*5;EXPANSION.ghostAppearanceCount=0;
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
+    EXPANSION.boss85Done=false;EXPANSION.boss110Done=false;EXPANSION.boss135Done=false;EXPANSION.boss165Done=false;
     EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;
     EXPANSION.boss200Done=false;EXPANSION.boss250Done=false;EXPANSION.collapseAnnounced=false;
+    resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
   }
   function finishExpansionRun(){
@@ -2148,6 +2298,11 @@
     if(EXPANSION.bossesDefeated>=3)expansionAchievement('boss-breaker','BOSS BREAKER');
     if(EXPANSION.nearMisses>=10)expansionAchievement('close-call','CLOSE CALL');
     if(EXPANSION.pickupsCollected>=8)expansionAchievement('collector','COLLECTOR');
+    if(EXPANSION.damageCount===0&&score>=25000)expansionAchievement('survival-medal','SURVIVAL MEDAL');
+    if(!EXPANSION_STORE.stats)EXPANSION_STORE.stats={};const st=EXPANSION_STORE.stats;st.totalRuns=(st.totalRuns||0)+1;st.totalRings=(st.totalRings||0)+ringCount;st.totalKills=(st.totalKills||0)+EXPANSION.enemyKills;st.totalBats=(st.totalBats||0)+UPGRADE.runBats;st.totalStars=(st.totalStars||0)+UPGRADE.runStars;st.totalRelics=(st.totalRelics||0)+UPGRADE.runRelics;st.bestCombo=Math.max(st.bestCombo||0,bestCombo);st.longestRun=Math.max(st.longestRun||0,Math.floor(elapsed));
+    if(UPGRADE.finalBossDefeated&&score>=250000){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('the-unwritten'))EXPANSION_STORE.endings.push('the-unwritten');expansionAchievement('secret-ending','SECRET ENDING');}
+    if(UPGRADE.emeraldComplete&&UPGRADE.secretRelics>0){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('emerald-witness'))EXPANSION_STORE.endings.push('emerald-witness');}
+    if(UPGRADE.dailyDone)EXPANSION_STORE.dailyChallenge={date:UPGRADE.dailyDate,done:true,id:UPGRADE.dailyType};
     saveExpansionStore();
     refreshExpansionMenu();
   }
@@ -2157,6 +2312,7 @@
     let html='';
     if(kind==='CODEX'){
       const codexEntries=EXPANSION_ENEMIES.concat(LATE_ENTITY_DEFS,[
+        {unlock:85000,name:'THE HOLLOW KING'},{unlock:110000,name:'THE MACHINE'},{unlock:135000,name:'THE WATCHER'},{unlock:165000,name:'THE FRACTURED'},
         {unlock:15000,name:'Bloodhunter'},{unlock:30000,name:'Relic Golem'},{unlock:42000,name:'Prism Wraith'},
         {unlock:45000,name:'Gravewing'},{unlock:50000,name:'Null Sovereign'},{unlock:58000,name:'Void Harrier'},
         {unlock:58000,name:'Rift Seraph'},{unlock:58000,name:'Nebula Shard'},{unlock:60000,name:'Ashen Colossus'},
@@ -2170,7 +2326,11 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      html='<b>ACHIEVEMENTS  '+EXPANSION_STORE.achievements.length+'/'+labels.length+'</b>'+labels.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
+      const extra=[['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING']],all=labels.concat(extra);
+      html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
+    }else if(kind==='ARCHIVE'){
+      const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
+      html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+(endings.includes('emerald-witness')?' · EMERALD':'')+'</div>';
     }
     panel.innerHTML=html;
     panel.style.display=kind?'block':'none';
@@ -2184,7 +2344,7 @@
   function refreshExpansionMenu(){
     if(!EXPANSION.menuButtons)return;
     EXPANSION.menuButtons.mode.textContent='MODE: '+EXPANSION_MODE_NAMES[EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode)] ;
-    EXPANSION.menuButtons.mode.title='Cycle through challenge modes';
+    EXPANSION.menuButtons.mode.title='Cycle through challenge modes';if(EXPANSION.menuButtons.skin)EXPANSION.menuButtons.skin.textContent='SKIN: '+UPGRADE.selectedSkin;
     EXPANSION.menuButtons.mode.onclick=()=>{
       const i=EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode);
       EXPANSION.mode=EXPANSION_MODE_NAMES[(i+1)%EXPANSION_MODE_NAMES.length];
@@ -2199,20 +2359,22 @@
       b.style.cssText='font:700 11px Consolas,monospace;padding:7px 10px;color:#f7dbe5;background:#250d19;border:1px solid #9c435d;border-radius:4px;';
       wrap.appendChild(b);return b;
     }
-    const mode=makeButton('MODE: ENDLESS'),codex=makeButton('ENTITY CODEX'),achievements=makeButton('ACHIEVEMENTS');
-    const controls=document.createElement('div');controls.textContent='Q Phase Shift · E Time Fracture · C Echo Dash · V Magnet Core · B Chaos Rebound · R Overdrive · G Glitch Shield · F Void Step';controls.style.cssText='width:100%;color:#b69ba4;font:10px Consolas,monospace;line-height:1.5;padding:2px 8px;';wrap.appendChild(controls);
+    const mode=makeButton('MODE: ENDLESS'),codex=makeButton('ENTITY CODEX'),achievements=makeButton('ACHIEVEMENTS'),archive=makeButton('ARCHIVE / BOSS GALLERY'),skin=makeButton('SKIN: '+UPGRADE.selectedSkin);
+    const controls=document.createElement('div');controls.textContent='← / A Back · → / D Forward · Q Phase · E Time · C Echo · V Magnet · B Rebound · R Overdrive · G Shield · F Void · K Explosion · J Air Counter · H Decoy · T Chain Lightning · L Last Stand';controls.style.cssText='width:100%;color:#b69ba4;font:10px Consolas,monospace;line-height:1.5;padding:2px 8px;';wrap.appendChild(controls);
     const panel=document.createElement('div');
     panel.style.cssText='display:none;max-height:145px;overflow:auto;width:min(90%,620px);text-align:left;padding:9px 12px;margin:4px 0 8px;background:rgba(8,3,10,.96);border:1px solid #6f2943;color:#f0dce3;font:11px Consolas,monospace;line-height:1.35;';
     codex.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'CODEX');
     achievements.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ACHIEVEMENTS');
-    EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements};
+    archive.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ARCHIVE');
+    skin.onclick=()=>upgradeCycleSkin();UPGRADE.skinButton=skin;
+    EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements,archive,skin};
     const mobileControls=document.getElementById('mobileControls');
     if(mobileControls&&!mobileControls.querySelector('[data-expansion-power]')){
-      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP']];
+      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyK','CHAOS EXPLOSION'],['KeyJ','AIR COUNTER'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
       const powerButton=document.createElement('button');powerButton.className='touch';powerButton.dataset.expansionPower='true';let powerIndex=0;
       powerButton.style.fontSize='9px';powerButton.style.padding='5px 2px';
       powerButton.textContent='POWER: '+powers[powerIndex][1];
-      powerButton.addEventListener('click',()=>{handleExpansionKey(powers[powerIndex][0]);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
+      powerButton.addEventListener('click',()=>{const k=powers[powerIndex][0];if(!handleExpansionKey(k))handleUltimateKey(k);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
       mobileControls.appendChild(powerButton);
     }
     overlay.insertBefore(wrap,startBtn);
@@ -2261,7 +2423,7 @@
   function expansionHit(x,y,color){
     if(state!=='running'||landingGrace>0)return false;
     if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||
-       EXPANSION.voidStepTimer>0||player.flight>0||dashTimer>0){
+       EXPANSION.voidStepTimer>0||player.flight>0||dashTimer>0||UPGRADE.lastStandTimer>0){
       awardScore(45);burst(x,y,color||'#b477ff',13);EXPANSION.enemyKills++;return true;
     }
     if(EXPANSION.reboundCharges>0){
@@ -2298,9 +2460,10 @@
     EXPANSION.hazards.push(h);
   }
   function spawnExpansionPickup(){
-    const kind=expansionRandom()<.14?'jackpotCrystal':'riskChest';
     const y=80+expansionRandom()*Math.max(60,GROUND-170);
-    EXPANSION.pickups.push({kind,x:W+35,y,w:kind==='riskChest'?38:30,h:kind==='riskChest'?34:34,phase:expansionRandom()*6});
+    const roll=expansionRandom(),kind=roll<.055?'goldenBat':roll<.13?'emeraldShard':roll<.18?'secretRelic':roll<.32?'jackpotCrystal':'riskChest';
+    const dims=kind==='riskChest'?{w:38,h:34}:kind==='goldenBat'?{w:40,h:28}:kind==='secretRelic'?{w:34,h:38}:{w:30,h:34};
+    EXPANSION.pickups.push({kind,x:W+35,y,w:dims.w,h:dims.h,phase:expansionRandom()*6});
   }
   function startExpansionBoss(name,duration,reward,kind){
     if(EXPANSION.boss||state!=='running')return;
@@ -2358,7 +2521,7 @@
       flash=.5;shake=.3;burst(W-190,115,'#f4f0ff',42);
       if(b.kind==='absolute')expansionAchievement('absolute','THE ABSOLUTE');
       if(b.kind==='last')expansionAchievement('last-signal','LAST SIGNAL');
-      if(b.kind==='final')expansionAchievement('unwritten','THE UNWRITTEN');
+      if(b.kind==='final'){UPGRADE.finalBossDefeated=true;expansionAchievement('unwritten','THE UNWRITTEN');}
       expansionAchievement('boss-breaker','BOSS BREAKER');
     }
   }
@@ -2449,6 +2612,10 @@
     }
     // New 2,000-point entities are joined by the Collapse-era roster rather than replacing it.
     const nextBosses=[
+      {at:85000,key:'boss85Done',name:'THE HOLLOW KING',duration:24,reward:3400,kind:'hollowKing'},
+      {at:110000,key:'boss110Done',name:'THE MACHINE',duration:28,reward:3900,kind:'machine'},
+      {at:135000,key:'boss135Done',name:'THE WATCHER',duration:31,reward:4600,kind:'watcher'},
+      {at:165000,key:'boss165Done',name:'THE FRACTURED',duration:34,reward:5200,kind:'fractured'},
       {at:150000,key:'boss150Done',name:'THE ABSOLUTE',duration:34,reward:5600,kind:'absolute'},
       {at:175000,key:'boss175Done',name:'NULL SOVEREIGN — REMATCH',duration:26,reward:4200,kind:'rematch'},
       {at:200000,key:'boss200Done',name:'THE LAST SIGNAL',duration:38,reward:7600,kind:'last'},
@@ -2549,11 +2716,11 @@
         if(p.kind==='riskChest'){
           if(expansionRandom()<.68){awardScore(850+Math.floor(expansionRandom()*1050));scoreMultiplierTimer=Math.max(scoreMultiplierTimer,4);}
           else{EXPANSION.scoreGlitchTimer=2.4;EXPANSION.soundlessTimer=1.2;glitchPulse=Math.max(glitchPulse,.7);}
-        }else{
-          awardScore(1800);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,9);
-          expansionAchievement('jackpot','JACKPOT');burst(p.x+15,p.y+17,'#ffe17a',30);
-        }
-        burst(p.x+p.w/2,p.y+p.h/2,p.kind==='riskChest'?'#e9b76e':'#ffe17a',22);
+        }else if(p.kind==='goldenBat'){awardScore(3600);UPGRADE.goldenBats++;UPGRADE.runBats++;expansionAchievement('golden-bat','GOLDEN BAT');}
+        else if(p.kind==='emeraldShard'){UPGRADE.emeraldFragments++;awardScore(280);if(UPGRADE.emeraldFragments>=3){UPGRADE.emeraldFragments-=3;UPGRADE.emeraldComplete=true;awardScore(4200);expansionAchievement('emerald-reassembled','EMERALD REASSEMBLED');}}
+        else if(p.kind==='secretRelic'){UPGRADE.secretRelics++;UPGRADE.runRelics++;awardScore(1250);expansionRememberEntity('Secret Relic');expansionAchievement('relic-finder','RELIC FINDER');}
+        else{awardScore(1800);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,9);expansionAchievement('jackpot','JACKPOT');burst(p.x+15,p.y+17,'#ffe17a',30);}
+        burst(p.x+p.w/2,p.y+p.h/2,p.kind==='riskChest'?'#e9b76e':p.kind==='goldenBat'?'#ffe17a':p.kind==='emeraldShard'?'#62f0e0':p.kind==='secretRelic'?'#d477ff':'#ffe17a',22);
         EXPANSION.pickups.splice(i,1);continue;
       }
       if(p.x<-70)EXPANSION.pickups.splice(i,1);
@@ -2612,6 +2779,7 @@
       if(consumed)EXPANSION.echoWaves.splice(i,1);
     }
     updateExpansionBoss(dt,playerBox);
+    updateUltimateSystems(dt);
   }
   function drawExpansionWorld(){
     // Ghost Runner: a shadowy duplicate that flickers in briefly from 20K to 30K only.
@@ -2645,7 +2813,12 @@
       ctx.shadowColor=c;ctx.shadowBlur=e.bounty?25:14;ctx.strokeStyle=c;ctx.lineWidth=e.bounty?4:2;
       ctx.beginPath();ctx.ellipse(x+e.w/2,y+e.h/2,e.w*.54,e.h*.42,Math.sin(e.phase)*.12,0,Math.PI*2);ctx.stroke();
       ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
-      if(e.id==='observer'){
+      if(e.id==='batSwarm'){for(let k=0;k<7;k++)drawUpgradeBat(x+13+k*11,y+24+Math.sin(e.phase*2+k)*9,.48,c,e.phase+k,.9);}
+      else if(e.id==='shadowBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.15,'#09040f',e.phase,.96);ctx.fillStyle='#a56cff';ctx.fillRect(x+26,y+19,5,3);ctx.fillRect(x+39,y+19,5,3);}
+      else if(e.id==='alphaBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.8,'#190511',e.phase,1);ctx.fillStyle='#ff315d';ctx.fillRect(x+40,y+24,7,4);ctx.fillRect(x+58,y+24,7,4);}
+      else if(e.id==='phantomBats'){for(let k=0;k<4;k++)drawUpgradeBat(x+18+k*19,y+26+Math.sin(e.phase+k)*14,.72,'#9adfff',e.phase+k,.38);}
+      else if(e.id==='bloodwing'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.55,'#4b061b',e.phase,1);ctx.fillStyle='#ff315d';ctx.fillRect(x+31,y+19,6,4);ctx.fillRect(x+51,y+19,6,4);}
+      else if(e.id==='observer'){
         ctx.fillStyle='#080b17';ctx.fillRect(x+8,y+7,e.w-16,e.h-14);
         ctx.fillStyle=c;ctx.fillRect(x+15,y+19,e.w-30,7);ctx.fillRect(x+e.w/2-3,y+31,6,12);
         ctx.fillStyle='#fff';ctx.fillRect(x+e.w/2-2,y+21,4,3);
@@ -2716,13 +2889,11 @@
       ctx.save();const pulse=.8+.2*Math.sin(p.phase*2);
       ctx.shadowColor=p.kind==='riskChest'?'#e9b76e':'#ffe17a';ctx.shadowBlur=18;
       if(p.kind==='riskChest'){
-        ctx.fillStyle='#24120d';ctx.strokeStyle='#e9b76e';ctx.lineWidth=3;ctx.fillRect(p.x,p.y+8,p.w,p.h-8);ctx.strokeRect(p.x,p.y+8,p.w,p.h-8);
-        ctx.fillStyle='#e9b76e';ctx.fillRect(p.x+3,p.y+14,p.w-6,5);ctx.fillRect(p.x+p.w/2-3,p.y+22,6,9);
-      }else{
-        ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.phase*.5);ctx.fillStyle='#39250b';ctx.strokeStyle='#ffe17a';ctx.lineWidth=3;
-        ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(14*pulse,0);ctx.lineTo(0,17*pulse);ctx.lineTo(-14*pulse,0);ctx.closePath();ctx.fill();ctx.stroke();
-        ctx.fillStyle='#fff';ctx.fillRect(-3,-4,6,8);
-      }
+        ctx.fillStyle='#24120d';ctx.strokeStyle='#e9b76e';ctx.lineWidth=3;ctx.fillRect(p.x,p.y+8,p.w,p.h-8);ctx.strokeRect(p.x,p.y+8,p.w,p.h-8);ctx.fillStyle='#e9b76e';ctx.fillRect(p.x+3,p.y+14,p.w-6,5);ctx.fillRect(p.x+p.w/2-3,p.y+22,6,9);
+      }else if(p.kind==='goldenBat')drawUpgradeBat(p.x+p.w/2,p.y+p.h/2,1.05,'#ffe17a',p.phase,1);
+      else if(p.kind==='emeraldShard'){ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.phase*.5);ctx.fillStyle='#0b453f';ctx.strokeStyle='#62f0e0';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(13,0);ctx.lineTo(0,18);ctx.lineTo(-13,0);ctx.closePath();ctx.fill();ctx.stroke();}
+      else if(p.kind==='secretRelic'){ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.phase*.3);ctx.strokeStyle='#d477ff';ctx.lineWidth=3;ctx.shadowColor='#d477ff';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#f4dfff';ctx.fillRect(-3,-7,6,14);}
+      else{ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.phase*.5);ctx.fillStyle='#39250b';ctx.strokeStyle='#ffe17a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(14*pulse,0);ctx.lineTo(0,17*pulse);ctx.lineTo(-14*pulse,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.fillRect(-3,-4,6,8);}
       ctx.restore();
     }
     if(EXPANSION.pursuit){
@@ -2745,6 +2916,7 @@
     for(const w of EXPANSION.echoWaves){ctx.save();ctx.globalAlpha=Math.max(0,w.life);ctx.strokeStyle='#d477ff';ctx.lineWidth=4;ctx.shadowColor='#d477ff';ctx.shadowBlur=16;ctx.beginPath();ctx.arc(w.x,w.y,18+(1.1-w.life)*35,0,Math.PI*2);ctx.stroke();ctx.restore();}
   }
   function drawExpansionOverlay(){
+    drawUltimateOverlay();
     ctx.save();
     if(score>=125000&&state==='running'){
       ctx.globalAlpha=.045+.035*Math.sin(elapsed*5);ctx.fillStyle='#6412a4';ctx.fillRect(0,0,W,H);
