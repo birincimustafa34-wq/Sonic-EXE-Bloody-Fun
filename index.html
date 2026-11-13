@@ -1129,7 +1129,7 @@
       if(rectHit(playerBox,box,3)){shieldTimer=Math.max(1,Number(CONFIG.shieldDuration)||9);sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);return false;}
       return sh.x>-50;
     });
-    scoreSigils=scoreSigils.filter(sigil=>{const box={x:sigil.x,y:sigil.y+Math.sin(sigil.phase)*5,w:sigil.w,h:sigil.h};if(rectHit(playerBox,box,2)){scoreMultiplierTimer=Math.max(scoreMultiplierTimer,8);awardScore(150);sfx('rush');burst(sigil.x+17,sigil.y+17,'#d477ff',28);flash=Math.max(flash,.12);return false;}return sigil.x>-55;});
+    scoreSigils=scoreSigils.filter(sigil=>{const box={x:sigil.x,y:sigil.y+Math.sin(sigil.phase)*5,w:sigil.w,h:sigil.h};if(rectHit(playerBox,box,2)){awardScore(150);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,8);sfx('rush');burst(sigil.x+17,sigil.y+17,'#d477ff',28);flash=Math.max(flash,.12);return false;}return sigil.x>-55;});
     for(let i=obstacles.length-1;i>=0;i--){
       const o=obstacles[i];
       let oy=o.y;
