@@ -550,7 +550,7 @@
       boss.x+=(W-225-boss.x)*Math.min(1,dt*(boss.kind==='eventHorizon'?2.05:1.8)*bossTimeScale);
       boss.y=(boss.kind==='eventHorizon'?30:42)+Math.sin(boss.phase*(boss.kind==='eventHorizon'?1.55:1.2))*(boss.kind==='eventHorizon'?48:39);
       if(boss.warning>0){
-        boss.warning=Math.max(0,boss.warning-dt);
+        boss.warning=Math.max(0,boss.warning-dt*bossTimeScale);
         if(boss.warning===0){
           boss.volleyCount=(boss.volleyCount||0)+1;
           let offsets,kind,shotSpeed,cols;
@@ -566,11 +566,11 @@
           boss.attackClock=boss.kind==='eventHorizon'?(boss.volleyCount%2===0?1.12:.92):(boss.volleyCount%3===0?1.55:1.32);
           burst(boss.x-18,centerY,boss.kind==='eventHorizon'?'#884cff':'#ff8a48',boss.kind==='eventHorizon'?22:17);
         }
-      }else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=boss.kind==='eventHorizon'?.40:.50;boss.targetY=playerBox.y+playerBox.h*.5;}}
+      }else{boss.attackClock-=dt*bossTimeScale;if(boss.attackClock<=0){boss.warning=boss.kind==='eventHorizon'?.40:.50;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }else{
       boss.x+=(W-165-boss.x)*Math.min(1,dt*2.0*bossTimeScale);boss.y=68+Math.sin(boss.phase*1.55)*25;
-      if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0){bossProjectiles.push({x:boss.x-38,y:boss.targetY,baseY:boss.targetY,w:25,h:18,phase:Math.random()*6,speed:500});boss.attackClock=1.55;}}
-      else{boss.attackClock-=dt;if(boss.attackClock<=0){boss.warning=.48;boss.targetY=playerBox.y+playerBox.h*.5;}}
+      if(boss.warning>0){boss.warning-=dt*bossTimeScale;if(boss.warning<=0){bossProjectiles.push({x:boss.x-38,y:boss.targetY,baseY:boss.targetY,w:25,h:18,phase:Math.random()*6,speed:500});boss.attackClock=1.55;}}
+      else{boss.attackClock-=dt*bossTimeScale;if(boss.attackClock<=0){boss.warning=.48;boss.targetY=playerBox.y+playerBox.h*.5;}}
     }
     for(let i=bossProjectiles.length-1;i>=0;i--){
       const shot=bossProjectiles[i];shot.x-=shot.speed*dt*bossTimeScale;shot.phase+=dt*5.5*bossTimeScale;
