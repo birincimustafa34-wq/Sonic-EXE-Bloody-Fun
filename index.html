@@ -304,11 +304,16 @@
     trees=Array.from({length:17},(_,i)=>({x:i*75+Math.random()*40,h:95+Math.random()*135,eyes:Math.random()<.35,layer:Math.random()<.5?0:1}));
     stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*245,a:.2+Math.random()*.65,size:Math.random()<.8?2:3}));
   }
-  function begin() {
+  function begin(testMode=false,testScenario='free') {
     if (state==='paused') { state='running'; lastTime=performance.now(); overlay.classList.add('hidden'); startMusic(); requestAnimationFrame(loop); return; }
-    applyExpansionRandomMode();reset(); state='running'; initAudio(); startMusic(); overlay.classList.add('hidden'); lastTime=performance.now(); requestAnimationFrame(loop);
+    UPGRADE.testMode=!!testMode;
+    UPGRADE.testScenario=UPGRADE.testMode?(testScenario||'free'):'';
+    UPGRADE.testSnapshot=UPGRADE.testMode?JSON.parse(JSON.stringify(EXPANSION_STORE)):null;
+    applyExpansionRandomMode();reset();state='running';initAudio();startMusic();
+    if(UPGRADE.testMode)setupTestingScenario(UPGRADE.testScenario);
+    overlay.classList.add('hidden');lastTime=performance.now();requestAnimationFrame(loop);
   }
-  startBtn.addEventListener('click',begin);
+  startBtn.addEventListener('click',()=>begin(false));
 
   function activateShadowDash(){
     if(state!=='running'||dashCharges<=0||dashTimer>0)return;
@@ -2247,6 +2252,7 @@
   if(!Array.isArray(EXPANSION_STORE.codex))EXPANSION_STORE.codex=[];
   if(!Array.isArray(EXPANSION_STORE.ghost))EXPANSION_STORE.ghost=[];
   function saveExpansionStore(){
+    if(UPGRADE.testMode)return;
     try{localStorage.setItem(EXPANSION_STORAGE_KEY,JSON.stringify(EXPANSION_STORE));}catch(_){}
   }
   const EXPANSION={
@@ -2277,6 +2283,7 @@
     explosionCooldown:0,explosionTimer:0,counterCooldown:0,decoyCooldown:0,decoyTimer:0,lightningCooldown:0,
     lastStandTimer:0,lastStandUsed:false,selectedSkin:skinUnlocked(EXPANSION_STORE.selectedSkin)?EXPANSION_STORE.selectedSkin:'DEFAULT',skinButton:null,finalBossDefeated:false,
     lastAbilityKey:'',lastAbilityTime:-99,synergyToast:'',synergyToastTimer:0,synergyCount:0,
+    testMode:false,testScenario:'',testSnapshot:null,
     runBats:0,runStars:0,runRelics:0,runDamageFree:true,dailyDate:'',dailyType:'',dailyTarget:0,dailyDone:false
   };
   const UPGRADE_DAILY=[
@@ -2290,6 +2297,37 @@
     ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
     ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000]
   ];
+
+  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done'];
+  function setupTestingScenario(id){
+    if(!UPGRADE.testMode)return;
+    for(const key of TEST_BOSS_FLAGS)EXPANSION[key]=true;
+    UPGRADE.testScenario=id||'free';
+    if(id==='enemy-showcase'){
+      score=120000;
+      const ids=['riftLantern','mirrorWraith','graveMantis'];
+      ids.forEach((enemyId,i)=>{
+        const d=EXPANSION_ENEMIES.find(x=>x.id===enemyId);if(!d)return;
+        const baseY=GROUND-190-i*26;
+        EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
+          x:W+165+i*260,y:baseY,baseY,phase:i*.9,attack:1.2,bounty:false,passed:false,hit:false});
+        expansionRememberEntity(d.name);
+      });
+    }else if(id==='boss-showcase'){
+      score=185000;
+      startExpansionBoss('THE STATIC CHOIR',36,6500,'staticChoir');
+    }else if(id==='hazard-showcase'){
+      score=120000;
+      EXPANSION.hazards.push(
+        {id:'laser',name:'Laser Grid',x:W+160,w:24,h:GROUND,phase:0,warning:1.1,active:8,passed:false,gapY:GROUND-190,gapH:155},
+        {id:'gravity',name:'Gravity Zone',x:W+440,w:170,h:145,y:150,phase:0,warning:1.1,active:8,passed:false,pull:1},
+        {id:'corridor',name:'Spike Corridor',x:W+720,w:124,h:GROUND,phase:0,warning:1.1,active:8,passed:false,gapY:GROUND-190,gapH:155}
+      );
+    }else if(id==='biome-showcase'){
+      score=230000;activeBiomeTier=0;updateBiomeTransition(.016);
+    }
+    refreshExpansionMenu();
+  }
   function skinUnlocked(id){
     const endings=Array.isArray(EXPANSION_STORE.endings)?EXPANSION_STORE.endings:[];
     if(id==='DEFAULT')return true;
@@ -2468,6 +2506,11 @@
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
   }
   function finishExpansionRun(){
+    if(UPGRADE.testMode){
+      if(UPGRADE.testSnapshot)EXPANSION_STORE=UPGRADE.testSnapshot;
+      UPGRADE.testMode=false;UPGRADE.testScenario='';UPGRADE.testSnapshot=null;
+      refreshExpansionMenu();return;
+    }
     if(EXPANSION_STORE.best<Math.floor(score))EXPANSION_STORE.best=Math.floor(score);
     const compact=EXPANSION.runSamples.slice(-1500);
     if(compact.length>20)EXPANSION_STORE.ghost=compact;
@@ -2514,6 +2557,7 @@
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
       ['Skin selection',skinUnlocked(UPGRADE.selectedSkin),UPGRADE.selectedSkin+' · saved '+(EXPANSION_STORE.selectedSkin||'DEFAULT')],
       ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
+      ['Sandbox isolation',!UPGRADE.testMode||!!UPGRADE.testSnapshot,(UPGRADE.testMode?'ACTIVE · '+UPGRADE.testScenario:'INACTIVE')],
       ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'12 cooldown timers checked'],
       ['Canvas renderer',!!ctx&&typeof drawPlayer==='function','Canvas '+W+'×'+H],
       ['Menu controls',!!(EXPANSION.menuButtons&&EXPANSION.menuButtons.skin&&EXPANSION.menuButtons.lab&&typeof EXPANSION.menuButtons.skin.onclick==='function'&&typeof EXPANSION.menuButtons.lab.onclick==='function'),'Skin and Test Lab buttons connected'],
@@ -2534,7 +2578,16 @@
       '<div style="margin-top:8px"><b>ABILITY COOLDOWNS</b><div>'+cooldownRows+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'+
       '<button type="button" data-lab-refresh style="font:700 10px Consolas,monospace;padding:7px 9px;color:#fff;background:#3b1730;border:1px solid #a34c70;border-radius:3px">REFRESH / RE-RUN CHECKS</button>'+
-      '<button type="button" data-lab-close style="font:700 10px Consolas,monospace;padding:7px 9px;color:#e8d5de;background:#21121d;border:1px solid #654052;border-radius:3px">CLOSE PANEL</button></div>';
+      '<button type="button" data-lab-close style="font:700 10px Consolas,monospace;padding:7px 9px;color:#e8d5de;background:#21121d;border:1px solid #654052;border-radius:3px">CLOSE PANEL</button></div>'+
+      ((state==='ready'||state==='over')?
+        '<div style="margin-top:10px;padding:8px;background:#120b14;border:1px solid #6b3b60"><b style="color:#d9b6ff">ISOLATED SANDBOX // RECORDS DISABLED</b><div style="margin:5px 0;color:#bcaaba">Test scenarios do not save scores, achievements, unlocks, or archive records.</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button type="button" data-sandbox="free" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">FREE TEST RUN</button>'+
+        '<button type="button" data-sandbox="enemy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ENEMY SHOWCASE</button>'+
+        '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
+        '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
+        '<button type="button" data-sandbox="biome-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BIOME REVIEW</button>'+
+        '</div></div>':'<div style="margin-top:8px;color:#bcaaba">Sandbox launch is available from the title or Game Over screen.</div>');
   }
   function expansionPanelShow(kind){
     const panel=EXPANSION.menuPanel;
@@ -2570,6 +2623,7 @@
       const close=panel.querySelector('[data-lab-close]');
       if(refresh)refresh.onclick=()=>expansionPanelShow('TEST LAB');
       if(close)close.onclick=()=>expansionPanelShow(null);
+      panel.querySelectorAll('[data-sandbox]').forEach(btn=>{btn.onclick=()=>{if(state==='ready'||state==='over')begin(true,btn.dataset.sandbox);};});
     }
   }
   function applyExpansionRandomMode(){
@@ -3214,6 +3268,10 @@
     if(score>=125000&&state==='running'){
       ctx.globalAlpha=.045+.035*Math.sin(elapsed*5);ctx.fillStyle='#6412a4';ctx.fillRect(0,0,W,H);
       if(score>=225000&&Math.floor(elapsed*14)%5===0){ctx.globalAlpha=.12;ctx.fillStyle='#c85cff';ctx.fillRect(0,(Math.floor(elapsed*37)%H),W,3);}
+    }
+    if(UPGRADE.testMode){
+      ctx.textAlign='left';ctx.font='bold 11px Consolas,monospace';ctx.fillStyle='#d9b6ff';
+      ctx.fillText('TEST SANDBOX // RECORDS DISABLED',18,66);
     }
     if(UPGRADE.synergyToastTimer>0){
       ctx.globalAlpha=Math.min(1,UPGRADE.synergyToastTimer);
