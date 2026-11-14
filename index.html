@@ -177,7 +177,7 @@
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let activeBiomeTier=0,biomeIntroTimer=0;
   const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000],[140000,175000]];
-  const BLOOD_RAIN_SCORE_BANDS=[[90000,120000],[160000,200000]];
+  const BLOOD_RAIN_SCORE_BANDS=[[105000,125000],[180000,205000]];
   let rainSchedule=[],bloodRainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -778,10 +778,6 @@
       const nextRain=rainSchedule.find(event=>!event.done);
       if(nextBlood&&score>=nextBlood.threshold){
         nextBlood.done=true;
-        // Blood rain replaces a normal rain trigger when both occupy the same score window.
-        rainSchedule.forEach(event=>{
-          if(event.threshold>=nextBlood.min&&event.threshold<=nextBlood.max)event.done=true;
-        });
         startRainEvent(nextBlood.duration,'blood');
       }else if(nextRain&&score>=nextRain.threshold){
         nextRain.done=true;startRainEvent(nextRain.duration,'normal');
@@ -2701,6 +2697,7 @@
       ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Air Counter',UPGRADE.counterCooldown],
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
+    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
@@ -2711,6 +2708,7 @@
       ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
       ['Rain schedule',rainSchedule.length===4&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Blood rain schedule',bloodRainSchedule.length===2&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
+      ['Weather window separation',sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0]),'No overlap · minimum gap '+Math.min(...sortedWeatherBands.slice(1).map((band,i)=>band[0]-sortedWeatherBands[i][1]))+' points'],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
