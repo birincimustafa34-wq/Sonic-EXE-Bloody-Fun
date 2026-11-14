@@ -19,7 +19,7 @@ The lab reports:
 - Ability cooldowns and synergy state
 - Canvas availability, menu event bindings, and local-storage accessibility
 
-**REFRESH / RE-RUN CHECKS** rebuilds the diagnostic snapshot. **CLOSE PANEL** hides the panel.
+**REFRESH / RE-RUN CHECKS** rebuilds the diagnostic snapshot. **COPY DIAGNOSTIC REPORT** creates a structured JSON snapshot with player position, current entities, hazards, boss state, biome, skin, ability cooldowns, synergies, and sandbox status. It attempts to copy the report to the clipboard; when clipboard access is unavailable, the report is shown in a selectable text area. **CLOSE PANEL** hides the panel.
 
 ## Isolated test scenarios
 
@@ -38,6 +38,7 @@ All scenarios are started from the title screen or Game Over screen.
 ## Save isolation
 
 - Sandbox sessions display **TEST SANDBOX // RECORDS DISABLED** on the game HUD.
+- The diagnostic report contains runtime state only; it does not include the contents of the player's local save.
 - Calls to the normal save helper are blocked while a sandbox is active.
 - The current local player profile is snapshotted when the sandbox starts.
 - At Game Over, the in-memory player profile is restored from that snapshot.
