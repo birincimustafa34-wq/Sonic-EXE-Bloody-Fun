@@ -20,7 +20,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 | 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | **Started** |
 | 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | **Started** |
 | 5 | Sprite and Animation Pack | Player skins, enemy sprites, boss art, and visual effects | **Started** |
-| 6 | Audio Project | Music, boss themes, ambience, and sound effects | Planned |
+| 6 | Audio Project | Music, boss themes, ambience, and sound effects | **Started** |
 | 7 | Abilities and Gameplay Expansion | New abilities, combinations, challenge modes, and balancing | Planned |
 
 ## Phase 1 — Testing Laboratory
@@ -119,6 +119,17 @@ The player now has seven selectable looks:
 The selected skin is saved in the existing local save object and restored on page load. The Archive lists every currently unlocked skin. The Testing Laboratory checks that the selected skin is genuinely unlocked.
 
 Detailed skin notes live in `content-packs/sprites/player-skins.md`.
+
+
+## Phase 6 — Audio Project
+
+### First audio layer integrated
+
+The game now has synthesized transition cues for the three new biomes and distinct entrance cues for the three new bosses. The audio configuration also supports optional custom music tracks per biome and optional custom sound files for those cues.
+
+When optional files are not supplied, the built-in Web Audio tone sequences are used. Existing background music and original sound mappings remain intact.
+
+The audio file layout and configuration keys are documented in `assets/audio/AUDIO_MANIFEST.md`.
 
 ## Regression checklist
 
