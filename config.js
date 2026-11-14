@@ -23,6 +23,12 @@ window.BLOODY_FLIGHT_CONFIG = {
     volume: 0.45,
     loop: true
   },
+  // Optional region-specific tracks. Leave empty to keep the default music.
+  biomeMusic: {
+    glassWastes: "",
+    staticCathedral: "",
+    eclipseAbyss: ""
+  },
   images: {
     background: "assets/images/background.png",
     player: "assets/images/player.png",
@@ -39,7 +45,14 @@ window.BLOODY_FLIGHT_CONFIG = {
     ring: "assets/audio/ring.wav",
     emerald: "assets/audio/emerald.wav",
     shield: "assets/audio/shield.wav",
-    hit: "assets/audio/hit.wav"
+    hit: "assets/audio/hit.wav",
+    // Optional custom files. Empty paths use the built-in synthesized cues.
+    biomeGlass: "",
+    biomeCathedral: "",
+    biomeEclipse: "",
+    bossChoir: "",
+    bossJudge: "",
+    bossArchitect: ""
   },
   colors: {
     ringOuter: "#760008",
