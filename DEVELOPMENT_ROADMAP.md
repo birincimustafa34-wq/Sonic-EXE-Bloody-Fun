@@ -110,6 +110,8 @@ Light rain can now occur once in each of four score windows, with a randomly sel
 
 Each event lasts approximately 11–18 seconds. Thin droplets travel at varied speeds with a slight diagonal slant. The rain fades in and out smoothly, while low-contrast clouds drift across the upper sky. The effect is visual-only and does not change physics or collisions. The rain schedule and remaining event duration are available in Test Lab diagnostics and the copyable report. A **RAIN TEST** sandbox preset previews the effect immediately.
 
+A second weather type, **BLOOD RAIN**, now has two additional randomized windows at 90K–120K and 160K–200K. Its droplets use layered crimson highlights, with a restrained dark-red sky wash and maroon cloud silhouettes. Blood rain takes priority over a normal-rain threshold inside the same window. Test Lab reports both schedules and includes a dedicated **BLOOD RAIN TEST** preview.
+
 
 ## Phase 5 — Sprite and Animation Pack
 
