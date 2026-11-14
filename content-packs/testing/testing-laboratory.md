@@ -56,3 +56,11 @@ The lab currently performs source/runtime data checks; it is not a complete auto
 - Targeted collision test presets for each enemy and hazard
 - Touch-screen control checks
 - Screenshot/visual comparison workflow for new sprites and biomes
+
+
+## Weather preview
+
+The **RAIN TEST** sandbox preset starts a short rain preview at 2,000 score. It is useful for reviewing streak angle, opacity, cloud movement, fade timing, and visual readability without waiting for a random score threshold.
+
+The live diagnostic report includes the rain-active flag, remaining duration, current fade blend, and all four randomized score windows. Normal gameplay triggers these events once per run, at a randomly selected score inside each configured range.
+
