@@ -17,7 +17,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 |---|---|---|---|
 | 1 | Testing Laboratory | Read-only live diagnostics, engine self-checks, and later an isolated sandbox for controlled test cases | **Started** |
 | 2 | Enemy Creation Project | Enemy definitions, behaviors, collision profiles, sprites, and animation variants | **Started** |
-| 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | Planned |
+| 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | **Started** |
 | 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | Planned |
 | 5 | Sprite and Animation Pack | Player skins, enemy sprites, boss art, and visual effects | Planned |
 | 6 | Audio Project | Music, boss themes, ambience, and sound effects | Planned |
@@ -70,6 +70,21 @@ Three new enemies have been added to the main game:
 All three have unique IDs, score rewards, colors, dimensions, and Codex entries through the shared enemy catalog. The Testing Laboratory also checks that enemy IDs are unique and that every declared movement archetype is supported.
 
 The detailed first-pack design notes live in `content-packs/enemies/enemy-catalog.md`.
+
+
+## Phase 3 — Boss Creation Laboratory
+
+### First boss pack integrated
+
+Three late-game bosses have been added:
+
+- **THE STATIC CHOIR** — 185,000 score; 36-second encounter; 6,500 reward. Uses a rotating trio visual and a staggered volley rhythm.
+- **THE RED JUDGE** — 215,000 score; 40-second encounter; 8,200 reward. Uses wider attack lanes, faster crimson projectiles, and a shorter attack cadence.
+- **THE PALE ARCHITECT** — 275,000 score; 48-second encounter; 15,000 reward. Uses pale geometric artwork and projectiles with diagonal drift.
+
+All three use the established three-core weakness-window framework. Their milestone flags reset between runs, and they are included in the Boss Gallery and Entity Codex. Existing boss milestones were sorted chronologically to make threshold progression deterministic.
+
+Detailed design notes live in `content-packs/bosses/boss-catalog.md`.
 
 ## Regression checklist
 
