@@ -16,7 +16,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 | Phase | Project | Scope | Status |
 |---|---|---|---|
 | 1 | Testing Laboratory | Read-only live diagnostics, engine self-checks, and later an isolated sandbox for controlled test cases | **Started** |
-| 2 | Enemy Creation Project | Enemy definitions, behaviors, collision profiles, sprites, and animation variants | Planned |
+| 2 | Enemy Creation Project | Enemy definitions, behaviors, collision profiles, sprites, and animation variants | **Started** |
 | 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | Planned |
 | 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | Planned |
 | 5 | Sprite and Animation Pack | Player skins, enemy sprites, boss art, and visual effects | Planned |
@@ -55,6 +55,21 @@ The current panel does not spawn entities, modify score, grant abilities, change
 - Add controlled enemy, hazard, pickup, and boss spawning inside that isolated session.
 - Add scenario presets for movement, collision, flight, boss weakness windows, and mobile controls.
 - Add a compact diagnostic report that can be copied for bug investigations.
+
+
+## Phase 2 — Enemy Creation Project
+
+### First enemy pack integrated
+
+Three new enemies have been added to the main game:
+
+- **Rift Lantern** — unlocks at 38,000 score; follows a drifting orbital path and uses a glowing lantern silhouette.
+- **Mirror Wraith** — unlocks at 72,000 score; uses the existing blink movement archetype and a fractured reflective body.
+- **Grave Mantis** — unlocks at 108,000 score; uses aggressive dash movement with a scythe-like pixel-art silhouette.
+
+All three have unique IDs, score rewards, colors, dimensions, and Codex entries through the shared enemy catalog. The Testing Laboratory also checks that enemy IDs are unique and that every declared movement archetype is supported.
+
+The detailed first-pack design notes live in `content-packs/enemies/enemy-catalog.md`.
 
 ## Regression checklist
 
