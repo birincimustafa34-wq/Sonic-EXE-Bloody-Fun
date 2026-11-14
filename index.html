@@ -318,10 +318,52 @@
     burst(player.x+player.w*.5,player.y+player.h*.5,'#bd55ff',18);
     shake=Math.max(shake,.07);
   }
+
+  function registerAbilityUse(code){
+    const elapsedSinceLast=elapsed-UPGRADE.lastAbilityTime;
+    const previous=UPGRADE.lastAbilityKey;
+    const pair=[previous,code].sort().join('+');
+    let comboName='';
+    if(elapsedSinceLast<=4.5&&pair==='KeyE+KeyQ'){
+      EXPANSION.timeFractureTimer=Math.min(5.2,EXPANSION.timeFractureTimer+1.4);
+      awardScore(450);burst(player.x+player.w/2,player.y+player.h/2,'#65c9ff',26);
+      comboName='RIFT SYNCHRONY';
+    }else if(elapsedSinceLast<=4.5&&pair==='KeyB+KeyF'){
+      EXPANSION.voidStepTimer=Math.max(EXPANSION.voidStepTimer,4.8);
+      EXPANSION.reboundCharges=Math.max(1,EXPANSION.reboundCharges);
+      awardScore(425);burst(player.x+player.w/2,player.y+player.h/2,'#a77cff',25);
+      comboName='VOID REBOUND';
+    }else if(elapsedSinceLast<=4.5&&pair==='KeyH+KeyT'){
+      UPGRADE.decoyTimer=Math.max(UPGRADE.decoyTimer,5.6);
+      let cleared=0;
+      for(let i=EXPANSION.shots.length-1;i>=0&&cleared<3;i--){
+        const sh=EXPANSION.shots[i];
+        if(Math.abs(sh.x-player.x)<520){
+          EXPANSION.shots.splice(i,1);burst(sh.x,sh.y,'#72eaff',9);cleared++;
+        }
+      }
+      awardScore(475);burst(player.x+player.w/2,player.y+player.h/2,'#d477ff',25);
+      comboName='DECOY STORM';
+    }
+    if(comboName){
+      UPGRADE.synergyToast=comboName;UPGRADE.synergyToastTimer=2.8;UPGRADE.synergyCount++;
+      UPGRADE.lastAbilityKey='';UPGRADE.lastAbilityTime=-99;
+      expansionAchievement('first-synergy','ABILITY SYNCHRONY');
+      sfx('rush');return;
+    }
+    UPGRADE.lastAbilityKey=code;UPGRADE.lastAbilityTime=elapsed;
+  }
+  function handlePlayerAbility(code){
+    const handled=handleExpansionKey(code)||handleUltimateKey(code);
+    if(!handled)return false;
+    const groundedCounter=code==='KeyJ'&&player.flight<=0&&player.y>=GROUND-player.h-8;
+    if(!groundedCounter)registerAbilityUse(code);
+    return true;
+  }
   function pressKey(code, down) {
     keys[code]=down;
     if (!down || state!=='running') return;
-    if(handleExpansionKey(code)||handleUltimateKey(code))return;
+    if(handlePlayerAbility(code))return;
     if(code==='KeyX'||code==='ShiftLeft'||code==='ShiftRight')activateShadowDash();
     if (code==='Space' || code==='ArrowUp' || code==='KeyW') {
       if (player.flight>0) return;
@@ -2234,6 +2276,7 @@
     emeraldFragments:0,emeraldComplete:false,secretRelics:0,goldenBats:0,
     explosionCooldown:0,explosionTimer:0,counterCooldown:0,decoyCooldown:0,decoyTimer:0,lightningCooldown:0,
     lastStandTimer:0,lastStandUsed:false,selectedSkin:skinUnlocked(EXPANSION_STORE.selectedSkin)?EXPANSION_STORE.selectedSkin:'DEFAULT',skinButton:null,finalBossDefeated:false,
+    lastAbilityKey:'',lastAbilityTime:-99,synergyToast:'',synergyToastTimer:0,synergyCount:0,
     runBats:0,runStars:0,runRelics:0,runDamageFree:true,dailyDate:'',dailyType:'',dailyTarget:0,dailyDone:false
   };
   const UPGRADE_DAILY=[
@@ -2266,6 +2309,7 @@
     UPGRADE.emeraldFragments=0;UPGRADE.emeraldComplete=false;UPGRADE.secretRelics=0;UPGRADE.goldenBats=0;
     for(const k of ['explosionCooldown','counterCooldown','decoyCooldown','lightningCooldown'])UPGRADE[k]=0;
     UPGRADE.lastStandUsed=false;UPGRADE.finalBossDefeated=false;UPGRADE.runBats=0;UPGRADE.runStars=0;UPGRADE.runRelics=0;UPGRADE.runDamageFree=true;
+    UPGRADE.lastAbilityKey='';UPGRADE.lastAbilityTime=-99;UPGRADE.synergyToast='';UPGRADE.synergyToastTimer=0;UPGRADE.synergyCount=0;
     const d=new Date(),date=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(),daily=UPGRADE_DAILY[expansionSeedForToday()%UPGRADE_DAILY.length];
     UPGRADE.dailyDate=date;UPGRADE.dailyType=daily.id;UPGRADE.dailyTarget=daily.target;
     UPGRADE.dailyDone=!!(EXPANSION_STORE.dailyChallenge&&EXPANSION_STORE.dailyChallenge.date===date&&EXPANSION_STORE.dailyChallenge.done);
@@ -2314,7 +2358,7 @@
     return false;
   }
   function updateUltimateSystems(dt){
-    for(const k of ['explosionCooldown','explosionTimer','counterCooldown','decoyCooldown','decoyTimer','lightningCooldown','lastStandTimer','bloodMoonTimer','portalTimer','eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer'])UPGRADE[k]=Math.max(0,UPGRADE[k]-dt);
+    for(const k of ['explosionCooldown','explosionTimer','counterCooldown','decoyCooldown','decoyTimer','lightningCooldown','lastStandTimer','bloodMoonTimer','portalTimer','eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer','synergyToastTimer'])UPGRADE[k]=Math.max(0,UPGRADE[k]-dt);
     if(UPGRADE.bloodMoonTimer<=0&&score>=45000){UPGRADE.bloodMoonClock-=dt;if(UPGRADE.bloodMoonClock<=0){UPGRADE.bloodMoonTimer=11+expansionRandom()*4;UPGRADE.bloodMoonClock=58+expansionRandom()*24;bossIntroMessage='BLOOD MOON — THE HUNT INTENSIFIES';bossIntroTimer=2.6;flash=.3;shake=.12;}}
     if(UPGRADE.choiceActive){
       UPGRADE.choiceTimer-=dt;
@@ -2436,7 +2480,7 @@
     if(EXPANSION.nearMisses>=10)expansionAchievement('close-call','CLOSE CALL');
     if(EXPANSION.pickupsCollected>=8)expansionAchievement('collector','COLLECTOR');
     if(UPGRADE.runDamageFree&&score>=25000)expansionAchievement('survival-medal','SURVIVAL MEDAL');
-    if(!EXPANSION_STORE.stats)EXPANSION_STORE.stats={};const st=EXPANSION_STORE.stats;st.totalRuns=(st.totalRuns||0)+1;st.totalRings=(st.totalRings||0)+ringCount;st.totalKills=(st.totalKills||0)+EXPANSION.enemyKills;st.totalBats=(st.totalBats||0)+UPGRADE.runBats;st.totalStars=(st.totalStars||0)+UPGRADE.runStars;st.totalRelics=(st.totalRelics||0)+UPGRADE.runRelics;st.bestCombo=Math.max(st.bestCombo||0,bestCombo);st.longestRun=Math.max(st.longestRun||0,Math.floor(elapsed));
+    if(!EXPANSION_STORE.stats)EXPANSION_STORE.stats={};const st=EXPANSION_STORE.stats;st.totalRuns=(st.totalRuns||0)+1;st.totalRings=(st.totalRings||0)+ringCount;st.totalKills=(st.totalKills||0)+EXPANSION.enemyKills;st.totalBats=(st.totalBats||0)+UPGRADE.runBats;st.totalStars=(st.totalStars||0)+UPGRADE.runStars;st.totalRelics=(st.totalRelics||0)+UPGRADE.runRelics;st.totalSynergies=(st.totalSynergies||0)+UPGRADE.synergyCount;st.bestCombo=Math.max(st.bestCombo||0,bestCombo);st.longestRun=Math.max(st.longestRun||0,Math.floor(elapsed));
     if(UPGRADE.finalBossDefeated&&score>=250000){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('the-unwritten'))EXPANSION_STORE.endings.push('the-unwritten');expansionAchievement('secret-ending','SECRET ENDING');}
     if(UPGRADE.emeraldComplete&&UPGRADE.secretRelics>0){if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];if(!EXPANSION_STORE.endings.includes('emerald-witness'))EXPANSION_STORE.endings.push('emerald-witness');}
     if(UPGRADE.dailyDone)EXPANSION_STORE.dailyChallenge={date:UPGRADE.dailyDate,done:true,id:UPGRADE.dailyType};
@@ -2469,6 +2513,7 @@
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
       ['Skin selection',skinUnlocked(UPGRADE.selectedSkin),UPGRADE.selectedSkin+' · saved '+(EXPANSION_STORE.selectedSkin||'DEFAULT')],
+      ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
       ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'12 cooldown timers checked'],
       ['Canvas renderer',!!ctx&&typeof drawPlayer==='function','Canvas '+W+'×'+H],
       ['Menu controls',!!(EXPANSION.menuButtons&&EXPANSION.menuButtons.skin&&EXPANSION.menuButtons.lab&&typeof EXPANSION.menuButtons.skin.onclick==='function'&&typeof EXPANSION.menuButtons.lab.onclick==='function'),'Skin and Test Lab buttons connected'],
@@ -2510,13 +2555,13 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT']],all=labels.concat(extra);
+      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
-      html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+'</div>';
+      html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+' · Ability synergies: '+(stats.totalSynergies||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+'</div>';
     }
-    if(kind==='ARCHIVE')html=html.replace("<b>SKINS</b><div>DEFAULT"+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+(endings.includes('emerald-witness')?' · EMERALD':'')+"</div>","<b>SKINS</b><div>"+['DEFAULT','BLOODSTAINED','VOID','EMERALD','PHANTOM','OBSIDIAN','UNWRITTEN'].filter(skinUnlocked).join(' · ')+"</div>");
+    if(kind==='ARCHIVE')html=html.replace("<b>SKINS</b><div>DEFAULT"+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+"</div>","<b>SKINS</b><div>"+['DEFAULT','BLOODSTAINED','VOID','EMERALD','PHANTOM','OBSIDIAN','UNWRITTEN'].filter(skinUnlocked).join(' · ')+"</div>");
     if(kind==='TEST LAB')html=buildTestingLabHtml();
     panel.innerHTML=html;
     panel.style.display=kind?'block':'none';
@@ -2567,7 +2612,7 @@
       const powerButton=document.createElement('button');powerButton.className='touch';powerButton.dataset.expansionPower='true';let powerIndex=0;
       powerButton.style.fontSize='9px';powerButton.style.padding='5px 2px';
       powerButton.textContent='POWER: '+powers[powerIndex][1];
-      powerButton.addEventListener('click',()=>{const k=powers[powerIndex][0];if(!handleExpansionKey(k))handleUltimateKey(k);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
+      powerButton.addEventListener('click',()=>{const k=powers[powerIndex][0];handlePlayerAbility(k);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
       mobileControls.appendChild(powerButton);
     }
     overlay.insertBefore(wrap,startBtn);
@@ -3168,6 +3213,11 @@
     if(score>=125000&&state==='running'){
       ctx.globalAlpha=.045+.035*Math.sin(elapsed*5);ctx.fillStyle='#6412a4';ctx.fillRect(0,0,W,H);
       if(score>=225000&&Math.floor(elapsed*14)%5===0){ctx.globalAlpha=.12;ctx.fillStyle='#c85cff';ctx.fillRect(0,(Math.floor(elapsed*37)%H),W,3);}
+    }
+    if(UPGRADE.synergyToastTimer>0){
+      ctx.globalAlpha=Math.min(1,UPGRADE.synergyToastTimer);
+      ctx.textAlign='center';ctx.font='bold 15px Consolas,monospace';ctx.fillStyle='#fff4ff';ctx.shadowColor='#d477ff';ctx.shadowBlur=14;
+      ctx.fillText('ABILITY SYNCHRONY // '+UPGRADE.synergyToast,W/2,96);ctx.shadowBlur=0;
     }
     if(EXPANSION.mode==='CORRUPTED'&&state==='running'){
       ctx.globalAlpha=.09+.06*Math.sin(elapsed*21);ctx.fillStyle='#b24cff';ctx.fillRect(0,0,W,H);
