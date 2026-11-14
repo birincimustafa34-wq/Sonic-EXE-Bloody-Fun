@@ -176,6 +176,8 @@
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let activeBiomeTier=0,biomeIntroTimer=0;
+  const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000],[140000,175000]];
+  let rainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
@@ -293,7 +295,7 @@
     elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.0; ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
-    worldCorruption=0;worldDetails=[];worldDetailClock=5;activeBiomeTier=0;biomeIntroTimer=0;
+    worldCorruption=0;worldDetails=[];worldDetailClock=5;activeBiomeTier=0;biomeIntroTimer=0;resetRainWeather();
     boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;thirdBossIntroduced=false;fourthBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
@@ -740,6 +742,87 @@
       switchMusicTrack(CONFIG.biomeMusic[key]||CONFIG.music.path||'');
     }else biomeIntroTimer=Math.max(0,biomeIntroTimer-dt);
   }
+
+  function makeRainDrop(randomY=false){
+    return {x:Math.random()*(W+100)-40,y:randomY?Math.random()*H:-20-Math.random()*120,
+      length:11+Math.random()*10,speed:390+Math.random()*210,drift:54+Math.random()*42,
+      alpha:.18+Math.random()*.22,width:.8+Math.random()*.65};
+  }
+  function resetRainWeather(){
+    rainDrops=[];rainTimer=0;rainBlend=0;rainWind=0;
+    rainSchedule=RAIN_SCORE_BANDS.map(([min,max])=>({
+      min,max,threshold:min+Math.random()*(max-min),duration:11+Math.random()*7,done:false
+    }));
+  }
+  function startRainEvent(duration){
+    rainTimer=duration||12;rainWind=52+Math.random()*42;
+    rainDrops=Array.from({length:128},()=>makeRainDrop(true));
+  }
+  function updateRainWeather(dt){
+    if(rainTimer<=0){
+      const next=rainSchedule.find(event=>!event.done);
+      if(next&&score>=next.threshold){
+        next.done=true;startRainEvent(next.duration);
+      }
+    }else rainTimer=Math.max(0,rainTimer-dt);
+    const target=rainTimer>0?1:0;
+    rainBlend+=(target-rainBlend)*Math.min(1,dt*1.65);
+    if(rainBlend<.008){rainBlend=0;rainDrops=[];return;}
+    for(const drop of rainDrops){
+      drop.x+=(rainWind+drop.drift)*dt;
+      drop.y+=drop.speed*dt;
+      if(drop.y>H+24){
+        drop.y=-drop.length-Math.random()*80;
+        drop.x=Math.random()*(W+100)-50;
+        drop.length=11+Math.random()*10;
+        drop.speed=390+Math.random()*210;
+        drop.alpha=.18+Math.random()*.22;
+      }
+      if(drop.x>W+50)drop.x=-30-Math.random()*40;
+    }
+  }
+  function drawRainWeather(){
+    if(rainBlend<=.008)return;
+    ctx.save();
+    ctx.globalAlpha=rainBlend;
+    const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
+    skyWash.addColorStop(0,'rgba(116,151,177,.045)');
+    skyWash.addColorStop(.55,'rgba(92,130,154,.025)');
+    skyWash.addColorStop(1,'rgba(73,112,139,.045)');
+    ctx.fillStyle=skyWash;ctx.fillRect(0,0,W,GROUND);
+    const cloudGroups=[
+      {x:(elapsed*5+35)%(W+240)-120,y:43,w:230,h:38},
+      {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
+      {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
+    ];
+    ctx.fillStyle='rgba(115,139,160,.075)';
+    for(const cloud of cloudGroups){
+      const {x,y,w,h}=cloud;
+      ctx.beginPath();
+      ctx.ellipse(x+w*.25,y+h*.55,w*.25,h*.36,0,0,Math.PI*2);
+      ctx.ellipse(x+w*.48,y+h*.34,w*.27,h*.49,0,0,Math.PI*2);
+      ctx.ellipse(x+w*.72,y+h*.56,w*.28,h*.35,0,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.lineCap='round';
+    for(const drop of rainDrops){
+      ctx.globalAlpha=rainBlend*drop.alpha;
+      ctx.strokeStyle='rgba(176,207,225,.9)';
+      ctx.lineWidth=drop.width;
+      ctx.beginPath();
+      ctx.moveTo(drop.x,drop.y);
+      ctx.lineTo(drop.x+drop.length*.19,drop.y+drop.length);
+      ctx.stroke();
+      ctx.globalAlpha=rainBlend*drop.alpha*.42;
+      ctx.strokeStyle='rgba(218,235,244,.8)';
+      ctx.lineWidth=Math.max(.55,drop.width*.55);
+      ctx.beginPath();
+      ctx.moveTo(drop.x-1,drop.y+drop.length*.24);
+      ctx.lineTo(drop.x+drop.length*.1,drop.y+drop.length*.82);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
   function drawBiomeLayers(){
     const tier=activeBiomeTier;if(tier===0)return;
     ctx.save();
@@ -947,7 +1030,7 @@
     }
   }
   function update(dt) {
-    elapsed+=dt; awardScore(dt*(10+speed*.012));updateBiomeTransition(dt);
+    elapsed+=dt; awardScore(dt*(10+speed*.012));updateBiomeTransition(dt);updateRainWeather(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
     speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
@@ -2124,6 +2207,7 @@
     }
     drawWorldAtmosphere();
     drawBiomeLayers();
+    drawRainWeather();
     drawBiomeNotice();
     drawEmbers();
     drawWorldDetails();
@@ -2321,6 +2405,8 @@
       UPGRADE.phaseCooldown=0;EXPANSION.timeFractureCooldown=0;EXPANSION.reboundCooldown=0;EXPANSION.voidStepCooldown=0;
       UPGRADE.decoyCooldown=0;UPGRADE.lightningCooldown=0;
       player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
+    }else if(id==='weather-showcase'){
+      score=2000;startRainEvent(14);
     }else if(id==='hazard-showcase'){
       score=120000;
       EXPANSION.hazards.push(
@@ -2552,7 +2638,9 @@
       player:{x:Math.round(player.x),y:Math.round(player.y),verticalVelocity:Math.round(player.vy),
         flightSeconds:Number(player.flight.toFixed(2)),shieldSeconds:Number(shieldTimer.toFixed(2)),
         jumps:player.jumps,sliding:player.sliding},
-      world:{biome:BIOME_INFO[activeBiomeTier]?.name||'Unknown',biomeTier:activeBiomeTier,groundHeight:GROUND},
+      world:{biome:BIOME_INFO[activeBiomeTier]?.name||'Unknown',biomeTier:activeBiomeTier,groundHeight:GROUND,
+        weather:{rainActive:rainTimer>0,rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
+          scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
       playerSkin:UPGRADE.selectedSkin,
       activeEntities:{
         enemies:EXPANSION.enemies.map(e=>({id:e.id,name:e.name,x:Math.round(e.x),y:Math.round(e.y),kind:e.kind})),
@@ -2589,6 +2677,7 @@
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
       ['Boss milestone catalog',new Set(UPGRADE_BOSSES.map(b=>b[1])).size===UPGRADE_BOSSES.length&&UPGRADE_BOSSES.every(b=>Number.isFinite(b[1])&&b[1]>0),UPGRADE_BOSSES.length+' unique unlock milestones'],
       ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
+      ['Rain schedule',rainSchedule.length===4&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
@@ -2628,6 +2717,7 @@
         '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
         '<button type="button" data-sandbox="synergy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">SYNERGY TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
+        '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
         '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
         '<button type="button" data-sandbox="biome-eclipse" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ECLIPSE ABYSS</button>'+
