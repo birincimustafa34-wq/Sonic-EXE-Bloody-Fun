@@ -2535,6 +2535,35 @@
     refreshExpansionMenu();
   }
 
+
+  function buildDiagnosticReport(){
+    const boss=EXPANSION.boss;
+    return JSON.stringify({
+      report:'Sonic.EXE Bloody Flight — Test Lab',
+      generatedAt:new Date().toISOString(),
+      state,mode:EXPANSION.mode,
+      score:Math.floor(score),bestScore:EXPANSION_STORE.best||0,
+      elapsedSeconds:Math.floor(elapsed),speed:Math.round(speed),
+      player:{x:Math.round(player.x),y:Math.round(player.y),verticalVelocity:Math.round(player.vy),
+        flightSeconds:Number(player.flight.toFixed(2)),shieldSeconds:Number(shieldTimer.toFixed(2)),
+        jumps:player.jumps,sliding:player.sliding},
+      world:{biome:BIOME_INFO[activeBiomeTier]?.name||'Unknown',biomeTier:activeBiomeTier,groundHeight:GROUND},
+      playerSkin:UPGRADE.selectedSkin,
+      activeEntities:{
+        enemies:EXPANSION.enemies.map(e=>({id:e.id,name:e.name,x:Math.round(e.x),y:Math.round(e.y),kind:e.kind})),
+        hazards:EXPANSION.hazards.map(h=>({id:h.id,name:h.name,x:Math.round(h.x),warning:Number((h.warning||0).toFixed(2)),active:Number((h.active||0).toFixed(2))})),
+        pickups:EXPANSION.pickups.map(p=>p.kind),
+        projectiles:EXPANSION.shots.length
+      },
+      boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,weaknessTime:Number(boss.weaknessTimer.toFixed(2))}:null,
+      abilities:{phase:EXPANSION.phaseCooldown,timeFracture:EXPANSION.timeFractureCooldown,echoDash:EXPANSION.echoDashCooldown,
+        magnet:EXPANSION.magnetCooldown,rebound:EXPANSION.reboundCooldown,overdrive:EXPANSION.overdriveCooldown,
+        glitchShield:EXPANSION.glitchShieldCooldown,voidStep:EXPANSION.voidStepCooldown,
+        explosion:UPGRADE.explosionCooldown,counter:UPGRADE.counterCooldown,decoy:UPGRADE.decoyCooldown,lightning:UPGRADE.lightningCooldown},
+      synergies:{countThisRun:UPGRADE.synergyCount,pendingAbility:UPGRADE.lastAbilityKey||null},
+      sandbox:{active:UPGRADE.testMode,scenario:UPGRADE.testScenario||null}
+    },null,2);
+  }
   function buildTestingLabHtml(){
     const boss=EXPANSION.boss;
     let storageReadable=true;
@@ -2562,6 +2591,7 @@
       ['Skin selection',skinUnlocked(UPGRADE.selectedSkin),UPGRADE.selectedSkin+' · saved '+(EXPANSION_STORE.selectedSkin||'DEFAULT')],
       ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
       ['Sandbox isolation',!UPGRADE.testMode||!!UPGRADE.testSnapshot,(UPGRADE.testMode?'ACTIVE · '+UPGRADE.testScenario:'INACTIVE')],
+      ['Diagnostic report',typeof buildDiagnosticReport==='function'&&!!JSON.stringify({state,score,elapsed}),'Report serializer ready'],
       ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'12 cooldown timers checked'],
       ['Canvas renderer',!!ctx&&typeof drawPlayer==='function','Canvas '+W+'×'+H],
       ['Menu controls',!!(EXPANSION.menuButtons&&EXPANSION.menuButtons.skin&&EXPANSION.menuButtons.lab&&typeof EXPANSION.menuButtons.skin.onclick==='function'&&typeof EXPANSION.menuButtons.lab.onclick==='function'),'Skin and Test Lab buttons connected'],
@@ -2582,7 +2612,9 @@
       '<div style="margin-top:8px"><b>ABILITY COOLDOWNS</b><div>'+cooldownRows+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'+
       '<button type="button" data-lab-refresh style="font:700 10px Consolas,monospace;padding:7px 9px;color:#fff;background:#3b1730;border:1px solid #a34c70;border-radius:3px">REFRESH / RE-RUN CHECKS</button>'+
+      '<button type="button" data-lab-copy style="font:700 10px Consolas,monospace;padding:7px 9px;color:#e4d6ff;background:#2b1740;border:1px solid #9664c1;border-radius:3px">COPY DIAGNOSTIC REPORT</button>'+
       '<button type="button" data-lab-close style="font:700 10px Consolas,monospace;padding:7px 9px;color:#e8d5de;background:#21121d;border:1px solid #654052;border-radius:3px">CLOSE PANEL</button></div>'+
+      '<textarea data-lab-report readonly style="display:none;width:100%;height:150px;margin-top:8px;background:#09060c;color:#d8c8e8;border:1px solid #65457b;font:10px Consolas,monospace;white-space:pre;overflow:auto"></textarea>'+
       ((state==='ready'||state==='over')?
         '<div style="margin-top:10px;padding:8px;background:#120b14;border:1px solid #6b3b60"><b style="color:#d9b6ff">ISOLATED SANDBOX // RECORDS DISABLED</b><div style="margin:5px 0;color:#bcaaba">Test scenarios do not save scores, achievements, unlocks, or archive records.</div>'+
         '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
@@ -2629,6 +2661,15 @@
       const close=panel.querySelector('[data-lab-close]');
       if(refresh)refresh.onclick=()=>expansionPanelShow('TEST LAB');
       if(close)close.onclick=()=>expansionPanelShow(null);
+      const copy=panel.querySelector('[data-lab-copy]');
+      if(copy)copy.onclick=()=>{
+        const report=buildDiagnosticReport(),area=panel.querySelector('[data-lab-report]');
+        area.value=report;area.style.display='block';
+        const fallback=()=>{copy.textContent='SELECT REPORT BELOW';area.focus();area.select();};
+        if(navigator.clipboard&&window.isSecureContext){
+          navigator.clipboard.writeText(report).then(()=>{copy.textContent='REPORT COPIED';}).catch(fallback);
+        }else fallback();
+      };
       panel.querySelectorAll('[data-sandbox]').forEach(btn=>{btn.onclick=()=>{if(state==='ready'||state==='over')begin(true,btn.dataset.sandbox);};});
     }
   }
