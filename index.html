@@ -2101,7 +2101,7 @@
     nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
     runSamples:[],ghostSamples:[],ghostClock:0,ghostAppearanceTimer:0,ghostAppearanceClock:0,ghostAppearanceCount:0,adaptiveFactor:1,
     boss85Done:false,boss110Done:false,boss135Done:false,boss165Done:false,
-    boss150Done:false,boss175Done:false,boss200Done:false,boss250Done:false,
+    boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
     menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
   };
@@ -2123,8 +2123,9 @@
     {id:'near',label:'MAKE 12 NEAR MISSES',target:12}
   ];
   const UPGRADE_BOSSES=[
-    ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE FRACTURED',165000],
-    ['THE ABSOLUTE',150000],['NULL SOVEREIGN REMATCH',175000],['THE LAST SIGNAL',200000],['THE UNWRITTEN',250000]
+    ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE ABSOLUTE',150000],
+    ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
+    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000]
   ];
   function resetUltimateSystems(){
     for(const k of ['eyesTimer','stalkerTimer','distortionTimer','falsePauseTimer','abandonedTimer','hiddenMessageTimer','bloodMoonTimer','choiceTimer','portalTimer','explosionTimer','decoyTimer','lastStandTimer'])UPGRADE[k]=0;
@@ -2286,8 +2287,8 @@
     EXPANSION.ghostAppearanceTimer=0;EXPANSION.ghostAppearanceClock=5+expansionRandom()*5;EXPANSION.ghostAppearanceCount=0;
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
     EXPANSION.boss85Done=false;EXPANSION.boss110Done=false;EXPANSION.boss135Done=false;EXPANSION.boss165Done=false;
-    EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;
-    EXPANSION.boss200Done=false;EXPANSION.boss250Done=false;EXPANSION.collapseAnnounced=false;
+    EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;EXPANSION.boss185Done=false;
+    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.collapseAnnounced=false;
     resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
   }
@@ -2330,6 +2331,7 @@
       ['Player physics', [player.x,player.y,player.vy].every(Number.isFinite),'X '+Math.round(player.x)+' · Y '+Math.round(player.y)],
       ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
+      ['Boss milestone catalog',new Set(UPGRADE_BOSSES.map(b=>b[1])).size===UPGRADE_BOSSES.length&&UPGRADE_BOSSES.every(b=>Number.isFinite(b[1])&&b[1]>0),UPGRADE_BOSSES.length+' unique unlock milestones'],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
@@ -2362,8 +2364,7 @@
     if(!panel)return;
     let html='';
     if(kind==='CODEX'){
-      const codexEntries=EXPANSION_ENEMIES.concat(LATE_ENTITY_DEFS,[
-        {unlock:85000,name:'THE HOLLOW KING'},{unlock:110000,name:'THE MACHINE'},{unlock:135000,name:'THE WATCHER'},{unlock:165000,name:'THE FRACTURED'},
+      const codexEntries=EXPANSION_ENEMIES.concat(LATE_ENTITY_DEFS,UPGRADE_BOSSES.map(([name,unlock])=>({unlock,name})),[
         {unlock:15000,name:'Bloodhunter'},{unlock:30000,name:'Relic Golem'},{unlock:42000,name:'Prism Wraith'},
         {unlock:45000,name:'Gravewing'},{unlock:50000,name:'Null Sovereign'},{unlock:58000,name:'Void Harrier'},
         {unlock:58000,name:'Rift Seraph'},{unlock:58000,name:'Nebula Shard'},{unlock:60000,name:'Ashen Colossus'},
@@ -2546,22 +2547,25 @@
     if(b.attackClock<=0){
       b.volley++;
       const center=Math.max(75,Math.min(GROUND-90,playerBox.y+playerBox.h*.5));
-      const offsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
-      const gapIndex=b.volley%offsets.length;
+      const standardOffsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
+      const offsets=b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
+      const gapIndex=(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
       offsets.forEach((off,i)=>{
         if(i===gapIndex)return;
         const y=Math.max(28,Math.min(GROUND-22,center+off));
-        EXPANSION.shots.push({x:W-115,y:y,w:23,h:20,speed:stage===3?520:stage===2?440:365,phase:0,color:b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':'#ff6d9b'});
+        const shotColor=b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
+        const shotSpeed=b.kind==='redJudge'?(stage===3?590:stage===2?510:430):b.kind==='paleArchitect'?(stage===3?560:stage===2?475:405):(stage===3?520:stage===2?440:365);
+        EXPANSION.shots.push({x:W-115,y:y,w:23,h:20,speed:shotSpeed,vy:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor});
       });
-      b.attackClock=stage===3?1.18:stage===2?1.55:2.0;
-      burst(W-115,b.timer%2?70:130,b.kind==='final'?'#f2edff':'#bd6bff',9);
+      b.attackClock=b.kind==='staticChoir'?(stage===3?1.02:stage===2?1.28:1.62):b.kind==='redJudge'?(stage===3?.98:stage===2?1.26:1.62):(stage===3?1.18:stage===2?1.55:2.0);
+      burst(W-115,b.timer%2?70:130,b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':b.kind==='final'?'#f2edff':'#bd6bff',9);
     }
     if(b.kind==='last'||b.kind==='final'){
       b.summonClock-=dt;
       if(b.summonClock<=0){spawnExpansionEnemy();b.summonClock=b.kind==='final'?4.3:6.1;}
     }
     for(let i=EXPANSION.shots.length-1;i>=0;i--){
-      const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;sh.y+=Math.sin(sh.phase)*12;
+      const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;sh.y+=Math.sin(sh.phase)*12+(sh.vy||0)*dt*slowFactor;
       const box={x:sh.x,y:sh.y,w:sh.w,h:sh.h};
       if(rectHit(playerBox,box,3)){
         if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||player.flight>0||dashTimer>0){
@@ -2674,11 +2678,14 @@
       {at:85000,key:'boss85Done',name:'THE HOLLOW KING',duration:24,reward:3400,kind:'hollowKing'},
       {at:110000,key:'boss110Done',name:'THE MACHINE',duration:28,reward:3900,kind:'machine'},
       {at:135000,key:'boss135Done',name:'THE WATCHER',duration:31,reward:4600,kind:'watcher'},
-      {at:165000,key:'boss165Done',name:'THE FRACTURED',duration:34,reward:5200,kind:'fractured'},
       {at:150000,key:'boss150Done',name:'THE ABSOLUTE',duration:34,reward:5600,kind:'absolute'},
+      {at:165000,key:'boss165Done',name:'THE FRACTURED',duration:34,reward:5200,kind:'fractured'},
       {at:175000,key:'boss175Done',name:'NULL SOVEREIGN — REMATCH',duration:26,reward:4200,kind:'rematch'},
+      {at:185000,key:'boss185Done',name:'THE STATIC CHOIR',duration:36,reward:6500,kind:'staticChoir'},
       {at:200000,key:'boss200Done',name:'THE LAST SIGNAL',duration:38,reward:7600,kind:'last'},
-      {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'}
+      {at:215000,key:'boss215Done',name:'THE RED JUDGE',duration:40,reward:8200,kind:'redJudge'},
+      {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'},
+      {at:275000,key:'boss275Done',name:'THE PALE ARCHITECT',duration:48,reward:15000,kind:'paleArchitect'}
     ];
     for(const b of nextBosses){
       if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
@@ -2992,7 +2999,7 @@
     }
     if(EXPANSION.boss){
       const b=EXPANSION.boss;ctx.save();ctx.globalCompositeOperation='lighter';
-      const c=b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':'#d477ff';
+      const c=b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#d477ff';
       ctx.shadowColor=c;ctx.shadowBlur=24;ctx.strokeStyle=c;ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(b.x,b.y,55+Math.sin(b.phase)*5,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle='#090611';ctx.beginPath();ctx.moveTo(b.x,b.y-50);ctx.lineTo(b.x+47,b.y-15);ctx.lineTo(b.x+39,b.y+39);ctx.lineTo(b.x,b.y+54);ctx.lineTo(b.x-39,b.y+39);ctx.lineTo(b.x-47,b.y-15);ctx.closePath();ctx.fill();ctx.stroke();
@@ -3000,6 +3007,18 @@
       else if(b.kind==='watcher'){ctx.fillStyle='#fff4d9';ctx.beginPath();ctx.ellipse(b.x,b.y,22,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff315d';ctx.beginPath();ctx.arc(b.x+Math.sin(b.phase)*7,b.y,7,0,Math.PI*2);ctx.fill();}
       else if(b.kind==='hollowKing'){ctx.fillStyle='#180c24';ctx.beginPath();ctx.moveTo(b.x-33,b.y-33);ctx.lineTo(b.x-54,b.y-75);ctx.lineTo(b.x-12,b.y-53);ctx.moveTo(b.x+33,b.y-33);ctx.lineTo(b.x+54,b.y-75);ctx.lineTo(b.x+12,b.y-53);ctx.fill();}
       else if(b.kind==='fractured'){ctx.strokeStyle='#ff5279';ctx.lineWidth=2;for(let k=0;k<5;k++){const ox=Math.sin(b.phase*3+k*4)*68,oy=Math.cos(b.phase*2+k*3)*54;ctx.strokeRect(b.x+ox-5,b.y+oy-5,10,10);}}
+      else if(b.kind==='staticChoir'){
+        for(let k=0;k<3;k++){const a=b.phase*1.4+k*Math.PI*2/3,cx=b.x+Math.cos(a)*76,cy=b.y+Math.sin(a)*48;ctx.fillStyle='#07131c';ctx.strokeStyle='#9ceeff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,17,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#eaffff';ctx.fillRect(cx-7,cy-3,5,4);ctx.fillRect(cx+3,cy-3,5,4);}
+        ctx.strokeStyle='#d8fbff';ctx.lineWidth=2;ctx.setLineDash([4,6]);ctx.beginPath();ctx.ellipse(b.x,b.y,83,54,b.phase*.2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      }else if(b.kind==='redJudge'){
+        ctx.fillStyle='#240611';ctx.strokeStyle='#ff3c55';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(b.x-48,b.y+26);ctx.lineTo(b.x-38,b.y-34);ctx.lineTo(b.x-14,b.y-22);ctx.lineTo(b.x,b.y-61);ctx.lineTo(b.x+17,b.y-23);ctx.lineTo(b.x+42,b.y-38);ctx.lineTo(b.x+49,b.y+27);ctx.lineTo(b.x,b.y+53);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.fillStyle='#fff0e9';ctx.beginPath();ctx.ellipse(b.x,b.y+1,25,14,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff143f';ctx.beginPath();ctx.ellipse(b.x+Math.sin(b.phase*2)*8,b.y+1,8,12,0,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#ff7184';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(b.x-62,b.y-50);ctx.lineTo(b.x-48,b.y-69);ctx.lineTo(b.x-28,b.y-48);ctx.moveTo(b.x+62,b.y-50);ctx.lineTo(b.x+48,b.y-69);ctx.lineTo(b.x+28,b.y-48);ctx.stroke();
+      }else if(b.kind==='paleArchitect'){
+        ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.phase*.22);ctx.strokeStyle='#f0edf7';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-74);ctx.lineTo(67,0);ctx.lineTo(0,74);ctx.lineTo(-67,0);ctx.closePath();ctx.stroke();
+        ctx.rotate(-b.phase*.48);ctx.strokeStyle='#b8b2ca';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-55);ctx.lineTo(48,38);ctx.lineTo(-48,38);ctx.closePath();ctx.stroke();ctx.fillStyle='#08070d';ctx.fillRect(-25,-19,50,38);ctx.strokeStyle='#e7e3f2';ctx.strokeRect(-25,-19,50,38);
+        ctx.fillStyle='#ffecb8';ctx.fillRect(-13,-5,8,7);ctx.fillRect(5,-5,8,7);ctx.restore();
+      }
       for(let k=0;k<3;k++){const a=b.phase*.5+k*Math.PI*2/3;const cx=b.x+Math.cos(a)*31,cy=b.y+Math.sin(a)*31;ctx.fillStyle=k<b.cores?'#ffe17a':'#4b3b55';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();}
       ctx.globalAlpha=.45+.4*Math.sin(b.phase*4);ctx.fillStyle=c;ctx.fillRect(b.x-23,b.y-4,46,7);
       if(b.weaknessTimer>0){ctx.globalAlpha=.9;ctx.strokeStyle='#fff2a3';ctx.lineWidth=4;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(b.x,b.y,68,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
