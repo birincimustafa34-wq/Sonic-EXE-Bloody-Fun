@@ -97,11 +97,12 @@
     shieldDuration:9, ringComboWindow:3.35, groundHeight:92,
     usePlayerImage:false,
     music:{path:'assets/audio/background.mp3',volume:.45,loop:true},
-    images:{}, sounds:{}, colors:{}
+    images:{}, sounds:{}, colors:{}, biomeMusic:{}
   }, window.BLOODY_FLIGHT_CONFIG || {});
   CONFIG.music = Object.assign({path:'',volume:.45,loop:true}, CONFIG.music || {});
   CONFIG.images = Object.assign({}, CONFIG.images || {});
   CONFIG.sounds = Object.assign({}, CONFIG.sounds || {});
+  CONFIG.biomeMusic = Object.assign({}, CONFIG.biomeMusic || {});
   CONFIG.colors = Object.assign({ringOuter:'#760008',ringInner:'#bd0718',accent:'#b41136',ground:'#190713',groundLine:'#9d1230'}, CONFIG.colors || {});
   document.title = (CONFIG.title || 'SONIC.EXE') + ' — Bloody Flight';
 
@@ -121,7 +122,7 @@
   }
   Object.entries(CONFIG.images).forEach(([name,path]) => loadImageAsset(name,path));
 
-  let bgMusic = null, musicFailed = false;
+  let bgMusic = null, musicFailed = false, bgMusicPath = CONFIG.music.path || '';
   if (CONFIG.music.path) {
     bgMusic = new Audio(CONFIG.music.path);
     bgMusic.loop = CONFIG.music.loop !== false;
@@ -143,6 +144,16 @@
     }
   }
   function stopMusic() { if (bgMusic) bgMusic.pause(); }
+  function switchMusicTrack(path){
+    const target=path||CONFIG.music.path||'';
+    if(target===bgMusicPath)return;
+    const resume=state==='running'&&!muted;
+    stopMusic();bgMusicPath=target;bgMusic=null;musicFailed=false;
+    if(!target)return;
+    bgMusic=new Audio(target);bgMusic.loop=CONFIG.music.loop!==false;bgMusic.volume=Math.max(0,Math.min(1,Number(CONFIG.music.volume??.45)));bgMusic.preload='auto';
+    bgMusic.addEventListener('error',()=>{musicFailed=true;if(target!==(CONFIG.music.path||''))switchMusicTrack(CONFIG.music.path||'');});
+    if(resume)startMusic();
+  }
   function drawAsset(name,x,y,w,h) {
     const img = images[name];
     if (!img || !img.complete || !img.naturalWidth) return false;
@@ -252,6 +263,12 @@
     if (name==='smash') tone(170,.22,'triangle',.13,38);
     if (name==='hit') { tone(180,.48,'sawtooth',.12,42); tone(95,.35,'square',.05,30,.08); }
     if (name==='flight') tone(330,.32,'sawtooth',.07,990);
+    if (name==='biomeGlass') [392,587,784,1175].forEach((n,i)=>tone(n,.28,'triangle',.035,n*1.12,i*.075));
+    if (name==='biomeCathedral') [196,294,392,587].forEach((n,i)=>tone(n,.42,'sine',.045,n*.96,i*.12));
+    if (name==='biomeEclipse') {tone(260,.62,'sawtooth',.055,58);tone(130,.78,'triangle',.045,38,.12);tone(65,.9,'sine',.04,28,.24);}
+    if (name==='bossChoir') [330,415,494,659].forEach((n,i)=>tone(n,.55,'sine',.038,n*1.08,i*.08));
+    if (name==='bossJudge') {tone(310,.22,'sawtooth',.09,72);tone(155,.34,'square',.055,42,.08);tone(620,.14,'square',.035,180,.18);}
+    if (name==='bossArchitect') [880,660,440,330].forEach((n,i)=>tone(n,.48,'triangle',.04,n*.72,i*.13));
   }
   function setOverlay(mode) {
     overlay.classList.remove('hidden');
@@ -668,8 +685,13 @@
   function biomeTierForScore(value){return value>=225000?3:value>=140000?2:value>=70000?1:0;}
   function updateBiomeTransition(dt){
     const next=biomeTierForScore(score);
-    if(next!==activeBiomeTier){activeBiomeTier=next;biomeIntroTimer=3.8;}
-    else biomeIntroTimer=Math.max(0,biomeIntroTimer-dt);
+    if(next!==activeBiomeTier){
+      activeBiomeTier=next;biomeIntroTimer=3.8;
+      const cue=next===1?'biomeGlass':next===2?'biomeCathedral':next===3?'biomeEclipse':null;
+      if(cue)sfx(cue);
+      const key=next===1?'glassWastes':next===2?'staticCathedral':next===3?'eclipseAbyss':'forest';
+      switchMusicTrack(CONFIG.biomeMusic[key]||CONFIG.music.path||'');
+    }else biomeIntroTimer=Math.max(0,biomeIntroTimer-dt);
   }
   function drawBiomeLayers(){
     const tier=activeBiomeTier;if(tier===0)return;
@@ -2643,7 +2665,9 @@
     EXPANSION.shots=[];
     bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
     bossIntroTimer=3.0;shake=.28;flash=.24;
-    burst(W-165,120,'#d477ff',30);sfx('smash');
+    burst(W-165,120,'#d477ff',30);
+    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'?'bossArchitect':null;
+    sfx(bossCue||'smash');
   }
   function updateExpansionBoss(dt,playerBox){
     const b=EXPANSION.boss;if(!b)return;
