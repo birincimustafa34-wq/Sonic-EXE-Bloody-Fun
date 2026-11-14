@@ -54,3 +54,13 @@ The visual layer is drawn between the biome background and the foreground world 
 
 The Testing Laboratory reports the currently active rainfall timer and each event's randomized score threshold. Its **RAIN TEST** sandbox preset forces a short preview at 2,000 score without changing persistent records.
 
+
+
+## Blood Rain Layer
+
+Two additional randomized weather events can occur once per run:
+
+- **90,000–120,000:** crimson blood rain
+- **160,000–200,000:** a second blood-rain window
+
+Each window receives its own randomized trigger threshold and lasts approximately 13–20 seconds. The effect recolors the falling streaks to vivid crimson with a pale-red highlight, adds a restrained dark-red sky wash, and shifts the drifting clouds toward deep maroon. Blood rain takes priority over a normal-rain trigger whose randomized threshold falls inside the same score window, preventing the two weather palettes from overlapping. Rain remains a visual-only effect and does not alter collisions, player physics, or scoring. A dedicated **BLOOD RAIN TEST** sandbox preset previews the layer at 100,000 score.
