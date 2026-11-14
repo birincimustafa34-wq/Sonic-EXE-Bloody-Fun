@@ -2316,6 +2316,11 @@
     }else if(id==='boss-showcase'){
       score=185000;
       startExpansionBoss('THE STATIC CHOIR',36,6500,'staticChoir');
+    }else if(id==='synergy-showcase'){
+      score=60000;
+      UPGRADE.phaseCooldown=0;EXPANSION.timeFractureCooldown=0;EXPANSION.reboundCooldown=0;EXPANSION.voidStepCooldown=0;
+      UPGRADE.decoyCooldown=0;UPGRADE.lightningCooldown=0;
+      player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
     }else if(id==='hazard-showcase'){
       score=120000;
       EXPANSION.hazards.push(
@@ -2621,6 +2626,7 @@
         '<button type="button" data-sandbox="free" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">FREE TEST RUN</button>'+
         '<button type="button" data-sandbox="enemy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ENEMY SHOWCASE</button>'+
         '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
+        '<button type="button" data-sandbox="synergy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">SYNERGY TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
         '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
