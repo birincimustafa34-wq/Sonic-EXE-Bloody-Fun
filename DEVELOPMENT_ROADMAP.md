@@ -99,6 +99,18 @@ The layers are drawn behind gameplay objects. They do not change collision geome
 Detailed visual notes live in `content-packs/worlds/biome-catalog.md`.
 
 
+### Randomized rainfall events added
+
+Light rain can now occur once in each of four score windows, with a randomly selected activation score per run:
+
+- 500–5,000
+- 10,000–20,000
+- 80,000–100,000
+- 140,000–175,000
+
+Each event lasts approximately 11–18 seconds. Thin droplets travel at varied speeds with a slight diagonal slant. The rain fades in and out smoothly, while low-contrast clouds drift across the upper sky. The effect is visual-only and does not change physics or collisions. The rain schedule and remaining event duration are available in Test Lab diagnostics and the copyable report. A **RAIN TEST** sandbox preset previews the effect immediately.
+
+
 ## Phase 5 — Sprite and Animation Pack
 
 ### Player skin system expanded
