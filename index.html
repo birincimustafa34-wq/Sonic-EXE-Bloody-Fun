@@ -2323,7 +2323,11 @@
         {id:'gravity',name:'Gravity Zone',x:W+440,w:170,h:145,y:150,phase:0,warning:1.1,active:8,passed:false,pull:1},
         {id:'corridor',name:'Spike Corridor',x:W+720,w:124,h:GROUND,phase:0,warning:1.1,active:8,passed:false,gapY:GROUND-190,gapH:155}
       );
-    }else if(id==='biome-showcase'){
+    }else if(id==='biome-glass'){
+      score=80000;activeBiomeTier=0;updateBiomeTransition(.016);
+    }else if(id==='biome-cathedral'){
+      score=160000;activeBiomeTier=0;updateBiomeTransition(.016);
+    }else if(id==='biome-eclipse'||id==='biome-showcase'){
       score=230000;activeBiomeTier=0;updateBiomeTransition(.016);
     }
     refreshExpansionMenu();
@@ -2586,7 +2590,9 @@
         '<button type="button" data-sandbox="enemy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ENEMY SHOWCASE</button>'+
         '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
-        '<button type="button" data-sandbox="biome-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BIOME REVIEW</button>'+
+        '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
+        '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
+        '<button type="button" data-sandbox="biome-eclipse" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ECLIPSE ABYSS</button>'+
         '</div></div>':'<div style="margin-top:8px;color:#bcaaba">Sandbox launch is available from the title or Game Over screen.</div>');
   }
   function expansionPanelShow(kind){
