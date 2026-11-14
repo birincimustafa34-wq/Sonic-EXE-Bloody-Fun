@@ -37,3 +37,20 @@ The first biome layer adds three score-driven visual regions to the existing cor
 - No new collision or scoring behavior is attached to these biome layers.
 - The Testing Laboratory includes a biome-tier consistency check.
 - JavaScript syntax and source-level integration checks passed. Full browser visual review is still required for readability, overlap, and performance.
+
+
+## Randomized Rainfall Layer
+
+The weather system can start one rainfall event in each of four score windows. At the beginning of each run, a threshold is selected randomly from each range:
+
+- 500–5,000
+- 10,000–20,000
+- 80,000–100,000
+- 140,000–175,000
+
+Each rain event lasts around 11–18 seconds. It uses 128 lightweight streak particles with varied lengths, speeds, opacity, and a slight diagonal wind drift. The rain fades in and out instead of switching abruptly. A very subtle cool sky wash and three low-contrast drifting cloud groups appear during the rain.
+
+The visual layer is drawn between the biome background and the foreground world details. It does not affect collision, scoring, enemy movement, or player physics.
+
+The Testing Laboratory reports the currently active rainfall timer and each event's randomized score threshold. Its **RAIN TEST** sandbox preset forces a short preview at 2,000 score without changing persistent records.
+
