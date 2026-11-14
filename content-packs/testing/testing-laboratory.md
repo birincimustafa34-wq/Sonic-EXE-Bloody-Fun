@@ -30,6 +30,7 @@ All scenarios are started from the title screen or Game Over screen.
 | FREE TEST RUN | A standard run in sandbox mode |
 | ENEMY SHOWCASE | Rift Lantern, Mirror Wraith, and Grave Mantis |
 | BOSS TEST | THE STATIC CHOIR at its late-game score context |
+| SYNERGY TEST | Starts at 60,000 score with the relevant ability cooldowns ready for all three combinations |
 | HAZARD TEST | Laser Grid, Gravity Zone, and Spike Corridor |
 | GLASS WASTES | Starts at 80,000 score to review the first biome |
 | STATIC CATHEDRAL | Starts at 160,000 score to review the second biome |
