@@ -60,7 +60,7 @@ The Testing Laboratory reports the currently active rainfall timer and each even
 
 Two additional randomized weather events can occur once per run:
 
-- **90,000–120,000:** crimson blood rain
-- **160,000–200,000:** a second blood-rain window
+- **105,000–125,000:** crimson blood rain
+- **180,000–205,000:** a second blood-rain window
 
-Each window receives its own randomized trigger threshold and lasts approximately 13–20 seconds. The effect recolors the falling streaks to vivid crimson with a pale-red highlight, adds a restrained dark-red sky wash, and shifts the drifting clouds toward deep maroon. Blood rain takes priority over a normal-rain trigger whose randomized threshold falls inside the same score window, preventing the two weather palettes from overlapping. Rain remains a visual-only effect and does not alter collisions, player physics, or scoring. A dedicated **BLOOD RAIN TEST** sandbox preset previews the layer at 100,000 score.
+Each window receives its own randomized trigger threshold and lasts approximately 13–20 seconds. The effect recolors the falling streaks to vivid crimson with a pale-red highlight, adds a restrained dark-red sky wash, and shifts the drifting clouds toward deep maroon. The normal-rain and blood-rain windows are arranged chronologically with at least 5,000 score points between neighboring windows, so the two weather types never overlap. Rain remains a visual-only effect and does not alter collisions, player physics, or scoring. A dedicated **BLOOD RAIN TEST** sandbox preset previews the layer at 100,000 score.
