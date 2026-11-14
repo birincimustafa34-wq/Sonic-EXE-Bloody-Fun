@@ -21,7 +21,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 | 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | **Started** |
 | 5 | Sprite and Animation Pack | Player skins, enemy sprites, boss art, and visual effects | **Started** |
 | 6 | Audio Project | Music, boss themes, ambience, and sound effects | **Started** |
-| 7 | Abilities and Gameplay Expansion | New abilities, combinations, challenge modes, and balancing | Planned |
+| 7 | Abilities and Gameplay Expansion | New abilities, combinations, challenge modes, and balancing | **Started** |
 
 ## Phase 1 — Testing Laboratory
 
@@ -130,6 +130,21 @@ The game now has synthesized transition cues for the three new biomes and distin
 When optional files are not supplied, the built-in Web Audio tone sequences are used. Existing background music and original sound mappings remain intact.
 
 The audio file layout and configuration keys are documented in `assets/audio/AUDIO_MANIFEST.md`.
+
+
+## Phase 7 — Abilities and Gameplay Expansion
+
+### First ability synergy pack integrated
+
+Three two-ability combinations are now available. The component abilities must both activate successfully within 4.5 seconds; either order is accepted.
+
+- **RIFT SYNCHRONY (Q + E):** Extends the active Time Fracture effect up to its cap and awards bonus score.
+- **VOID REBOUND (B + F):** Extends Void Step protection and preserves a Chaos Rebound charge.
+- **DECOY STORM (H + T):** Extends the Decoy Clone window, clears up to three nearby expansion projectiles, and awards bonus score.
+
+The game announces successful combinations, records the first-synergy achievement, and saves total synergy counts in the player's archive. Keyboard and mobile POWER inputs use the same ability handler. The title menu includes a combination reminder, and the Testing Laboratory validates synergy state.
+
+Detailed rules live in `content-packs/abilities/ability-synergies.md`.
 
 ## Regression checklist
 
