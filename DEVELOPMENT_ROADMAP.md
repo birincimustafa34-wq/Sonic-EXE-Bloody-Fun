@@ -15,7 +15,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 
 | Phase | Project | Scope | Status |
 |---|---|---|---|
-| 1 | Testing Laboratory | Read-only live diagnostics, engine self-checks, and later an isolated sandbox for controlled test cases | **Started** |
+| 1 | Testing Laboratory | Read-only live diagnostics, engine self-checks, and isolated scenario sandbox | **Started** |
 | 2 | Enemy Creation Project | Enemy definitions, behaviors, collision profiles, sprites, and animation variants | **Started** |
 | 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | **Started** |
 | 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | **Started** |
@@ -27,35 +27,31 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 
 ### Current implementation
 
-The **TEST LAB** menu panel provides a read-only snapshot of the current run and checks:
+The **TEST LAB** menu panel provides read-only live diagnostics for game state, player physics, horizontal bounds, entity collections, capacity limits, boss data, biome progression, enemy catalog integrity, skin unlocks, ability cooldowns, synergy state, menu bindings, and local-storage access.
 
-1. Game state validity
-2. Finite score and speed
-3. Player physics values
-4. Horizontal movement bounds
-5. Expansion entity collections
-6. Enemy capacity
-7. Hazard capacity
-8. Boss data integrity
-9. Selected skin validity
-10. Ability cooldown values
-11. Canvas renderer availability
-12. Menu interaction bindings
-13. Local storage read access
+The panel also displays current score, best score, run time, player position, active entity counts, boss state, and ability cooldowns. It is accessible from the title, pause, and Game Over overlays.
 
-The panel also displays run metrics, active entity counts, boss status, and ability cooldowns. It is accessible from the title, pause, and game-over overlays.
+### Isolated sandbox
+
+From the title or Game Over screen, the lab can start isolated test runs:
+
+- **FREE TEST RUN** — normal gameplay without persistent records.
+- **ENEMY SHOWCASE** — spawns Rift Lantern, Mirror Wraith, and Grave Mantis together.
+- **BOSS TEST** — starts THE STATIC CHOIR directly.
+- **HAZARD TEST** — stages a Laser Grid, Gravity Zone, and Spike Corridor.
+- **GLASS WASTES / STATIC CATHEDRAL / ECLIPSE ABYSS** — starts a run at the corresponding biome score threshold.
+
+The HUD labels sandbox sessions clearly. Sandbox saves are blocked, and the stored player profile is snapshotted and restored when the test run ends. Sandbox buttons are not offered while pausing a normal active run, avoiding accidental loss of run progress.
 
 ### Safety boundary
 
-The current panel does not spawn entities, modify score, grant abilities, change difficulty, or write player records. Its checks are runtime diagnostics, not a substitute for hands-on browser gameplay testing.
+The diagnostic panel itself is read-only. Sandbox sessions may temporarily change gameplay state so scenarios can be tested, but they do not update the player's persistent score, achievements, unlocks, or archive. Source-level checks and JavaScript syntax validation pass; browser interaction and gameplay testing remain necessary.
 
 ### Next Testing Laboratory tasks
 
-- Add an isolated test session that cannot update normal records or achievements.
-- Add controlled enemy, hazard, pickup, and boss spawning inside that isolated session.
-- Add scenario presets for movement, collision, flight, boss weakness windows, and mobile controls.
-- Add a compact diagnostic report that can be copied for bug investigations.
-
+- Add a structured report export for bugs.
+- Add broader collision and mobile-control scenario coverage.
+- Consider a dedicated visual comparison mode for sprite and biome review.
 
 ## Phase 2 — Enemy Creation Project
 
