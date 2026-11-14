@@ -29,7 +29,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 
 The **TEST LAB** menu panel provides read-only live diagnostics for game state, player physics, horizontal bounds, entity collections, capacity limits, boss data, biome progression, enemy catalog integrity, skin unlocks, ability cooldowns, synergy state, menu bindings, and local-storage access.
 
-The panel also displays current score, best score, run time, player position, active entity counts, boss state, and ability cooldowns. It is accessible from the title, pause, and Game Over overlays.
+The panel also displays current score, best score, run time, player position, active entity counts, boss state, and ability cooldowns. A copyable JSON diagnostic report exports the live run snapshot without including local save contents. It is accessible from the title, pause, and Game Over overlays.
 
 ### Isolated sandbox
 
