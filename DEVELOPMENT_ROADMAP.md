@@ -38,6 +38,7 @@ From the title or Game Over screen, the lab can start isolated test runs:
 - **FREE TEST RUN** — normal gameplay without persistent records.
 - **ENEMY SHOWCASE** — spawns Rift Lantern, Mirror Wraith, and Grave Mantis together.
 - **BOSS TEST** — starts THE STATIC CHOIR directly.
+- **SYNERGY TEST** — starts at 60K with combo ability cooldowns ready.
 - **HAZARD TEST** — stages a Laser Grid, Gravity Zone, and Spike Corridor.
 - **GLASS WASTES / STATIC CATHEDRAL / ECLIPSE ABYSS** — starts a run at the corresponding biome score threshold.
 
