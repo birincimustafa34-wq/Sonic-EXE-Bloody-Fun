@@ -2308,6 +2308,51 @@
     saveExpansionStore();
     refreshExpansionMenu();
   }
+
+  function buildTestingLabHtml(){
+    const boss=EXPANSION.boss;
+    let storageReadable=true;
+    try{localStorage.getItem(EXPANSION_STORAGE_KEY);}catch(_){storageReadable=false;}
+    const cooldowns=[
+      ['Q · Phase Shift',EXPANSION.phaseCooldown],['E · Time Fracture',EXPANSION.timeFractureCooldown],
+      ['C · Echo Dash',EXPANSION.echoDashCooldown],['V · Magnet Core',EXPANSION.magnetCooldown],
+      ['B · Chaos Rebound',EXPANSION.reboundCooldown],['R · Overdrive',EXPANSION.overdriveCooldown],
+      ['G · Glitch Shield',EXPANSION.glitchShieldCooldown],['F · Void Step',EXPANSION.voidStepCooldown],
+      ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Air Counter',UPGRADE.counterCooldown],
+      ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
+    ];
+    const checks=[
+      ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
+      ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
+      ['Player physics', [player.x,player.y,player.vy].every(Number.isFinite),'X '+Math.round(player.x)+' · Y '+Math.round(player.y)],
+      ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
+      ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
+      ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
+      ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
+      ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
+      ['Skin selection',['DEFAULT','BLOODSTAINED','VOID','EMERALD'].includes(UPGRADE.selectedSkin),UPGRADE.selectedSkin],
+      ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'12 cooldown timers checked'],
+      ['Canvas renderer',!!ctx&&typeof drawPlayer==='function','Canvas '+W+'×'+H],
+      ['Menu controls',!!(EXPANSION.menuButtons&&EXPANSION.menuButtons.skin&&EXPANSION.menuButtons.lab&&typeof EXPANSION.menuButtons.skin.onclick==='function'&&typeof EXPANSION.menuButtons.lab.onclick==='function'),'Skin and Test Lab buttons connected'],
+      ['Local storage read',storageReadable,'Save storage '+(storageReadable?'reachable':'blocked')]
+    ];
+    const passed=checks.filter(c=>c[1]).length;
+    const rows=checks.map(c=>'<div style="display:flex;gap:9px;justify-content:space-between;padding:4px 2px;border-bottom:1px solid #321724"><span style="color:'+(c[1]?'#91e6a6':'#ff899b')+'">'+(c[1]?'PASS':'CHECK')+' · '+c[0]+'</span><span style="color:#bfaeb7;text-align:right">'+c[2]+'</span></div>').join('');
+    const cooldownRows=cooldowns.map(c=>'<span style="display:inline-block;padding:4px 7px;margin:3px;background:#1b101c;border:1px solid #4d2941;border-radius:3px">'+c[0]+': '+Math.max(0,c[1]).toFixed(1)+'s</span>').join('');
+    return '<b style="color:#ffe17a">TEST LAB // LIVE DIAGNOSTICS</b>'+
+      '<div style="margin:5px 0 8px;color:#b8a7b0">READ-ONLY SELF-CHECK · No score, save data or gameplay state is modified.</div>'+
+      '<div style="padding:7px;background:#120b14;border:1px solid #4d2941;margin-bottom:8px"><b style="color:'+(passed===checks.length?'#91e6a6':'#ffbd77')+'">SYSTEM CHECK: '+passed+'/'+checks.length+' PASS</b>'+
+      '<div>State: '+state.toUpperCase()+' · Mode: '+EXPANSION.mode+' · Skin: '+UPGRADE.selectedSkin+'</div>'+
+      '<div>Score: '+Math.floor(score)+' · Best: '+(EXPANSION_STORE.best||0)+' · Run time: '+Math.floor(elapsed)+'s</div>'+
+      '<div>Player X: '+Math.round(player.x)+' · Y: '+Math.round(player.y)+' · Flight: '+player.flight.toFixed(1)+'s · Shield: '+shieldTimer.toFixed(1)+'s</div>'+
+      '<div>Enemies: '+EXPANSION.enemies.length+' · Hazards: '+EXPANSION.hazards.length+' · Pickups: '+EXPANSION.pickups.length+' · Shots: '+EXPANSION.shots.length+'</div>'+
+      '<div>Expansion boss: '+(boss?boss.name+' ('+Math.ceil(boss.timer)+'s)':'None')+' · Bosses defeated: '+EXPANSION.bossesDefeated+'</div></div>'+
+      '<b>ENGINE SELF-CHECKS</b>'+rows+
+      '<div style="margin-top:8px"><b>ABILITY COOLDOWNS</b><div>'+cooldownRows+'</div></div>'+
+      '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'+
+      '<button type="button" data-lab-refresh style="font:700 10px Consolas,monospace;padding:7px 9px;color:#fff;background:#3b1730;border:1px solid #a34c70;border-radius:3px">REFRESH / RE-RUN CHECKS</button>'+
+      '<button type="button" data-lab-close style="font:700 10px Consolas,monospace;padding:7px 9px;color:#e8d5de;background:#21121d;border:1px solid #654052;border-radius:3px">CLOSE PANEL</button></div>';
+  }
   function expansionPanelShow(kind){
     const panel=EXPANSION.menuPanel;
     if(!panel)return;
@@ -2334,8 +2379,15 @@
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
       html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+(endings.includes('emerald-witness')?' · EMERALD':'')+'</div>';
     }
+    if(kind==='TEST LAB')html=buildTestingLabHtml();
     panel.innerHTML=html;
     panel.style.display=kind?'block':'none';
+    if(kind==='TEST LAB'){
+      const refresh=panel.querySelector('[data-lab-refresh]');
+      const close=panel.querySelector('[data-lab-close]');
+      if(refresh)refresh.onclick=()=>expansionPanelShow('TEST LAB');
+      if(close)close.onclick=()=>expansionPanelShow(null);
+    }
   }
   function applyExpansionRandomMode(){
     if(EXPANSION.mode==='DAILY SEED'){
@@ -2361,15 +2413,16 @@
       b.style.cssText='font:700 11px Consolas,monospace;padding:7px 10px;color:#f7dbe5;background:#250d19;border:1px solid #9c435d;border-radius:4px;';
       wrap.appendChild(b);return b;
     }
-    const mode=makeButton('MODE: ENDLESS'),codex=makeButton('ENTITY CODEX'),achievements=makeButton('ACHIEVEMENTS'),archive=makeButton('ARCHIVE / BOSS GALLERY'),skin=makeButton('SKIN: '+UPGRADE.selectedSkin);
+    const mode=makeButton('MODE: ENDLESS'),codex=makeButton('ENTITY CODEX'),achievements=makeButton('ACHIEVEMENTS'),archive=makeButton('ARCHIVE / BOSS GALLERY'),skin=makeButton('SKIN: '+UPGRADE.selectedSkin),lab=makeButton('TEST LAB');
     const controls=document.createElement('div');controls.textContent='← / A Back · → / D Forward · Q Phase · E Time · C Echo · V Magnet · B Rebound · R Overdrive · G Shield · F Void · K Explosion · J Air Counter · H Decoy · T Chain Lightning · L Last Stand';controls.style.cssText='width:100%;color:#b69ba4;font:10px Consolas,monospace;line-height:1.5;padding:2px 8px;';wrap.appendChild(controls);
     const panel=document.createElement('div');
-    panel.style.cssText='display:none;max-height:145px;overflow:auto;width:min(90%,620px);text-align:left;padding:9px 12px;margin:4px 0 8px;background:rgba(8,3,10,.96);border:1px solid #6f2943;color:#f0dce3;font:11px Consolas,monospace;line-height:1.35;';
+    panel.style.cssText='display:none;max-height:235px;overflow:auto;width:min(94%,760px);text-align:left;padding:9px 12px;margin:4px 0 8px;background:rgba(8,3,10,.96);border:1px solid #6f2943;color:#f0dce3;font:11px Consolas,monospace;line-height:1.35;';
     codex.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'CODEX');
     achievements.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ACHIEVEMENTS');
     archive.onclick=()=>expansionPanelShow(panel.style.display==='block'?null:'ARCHIVE');
     skin.onclick=()=>upgradeCycleSkin();UPGRADE.skinButton=skin;
-    EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements,archive,skin};
+    lab.onclick=()=>expansionPanelShow('TEST LAB');
+    EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements,archive,skin,lab};
     const mobileControls=document.getElementById('mobileControls');
     if(mobileControls&&!mobileControls.querySelector('[data-expansion-power]')){
       const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyK','CHAOS EXPLOSION'],['KeyJ','AIR COUNTER'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
