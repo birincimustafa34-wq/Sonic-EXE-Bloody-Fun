@@ -177,7 +177,8 @@
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let activeBiomeTier=0,biomeIntroTimer=0;
   const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000],[140000,175000]];
-  let rainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0;
+  const BLOOD_RAIN_SCORE_BANDS=[[90000,120000],[160000,200000]];
+  let rainSchedule=[],bloodRainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
@@ -749,53 +750,81 @@
       alpha:.18+Math.random()*.22,width:.8+Math.random()*.65};
   }
   function resetRainWeather(){
-    rainDrops=[];rainTimer=0;rainBlend=0;rainWind=0;
+    rainDrops=[];rainTimer=0;rainBlend=0;rainWind=0;rainKind='normal';
     rainSchedule=RAIN_SCORE_BANDS.map(([min,max])=>({
       min,max,threshold:min+Math.random()*(max-min),duration:11+Math.random()*7,done:false
     }));
+    bloodRainSchedule=BLOOD_RAIN_SCORE_BANDS.map(([min,max])=>({
+      min,max,threshold:min+Math.random()*(max-min),duration:13+Math.random()*7,done:false
+    }));
   }
-  function startRainEvent(duration){
-    rainTimer=duration||12;rainWind=52+Math.random()*42;
-    rainDrops=Array.from({length:128},()=>makeRainDrop(true));
+  function startRainEvent(duration,kind='normal'){
+    rainTimer=duration||12;rainWind=52+Math.random()*42;rainKind=kind;
+    const blood=kind==='blood';
+    rainDrops=Array.from({length:blood?150:128},()=>{
+      const drop=makeRainDrop(true);
+      if(blood){
+        drop.length=13+Math.random()*10;
+        drop.speed=420+Math.random()*220;
+        drop.alpha=.27+Math.random()*.25;
+        drop.width=.9+Math.random()*.7;
+      }
+      return drop;
+    });
   }
   function updateRainWeather(dt){
     if(rainTimer<=0){
-      const next=rainSchedule.find(event=>!event.done);
-      if(next&&score>=next.threshold){
-        next.done=true;startRainEvent(next.duration);
+      const nextBlood=bloodRainSchedule.find(event=>!event.done);
+      const nextRain=rainSchedule.find(event=>!event.done);
+      if(nextBlood&&score>=nextBlood.threshold){
+        nextBlood.done=true;
+        // Blood rain replaces a normal rain trigger when both occupy the same score window.
+        rainSchedule.forEach(event=>{
+          if(event.threshold>=nextBlood.min&&event.threshold<=nextBlood.max)event.done=true;
+        });
+        startRainEvent(nextBlood.duration,'blood');
+      }else if(nextRain&&score>=nextRain.threshold){
+        nextRain.done=true;startRainEvent(nextRain.duration,'normal');
       }
     }else rainTimer=Math.max(0,rainTimer-dt);
     const target=rainTimer>0?1:0;
     rainBlend+=(target-rainBlend)*Math.min(1,dt*1.65);
-    if(rainBlend<.008){rainBlend=0;rainDrops=[];return;}
+    if(rainBlend<.008){rainBlend=0;rainDrops=[];rainKind='normal';return;}
     for(const drop of rainDrops){
       drop.x+=(rainWind+drop.drift)*dt;
       drop.y+=drop.speed*dt;
       if(drop.y>H+24){
         drop.y=-drop.length-Math.random()*80;
         drop.x=Math.random()*(W+100)-50;
-        drop.length=11+Math.random()*10;
-        drop.speed=390+Math.random()*210;
-        drop.alpha=.18+Math.random()*.22;
+        drop.length=rainKind==='blood'?13+Math.random()*10:11+Math.random()*10;
+        drop.speed=rainKind==='blood'?420+Math.random()*220:390+Math.random()*210;
+        drop.alpha=rainKind==='blood'?.27+Math.random()*.25:.18+Math.random()*.22;
       }
       if(drop.x>W+50)drop.x=-30-Math.random()*40;
     }
   }
   function drawRainWeather(){
     if(rainBlend<=.008)return;
+    const blood=rainKind==='blood';
     ctx.save();
     ctx.globalAlpha=rainBlend;
     const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
-    skyWash.addColorStop(0,'rgba(116,151,177,.045)');
-    skyWash.addColorStop(.55,'rgba(92,130,154,.025)');
-    skyWash.addColorStop(1,'rgba(73,112,139,.045)');
+    if(blood){
+      skyWash.addColorStop(0,'rgba(125,16,34,.105)');
+      skyWash.addColorStop(.55,'rgba(102,9,28,.065)');
+      skyWash.addColorStop(1,'rgba(75,5,22,.11)');
+    }else{
+      skyWash.addColorStop(0,'rgba(116,151,177,.045)');
+      skyWash.addColorStop(.55,'rgba(92,130,154,.025)');
+      skyWash.addColorStop(1,'rgba(73,112,139,.045)');
+    }
     ctx.fillStyle=skyWash;ctx.fillRect(0,0,W,GROUND);
     const cloudGroups=[
       {x:(elapsed*5+35)%(W+240)-120,y:43,w:230,h:38},
       {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
       {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
     ];
-    ctx.fillStyle='rgba(115,139,160,.075)';
+    ctx.fillStyle=blood?'rgba(54,12,27,.16)':'rgba(115,139,160,.075)';
     for(const cloud of cloudGroups){
       const {x,y,w,h}=cloud;
       ctx.beginPath();
@@ -807,14 +836,14 @@
     ctx.lineCap='round';
     for(const drop of rainDrops){
       ctx.globalAlpha=rainBlend*drop.alpha;
-      ctx.strokeStyle='rgba(176,207,225,.9)';
+      ctx.strokeStyle=blood?'rgba(255,48,70,.94)':'rgba(176,207,225,.9)';
       ctx.lineWidth=drop.width;
       ctx.beginPath();
       ctx.moveTo(drop.x,drop.y);
       ctx.lineTo(drop.x+drop.length*.19,drop.y+drop.length);
       ctx.stroke();
-      ctx.globalAlpha=rainBlend*drop.alpha*.42;
-      ctx.strokeStyle='rgba(218,235,244,.8)';
+      ctx.globalAlpha=rainBlend*drop.alpha*.48;
+      ctx.strokeStyle=blood?'rgba(255,137,145,.92)':'rgba(218,235,244,.8)';
       ctx.lineWidth=Math.max(.55,drop.width*.55);
       ctx.beginPath();
       ctx.moveTo(drop.x-1,drop.y+drop.length*.24);
@@ -2406,7 +2435,9 @@
       UPGRADE.decoyCooldown=0;UPGRADE.lightningCooldown=0;
       player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
     }else if(id==='weather-showcase'){
-      score=2000;startRainEvent(14);
+      score=2000;startRainEvent(14,'normal');
+    }else if(id==='blood-rain-showcase'){
+      score=100000;activeBiomeTier=0;updateBiomeTransition(.016);startRainEvent(16,'blood');
     }else if(id==='hazard-showcase'){
       score=120000;
       EXPANSION.hazards.push(
@@ -2639,8 +2670,9 @@
         flightSeconds:Number(player.flight.toFixed(2)),shieldSeconds:Number(shieldTimer.toFixed(2)),
         jumps:player.jumps,sliding:player.sliding},
       world:{biome:BIOME_INFO[activeBiomeTier]?.name||'Unknown',biomeTier:activeBiomeTier,groundHeight:GROUND,
-        weather:{rainActive:rainTimer>0,rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
-          scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
+        weather:{rainActive:rainTimer>0,rainType:rainBlend>.01?rainKind:'none',bloodRainActive:rainTimer>0&&rainKind==='blood',rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
+          scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
+          bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
       playerSkin:UPGRADE.selectedSkin,
       activeEntities:{
         enemies:EXPANSION.enemies.map(e=>({id:e.id,name:e.name,x:Math.round(e.x),y:Math.round(e.y),kind:e.kind})),
@@ -2677,7 +2709,8 @@
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
       ['Boss milestone catalog',new Set(UPGRADE_BOSSES.map(b=>b[1])).size===UPGRADE_BOSSES.length&&UPGRADE_BOSSES.every(b=>Number.isFinite(b[1])&&b[1]>0),UPGRADE_BOSSES.length+' unique unlock milestones'],
       ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
-      ['Rain schedule',rainSchedule.length===4&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
+      ['Rain schedule',rainSchedule.length===4&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
+      ['Blood rain schedule',bloodRainSchedule.length===2&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
@@ -2718,6 +2751,7 @@
         '<button type="button" data-sandbox="synergy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">SYNERGY TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
         '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
+        '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
         '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
         '<button type="button" data-sandbox="biome-eclipse" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ECLIPSE ABYSS</button>'+
