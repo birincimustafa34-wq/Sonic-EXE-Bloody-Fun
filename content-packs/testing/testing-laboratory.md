@@ -64,3 +64,7 @@ The **RAIN TEST** sandbox preset starts a short rain preview at 2,000 score. It 
 
 The live diagnostic report includes the rain-active flag, remaining duration, current fade blend, and all four randomized score windows. Normal gameplay triggers these events once per run, at a randomly selected score inside each configured range.
 
+
+## Blood-rain preview
+
+The **BLOOD RAIN TEST** sandbox starts at 100,000 score and previews the crimson weather layer for 16 seconds. In normal play, one blood-rain event is scheduled at a random score between 90,000–120,000 and a second between 160,000–200,000. When a normal-rain trigger falls inside one of those blood-rain windows, the blood-rain event takes priority so the two visual treatments do not stack. The diagnostic report shows the current rain type and both sets of randomized thresholds.
