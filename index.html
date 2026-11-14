@@ -164,6 +164,7 @@
   let hallucinationTier=0,hallucinationTimer=0,hallucinationCooldown=2,hallucinationDuration=0;
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
+  let activeBiomeTier=0,biomeIntroTimer=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
@@ -275,7 +276,7 @@
     elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.0; ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
-    worldCorruption=0;worldDetails=[];worldDetailClock=5;
+    worldCorruption=0;worldDetails=[];worldDetailClock=5;activeBiomeTier=0;biomeIntroTimer=0;
     boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;thirdBossIntroduced=false;fourthBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
@@ -657,6 +658,71 @@
     }
     ctx.globalAlpha=1;ctx.restore();
   }
+
+  const BIOME_INFO=[
+    {name:'THE BLOOD FOREST',color:'#ff6b86'},
+    {name:'THE GLASS WASTES',color:'#8cecff'},
+    {name:'THE STATIC CATHEDRAL',color:'#c7a4ff'},
+    {name:'THE ECLIPSE ABYSS',color:'#ff456b'}
+  ];
+  function biomeTierForScore(value){return value>=225000?3:value>=140000?2:value>=70000?1:0;}
+  function updateBiomeTransition(dt){
+    const next=biomeTierForScore(score);
+    if(next!==activeBiomeTier){activeBiomeTier=next;biomeIntroTimer=3.8;}
+    else biomeIntroTimer=Math.max(0,biomeIntroTimer-dt);
+  }
+  function drawBiomeLayers(){
+    const tier=activeBiomeTier;if(tier===0)return;
+    ctx.save();
+    if(tier===1){
+      const haze=ctx.createLinearGradient(0,0,0,GROUND);
+      haze.addColorStop(0,'rgba(8,45,65,.10)');haze.addColorStop(1,'rgba(5,40,58,.28)');
+      ctx.fillStyle=haze;ctx.fillRect(0,0,W,GROUND);
+      for(let i=0;i<10;i++){
+        const x=((i*119-elapsed*(15+(i%3)*5))%(W+160)+W+160)%(W+160)-75;
+        const h=76+(i%4)*24,base=GROUND-12-(i%3)*7;
+        ctx.fillStyle=i%2?'rgba(8,24,38,.82)':'rgba(10,34,48,.88)';
+        ctx.strokeStyle='rgba(104,226,242,.34)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x,base);ctx.lineTo(x+18,base-h*.66);ctx.lineTo(x+27,base-h);ctx.lineTo(x+43,base-h*.54);ctx.lineTo(x+57,base);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.globalAlpha=.35;ctx.strokeStyle='#a6f5ff';ctx.beginPath();ctx.moveTo(x+27,base-h+8);ctx.lineTo(x+34,base-h*.45);ctx.stroke();ctx.globalAlpha=1;
+      }
+      for(let i=0;i<8;i++){const x=(i*137+elapsed*(9+i%2*5))%W,y=50+(i*53)%190;pixelRect(x,y,3,3,'#9cecff');}
+    }else if(tier===2){
+      ctx.fillStyle='rgba(18,7,35,.23)';ctx.fillRect(0,0,W,GROUND);
+      for(let i=0;i<9;i++){
+        const x=((i*128-elapsed*(8+i%2*3))%(W+140)+W+140)%(W+140)-65;
+        const h=125+(i%4)*25,base=GROUND-8;
+        ctx.fillStyle='rgba(12,8,27,.88)';ctx.fillRect(x,base-h,31,h);
+        ctx.fillStyle='rgba(93,54,135,.38)';ctx.fillRect(x+5,base-h+9,4,h-18);ctx.fillRect(x+22,base-h+9,4,h-18);
+        ctx.strokeStyle='rgba(183,143,255,.42)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-8,base-h+13);ctx.lineTo(x+15,base-h-8);ctx.lineTo(x+39,base-h+13);ctx.stroke();
+        ctx.fillStyle='rgba(190,146,255,.48)';ctx.fillRect(x+13,base-h+35,5,21);
+      }
+      for(let i=0;i<6;i++){const x=(i*171+elapsed*12)%W;ctx.globalAlpha=.22+.14*Math.sin(elapsed*2+i);pixelRect(x,38+(i*41)%145,2,64,'#bda0ff');}
+      ctx.globalAlpha=1;
+    }else{
+      ctx.fillStyle='rgba(5,2,13,.26)';ctx.fillRect(0,0,W,GROUND);
+      const pulse=.5+.5*Math.sin(elapsed*1.7),cx=770,cy=112,r=72+pulse*5;
+      ctx.fillStyle='rgba(3,2,10,.88)';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,52,91,.52)';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(cx,cy,r+13,r*.44,elapsed*.12,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle='rgba(255,128,151,.46)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,r+23,elapsed*-.7,elapsed*-.7+Math.PI*1.25);ctx.stroke();
+      for(let i=0;i<12;i++){
+        const x=(i*91+elapsed*(i%2?20:-13))%W,y=32+(i*67)%Math.max(90,GROUND-65);
+        ctx.globalAlpha=.16+.12*Math.sin(elapsed*2+i);ctx.fillStyle=i%2?'#6b0929':'#21102b';
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y+18+(i%4)*6);ctx.lineTo(x-6,y+22+(i%3)*5);ctx.closePath();ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  }
+  function drawBiomeNotice(){
+    if(biomeIntroTimer<=0||activeBiomeTier<=0)return;
+    const info=BIOME_INFO[activeBiomeTier],alpha=Math.min(1,biomeIntroTimer*1.4);
+    ctx.save();ctx.globalAlpha=alpha;ctx.textAlign='center';ctx.font='bold 15px Consolas,monospace';
+    ctx.fillStyle=info.color;ctx.shadowColor=info.color;ctx.shadowBlur=14;
+    ctx.fillText('NEW BIOME // '+info.name,W/2,90);
+    ctx.restore();
+  }
+
   function drawEmbers(){
     if(score<20000)return;
     for(const ember of embers){
@@ -812,7 +878,7 @@
     }
   }
   function update(dt) {
-    elapsed+=dt; awardScore(dt*(10+speed*.012));
+    elapsed+=dt; awardScore(dt*(10+speed*.012));updateBiomeTransition(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
     speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
@@ -1958,6 +2024,8 @@
       trees.filter(t=>t.layer===1).forEach(t=>drawTree(t,0));
     }
     drawWorldAtmosphere();
+    drawBiomeLayers();
+    drawBiomeNotice();
     drawEmbers();
     drawWorldDetails();
     drawHallucinations();
@@ -2332,6 +2400,7 @@
       ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
       ['Boss milestone catalog',new Set(UPGRADE_BOSSES.map(b=>b[1])).size===UPGRADE_BOSSES.length&&UPGRADE_BOSSES.every(b=>Number.isFinite(b[1])&&b[1]>0),UPGRADE_BOSSES.length+' unique unlock milestones'],
+      ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
