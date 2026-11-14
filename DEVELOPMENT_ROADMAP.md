@@ -18,7 +18,7 @@ A modular development roadmap for **Sonic.EXE — Bloody Flight**.
 | 1 | Testing Laboratory | Read-only live diagnostics, engine self-checks, and later an isolated sandbox for controlled test cases | **Started** |
 | 2 | Enemy Creation Project | Enemy definitions, behaviors, collision profiles, sprites, and animation variants | **Started** |
 | 3 | Boss Creation Laboratory | Boss identities, phases, attack patterns, weak points, and rewards | **Started** |
-| 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | Planned |
+| 4 | World and Biome Pack | New environments, visual themes, hazards, and transitions | **Started** |
 | 5 | Sprite and Animation Pack | Player skins, enemy sprites, boss art, and visual effects | Planned |
 | 6 | Audio Project | Music, boss themes, ambience, and sound effects | Planned |
 | 7 | Abilities and Gameplay Expansion | New abilities, combinations, challenge modes, and balancing | Planned |
@@ -85,6 +85,21 @@ Three late-game bosses have been added:
 All three use the established three-core weakness-window framework. Their milestone flags reset between runs, and they are included in the Boss Gallery and Entity Codex. Existing boss milestones were sorted chronologically to make threshold progression deterministic.
 
 Detailed design notes live in `content-packs/bosses/boss-catalog.md`.
+
+
+## Phase 4 — World and Biome Pack
+
+### First biome layer integrated
+
+Three score-driven visual regions now transition into the run:
+
+- **THE GLASS WASTES** — 70,000 score; cyan haze, glass-spire silhouettes, and drifting shard lights.
+- **THE STATIC CATHEDRAL** — 140,000 score; dark monumental columns, pale arches, and vertical signal lights.
+- **THE ECLIPSE ABYSS** — 225,000 score; a dark eclipse, crimson orbital rings, and drifting shadow fragments.
+
+The layers are drawn behind gameplay objects. They do not change collision geometry, enemy timing, scoring, or player physics. Short transition titles announce entry into each biome. The Testing Laboratory checks that the active biome tier matches the current score.
+
+Detailed visual notes live in `content-packs/worlds/biome-catalog.md`.
 
 ## Regression checklist
 
