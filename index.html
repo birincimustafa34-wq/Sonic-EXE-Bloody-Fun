@@ -167,6 +167,9 @@
   let scoreMultiplierTimer=0;
   const SCORE_SIGIL_MULTIPLIER=1.5;
   const DISTANCE_SCORE_MULTIPLIER=1.12;
+  const RING_FORMATION_NAMES=Object.freeze(['arc','stair-step','zigzag','risk-reward','wave']);
+  const RING_TEST_SPEEDS=Object.freeze([360,650,850]);
+  let ringPatternIndex=0,lastRingFormation='none',ringTestTimer=0,ringTestTier=0;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
   // Brief landing protection starts when Bloody Flight ends.
   let landingGrace=0;
@@ -294,7 +297,8 @@
   }
   let ringCount = 0;
   function reset() {
-    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=2.0; ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;activeBiomeTier=0;biomeIntroTimer=0;resetRainWeather();
@@ -519,10 +523,43 @@
     const baseY=55+Math.random()*Math.max(45,GROUND-245),y=d.role==='flyer'?baseY:GROUND-d.h;
     obstacles.push({type:'lateentity',variant,tier,name:d.name,role:d.role,behavior:d.behavior,color:d.color,drain:d.drain,points:d.points,w:d.w,h:d.h,x:W+95,y,baseY,phase:Math.random()*6,attackClock:.75+Math.random()*.9,shiftTimer:.8+Math.random()*1.1,warning:0,diveTime:0,targetY:baseY,speedFactor:1.18+tier*.006,passed:false});
   }
-  function addRingGroup() {
+  function ringFormationOffset(pattern,index,direction=1){
+    const t=index/4;
+    switch(pattern){
+      case 'arc':return -Math.sin(t*Math.PI)*46;
+      case 'stair-step':return direction*(index-2)*24;
+      case 'zigzag':return index%2===0?-36:36;
+      case 'risk-reward':return -Math.sin(t*Math.PI)*92;
+      case 'wave':return Math.sin(t*Math.PI*2)*32;
+      default:return -Math.sin(t*Math.PI)*46;
+    }
+  }
+  function ringGroupIntervalForSpeed(currentSpeed=speed,randomize=true){
+    const safeSpeed=Math.max(320,Number(currentSpeed)||360);
+    const base=Math.max(1.55,Math.min(3.1,1300/safeSpeed));
+    return base+(randomize?.08+Math.random()*.14:.15);
+  }
+  function bonusRingDelayForSpeed(currentScore=score,currentSpeed=speed,randomize=true){
+    const lateGame=currentScore>=70000;
+    const targetDistance=lateGame?6400:9200;
+    const minDelay=lateGame?5.8:10;
+    const maxDelay=lateGame?9.6:18;
+    const safeSpeed=Math.max(320,Number(currentSpeed)||360);
+    const base=Math.max(minDelay,Math.min(maxDelay,targetDistance/safeSpeed));
+    return base*(randomize?.9+Math.random()*.2:1);
+  }
+  function addRingGroup(patternOverride=null,startX=W+35){
+    const pattern=patternOverride||RING_FORMATION_NAMES[ringPatternIndex%RING_FORMATION_NAMES.length];
+    if(!patternOverride)ringPatternIndex=(ringPatternIndex+1)%RING_FORMATION_NAMES.length;
+    lastRingFormation=pattern;
     const high=Math.random()<.5;
-    const base=high ? 75+Math.random()*100 : GROUND-125;
-    for(let i=0;i<5;i++) rings.push({x:W+35+i*42,y:high?base+Math.sin(i*.8)*18:base-Math.sin(i/4*Math.PI)*48,r:12,high});
+    const base=pattern==='risk-reward'?GROUND-74:(high?145+Math.random()*70:GROUND-132);
+    const direction=Math.random()<.5?-1:1;
+    for(let i=0;i<5;i++){
+      const y=Math.max(58,Math.min(GROUND-58,base+ringFormationOffset(pattern,i,direction)));
+      rings.push({x:startX+i*42,y,r:12,high:y<GROUND-155,formation:pattern});
+    }
+    return pattern;
   }
   function addBonusRing() {
     const high=Math.random()<.5;
@@ -1061,6 +1098,11 @@
     speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
     if(EXPANSION.overdriveTimer>0)speed=Math.min(900,speed+38);
+    if(UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'){
+      ringTestTimer-=dt;
+      if(ringTestTimer<=0){ringTestTier=(ringTestTier+1)%RING_TEST_SPEEDS.length;ringTestTimer=8;ringClock=Math.min(ringClock,.25);}
+      speed=RING_TEST_SPEEDS[ringTestTier];
+    }
     // Starts subtly after 500 points and reaches full intensity around 3,500 points.
     // Easing prevents sudden jumps when ring combos award a lot of score at once.
     const targetGlitch = Math.max(0, Math.min(1, (score-500)/(3500-500)));
@@ -1156,7 +1198,7 @@
       ringBonusClock-=dt;
       if(ringBonusClock<=0&&!rings.some(r=>!r.bonus)&&ringClock>1.1){
         addBonusRing();
-        ringBonusClock=score>=70000?5.5+Math.random()*3.5:11+Math.random()*7;
+        ringBonusClock=bonusRingDelayForSpeed(score,speed);
       }
     }
     scoreMultiplierTimer=Math.max(0,scoreMultiplierTimer-dt);
@@ -1174,7 +1216,7 @@
       const baseInterval=Math.max(.62,1.25-(speed-360)/700)+Math.random()*.34;
       spawnClock=boss?1.35:baseInterval*(score>=20000?.82:1);
     }
-    if(ringClock<=0){addRingGroup();ringClock=2.2+Math.random()*1.35;}
+    if(ringClock<=0){addRingGroup();ringClock=ringGroupIntervalForSpeed(speed);}
     if(emeraldClock<=0){addEmerald();emeraldClock=14+Math.random()*6;}
     if(shieldClock<=0){addShield();shieldClock=score>=100000?15+Math.random()*7:score>=58000?18+Math.random()*7:22+Math.random()*9;}
     if(player.flight>0){
@@ -2435,6 +2477,13 @@
       score=2000;startRainEvent(14,'normal');
     }else if(id==='blood-rain-showcase'){
       score=100000;activeBiomeTier=0;updateBiomeTransition(.016);startRainEvent(16,'blood');
+    }else if(id==='ring-showcase'){
+      score=72000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];
+      ringPatternIndex=0;lastRingFormation='arc';ringTestTier=0;ringTestTimer=8;
+      speed=RING_TEST_SPEEDS[0];ringClock=.18;ringBonusClock=2;rings=[];
+      player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
     }else if(id==='hazard-showcase'){
       score=120000;
       EXPANSION.hazards.push(
@@ -2670,6 +2719,16 @@
         weather:{rainActive:rainTimer>0,rainType:rainBlend>.01?rainKind:'none',bloodRainActive:rainTimer>0&&rainKind==='blood',rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
           scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
           bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
+      ringSystem:{
+        lastFormation:lastRingFormation,availableFormations:RING_FORMATION_NAMES.slice(),
+        activeRegularRings:rings.filter(r=>!r.bonus).length,activeBonusRings:rings.filter(r=>r.bonus).length,
+        nextGroupInSeconds:Number(Math.max(0,ringClock).toFixed(2)),
+        intervalAtCurrentSpeed:Number(ringGroupIntervalForSpeed(speed,false).toFixed(2)),
+        estimatedWorldGap:Math.round(speed*ringGroupIntervalForSpeed(speed,false)),
+        speedSamples:RING_TEST_SPEEDS.map(value=>({speed:value,interval:Number(ringGroupIntervalForSpeed(value,false).toFixed(2)),worldGap:Math.round(value*ringGroupIntervalForSpeed(value,false))})),
+        bonusSamples:RING_TEST_SPEEDS.map(value=>({speed:value,earlyDelay:Number(bonusRingDelayForSpeed(60000,value,false).toFixed(2)),lateDelay:Number(bonusRingDelayForSpeed(80000,value,false).toFixed(2))})),
+        sandboxTest:UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'?{tier:ringTestTier+1,speed:RING_TEST_SPEEDS[ringTestTier],secondsUntilNextTier:Number(Math.max(0,ringTestTimer).toFixed(2))}:null
+      },
       playerSkin:UPGRADE.selectedSkin,
       activeEntities:{
         enemies:EXPANSION.enemies.map(e=>({id:e.id,name:e.name,x:Math.round(e.x),y:Math.round(e.y),kind:e.kind})),
@@ -2702,10 +2761,16 @@
     const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
+    const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false)}));
+    const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
       ['Distance score boost',DISTANCE_SCORE_MULTIPLIER>=1.1&&DISTANCE_SCORE_MULTIPLIER<=1.2,Math.round(DISTANCE_SCORE_MULTIPLIER*100)+'% speed-scaled travel score'],
+      ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
+      ['Speed-aware ring spacing',ringSpacingSamples.every(sample=>sample.worldGap>=1150&&sample.worldGap<=1500)&&ringSpacingSamples[1].worldGap>=ringSpacingSamples[0].worldGap&&ringSpacingSamples[2].worldGap>=ringSpacingSamples[1].worldGap,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px').join(' · ')],
+      ['Bonus ring cadence',bonusRingSamples.every(sample=>Number.isFinite(sample.early)&&Number.isFinite(sample.late)&&sample.early>0&&sample.late>0),'Speed-scaled early and late bonus intervals valid'],
+      ['Ring showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='ring-showcase'||(RING_TEST_SPEEDS[ringTestTier]===speed&&ringTestTimer>=0),UPGRADE.testScenario==='ring-showcase'?'Tier '+(ringTestTier+1)+' / '+RING_TEST_SPEEDS.length+' · '+Math.round(speed)+' speed':'Ready for isolated multi-speed preview'],
       ['Player physics', [player.x,player.y,player.vy].every(Number.isFinite),'X '+Math.round(player.x)+' · Y '+Math.round(player.y)],
       ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
@@ -2753,6 +2818,7 @@
         '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
         '<button type="button" data-sandbox="synergy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">SYNERGY TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
+        '<button type="button" data-sandbox="ring-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#2a1b12;color:#ffe6ad;border:1px solid #a9823d;border-radius:3px">RING SYSTEM 2.0 TEST</button>'+
         '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
         '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
@@ -3452,6 +3518,10 @@
     if(UPGRADE.testMode){
       ctx.textAlign='left';ctx.font='bold 11px Consolas,monospace';ctx.fillStyle='#d9b6ff';
       ctx.fillText('TEST SANDBOX // RECORDS DISABLED',18,66);
+      if(UPGRADE.testScenario==='ring-showcase'){
+        ctx.fillStyle='#ffe6ad';ctx.fillText('RING LAB // SPEED '+Math.round(speed)+' // '+lastRingFormation.toUpperCase(),18,82);
+        ctx.fillStyle='#d8c8e8';ctx.fillText('NEXT SPEED TIER IN '+Math.max(0,ringTestTimer).toFixed(1)+'s',18,97);
+      }
     }
     if(UPGRADE.synergyToastTimer>0){
       ctx.globalAlpha=Math.min(1,UPGRADE.synergyToastTimer);
