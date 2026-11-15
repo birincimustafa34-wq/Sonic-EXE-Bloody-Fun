@@ -166,6 +166,18 @@ The game announces successful combinations, records the first-synergy achievemen
 
 Detailed rules live in `content-packs/abilities/ability-synergies.md`.
 
+## Ring System 2.0 — speed-aware formations
+
+### First pass integrated
+
+Ring groups now use a speed-aware interval to keep their estimated world-space separation within a compact target band as the run accelerates. Instead of relying on a fixed 2.2–3.55 second timer, the group interval scales with current world speed. Each group still contains five rings and retains the original horizontal spacing, collision behavior, pickup sound, combo scoring, and high/low ring values.
+
+Five rotating formation shapes are available: **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave**. Bonus rings remain distinct and retain their original 60-point pickup reward; their early- and late-game timer cadence is also adjusted using current speed so they do not drift too far apart at high velocity.
+
+The new **RING SYSTEM 2.0 TEST** sandbox cycles through 360, 650, and 850 speed tiers every eight seconds. It uses the existing isolated sandbox save snapshot/restore behavior, suppresses milestone boss starts, and adds ring-specific data to the copyable Test Lab report. Test Lab checks the five formation IDs, expected world-space group spacing, bonus-ring cadence, and active showcase tier.
+
+Browser testing is still required to review formation readability, ring/hazard interactions, mobile collection feel, and real-run bonus frequency.
+
 ## Regression checklist
 
 Before integrating future modules, re-check:
