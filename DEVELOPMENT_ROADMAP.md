@@ -182,7 +182,7 @@ Browser testing is still required to review formation readability, ring/hazard i
 
 The wide-screen colored pixel interference is now delayed until the late game and split into three exact density tiers: **200,000 score → 200 pixels**, **500,000 → 500 pixels**, and **1,000,000 → 1,000 pixels**. The existing maximum visual level is preserved as the final tier rather than increased.
 
-Fragments are fully opaque, small, crisp rectangles, and distributed across a screen-wide stratified grid so they do not form dense clusters. The earlier low-level scanline and short tearing effects remain separate. Test Lab validates the score boundaries and reports the active pixel count and next tier.
+Fragments are fully opaque, small, crisp rectangles, and distributed across a screen-wide stratified grid so they do not form dense clusters. The earlier low-level scanline and short tearing effects remain separate. Test Lab validates the score boundaries and reports the active pixel count and next tier. Its isolated **PIXEL GLITCH TEST** sandbox cycles through 200,000 / 200 pixels, 500,000 / 500 pixels, and 1,000,000 / 1,000 pixels every eight seconds, with records disabled.
 
 Browser gameplay review is still required to confirm visual readability at the three thresholds on desktop and mobile.
 
