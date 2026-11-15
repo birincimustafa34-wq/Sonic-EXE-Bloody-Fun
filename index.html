@@ -166,6 +166,7 @@
   let spawnClock = 0, ringClock = 0, ringBonusClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0, scoreSigilClock=0;
   let scoreMultiplierTimer=0;
   const SCORE_SIGIL_MULTIPLIER=1.5;
+  const DISTANCE_SCORE_MULTIPLIER=1.12;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
   // Brief landing protection starts when Bloody Flight ends.
   let landingGrace=0;
@@ -176,8 +177,8 @@
   let hallucinationKind=0,hallucinationX=600,hallucinationY=150;
   let worldCorruption=0,worldDetails=[],worldDetailClock=0;
   let activeBiomeTier=0,biomeIntroTimer=0;
-  const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000],[140000,175000]];
-  const BLOOD_RAIN_SCORE_BANDS=[[105000,125000],[180000,205000]];
+  const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000]];
+  const BLOOD_RAIN_SCORE_BANDS=[[110000,125000],[140000,155000],[170000,185000],[200000,215000],[230000,245000],[260000,275000],[285000,300000]];
   let rainSchedule=[],bloodRainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -1055,7 +1056,7 @@
     }
   }
   function update(dt) {
-    elapsed+=dt; awardScore(dt*(10+speed*.012));updateBiomeTransition(dt);updateRainWeather(dt);
+    elapsed+=dt; awardScore(dt*(10+speed*.012)*DISTANCE_SCORE_MULTIPLIER);updateBiomeTransition(dt);updateRainWeather(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
     speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
@@ -2698,17 +2699,21 @@
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
     const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
+    const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
+      ['Distance score boost',DISTANCE_SCORE_MULTIPLIER>=1.1&&DISTANCE_SCORE_MULTIPLIER<=1.2,Math.round(DISTANCE_SCORE_MULTIPLIER*100)+'% speed-scaled travel score'],
       ['Player physics', [player.x,player.y,player.vy].every(Number.isFinite),'X '+Math.round(player.x)+' · Y '+Math.round(player.y)],
       ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
       ['Entity collections', ['enemies','hazards','pickups','shots','echoWaves'].every(k=>Array.isArray(EXPANSION[k])),'All live collections are arrays'],
       ['Boss milestone catalog',new Set(UPGRADE_BOSSES.map(b=>b[1])).size===UPGRADE_BOSSES.length&&UPGRADE_BOSSES.every(b=>Number.isFinite(b[1])&&b[1]>0),UPGRADE_BOSSES.length+' unique unlock milestones'],
       ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
-      ['Rain schedule',rainSchedule.length===4&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
-      ['Blood rain schedule',bloodRainSchedule.length===2&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
-      ['Weather window separation',sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0]),'No overlap · minimum gap '+Math.min(...sortedWeatherBands.slice(1).map((band,i)=>band[0]-sortedWeatherBands[i][1]))+' points'],
+      ['Rain schedule',rainSchedule.length===3&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
+      ['Blood rain schedule',bloodRainSchedule.length===7&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
+      ['Weather window separation',sortedWeatherBands.length===10&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===8&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
