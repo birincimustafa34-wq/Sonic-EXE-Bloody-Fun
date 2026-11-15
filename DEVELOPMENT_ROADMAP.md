@@ -101,16 +101,25 @@ Detailed visual notes live in `content-packs/worlds/biome-catalog.md`.
 
 ### Randomized rainfall events added
 
-Light rain can now occur once in each of four score windows, with a randomly selected activation score per run:
+Light rain remains an early-run weather event, with three randomized activation windows:
 
 - 500–5,000
 - 10,000–20,000
 - 80,000–100,000
-- 140,000–175,000
 
-Each event lasts approximately 11–18 seconds. Thin droplets travel at varied speeds with a slight diagonal slant. The rain fades in and out smoothly, while low-contrast clouds drift across the upper sky. The effect is visual-only and does not change physics or collisions. The rain schedule and remaining event duration are available in Test Lab diagnostics and the copyable report. A **RAIN TEST** sandbox preset previews the effect immediately.
+From 110K onward, crimson blood rain becomes the dominant weather in seven progressively recurring windows:
 
-A second weather type, **BLOOD RAIN**, now has two randomized windows at 105K–125K and 180K–205K. Its droplets use layered crimson highlights, with a restrained dark-red sky wash and maroon cloud silhouettes. These windows are separated from normal rain by at least 5K points, so no two weather events can share a score range. Test Lab reports both schedules, validates the separation, and includes a dedicated **BLOOD RAIN TEST** preview.
+- 110K–125K
+- 140K–155K
+- 170K–185K
+- 200K–215K
+- 230K–245K
+- 260K–275K
+- 285K–300K
+
+The schedule reaches 300K and leaves deliberate 10K or 15K quiet gaps from the 80K window onward. Every threshold is randomized once per run. Test Lab reports each schedule and validates that all ten windows remain separate. The dedicated **RAIN TEST** and **BLOOD RAIN TEST** presets preview both effects.
+
+Passive score gained by moving forward is now multiplied by **1.12×** while remaining tied to actual movement speed. This adds 12% to distance-based scoring only; ring pickups, boss rewards, and other fixed awards remain unchanged.
 
 
 ## Phase 5 — Sprite and Animation Pack
