@@ -2763,11 +2763,16 @@
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false)}));
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
+    const ringFormationGeometryValid=RING_FORMATION_NAMES.every(pattern=>{
+      const bases=pattern==='risk-reward'?[GROUND-74]:[180,GROUND-132];
+      return bases.every(base=>[-1,1].every(direction=>Array.from({length:5},(_,i)=>base+ringFormationOffset(pattern,i,direction)).every(y=>y>=58&&y<=GROUND-58)));
+    });
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
       ['Distance score boost',DISTANCE_SCORE_MULTIPLIER>=1.1&&DISTANCE_SCORE_MULTIPLIER<=1.2,Math.round(DISTANCE_SCORE_MULTIPLIER*100)+'% speed-scaled travel score'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
+      ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
       ['Speed-aware ring spacing',ringSpacingSamples.every(sample=>sample.worldGap>=1150&&sample.worldGap<=1500)&&ringSpacingSamples[1].worldGap>=ringSpacingSamples[0].worldGap&&ringSpacingSamples[2].worldGap>=ringSpacingSamples[1].worldGap,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px').join(' · ')],
       ['Bonus ring cadence',bonusRingSamples.every(sample=>Number.isFinite(sample.early)&&Number.isFinite(sample.late)&&sample.early>0&&sample.late>0),'Speed-scaled early and late bonus intervals valid'],
       ['Ring showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='ring-showcase'||(RING_TEST_SPEEDS[ringTestTier]===speed&&ringTestTimer>=0),UPGRADE.testScenario==='ring-showcase'?'Tier '+(ringTestTier+1)+' / '+RING_TEST_SPEEDS.length+' · '+Math.round(speed)+' speed':'Ready for isolated multi-speed preview'],
