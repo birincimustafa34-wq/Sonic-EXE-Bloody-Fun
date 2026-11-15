@@ -62,9 +62,13 @@ The lab currently performs source/runtime data checks; it is not a complete auto
 
 The **RAIN TEST** sandbox preset starts a short rain preview at 2,000 score. It is useful for reviewing streak angle, opacity, cloud movement, fade timing, and visual readability without waiting for a random score threshold.
 
-The live diagnostic report includes the rain-active flag, remaining duration, current fade blend, and all four randomized score windows. Normal gameplay triggers these events once per run, at a randomly selected score inside each configured range.
+The live diagnostic report includes the rain-active flag, rain type, remaining duration, current fade blend, and every randomized score window. Normal gameplay triggers each configured weather event at a randomly selected score inside its range.
 
 
 ## Blood-rain preview
 
-The **BLOOD RAIN TEST** sandbox starts at 100,000 score and previews the crimson weather layer for 16 seconds. In normal play, blood rain has two randomized score windows: 105,000–125,000 and 180,000–205,000. These ranges are deliberately separated from the normal-rain windows by at least 5,000 points, so the two weather types cannot overlap. The diagnostic report shows the current rain type, both sets of randomized thresholds, and a check confirming that all six weather windows are disjoint.
+The **BLOOD RAIN TEST** sandbox starts at 100,000 score and previews the crimson weather layer for 16 seconds. Normal rain has three windows: 500–5,000, 10,000–20,000, and 80,000–100,000. Blood rain then becomes the dominant weather, with seven randomized windows: 110,000–125,000, 140,000–155,000, 170,000–185,000, 200,000–215,000, 230,000–245,000, 260,000–275,000, and 285,000–300,000. There are no overlaps; from the 80,000–100,000 normal-rain window onward, the quiet gaps are 10,000 or 15,000 score points. The Test Lab checks the full schedule and verifies the minimum late-game gap.
+
+## Distance score pacing
+
+The passive score earned from forward movement is multiplied by **1.12** (a 12% increase). Because the base award still scales with the current movement speed, faster play also yields a slightly higher distance score. Ring pickups, boss rewards, and other score awards retain their existing values; the boost is limited to passive travel scoring.
