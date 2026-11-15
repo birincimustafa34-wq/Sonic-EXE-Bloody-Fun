@@ -2242,13 +2242,13 @@
       const columns=Math.ceil(Math.sqrt(fragmentCount*W/H));
       const rows=Math.ceil(fragmentCount/columns);
       const cellW=W/columns,cellH=H/rows;
-      const totalSlots=columns*rows,skippedSlots=totalSlots-fragmentCount;
+      const totalSlots=columns*rows;
       ctx.save();
       ctx.globalCompositeOperation='source-over';
       ctx.globalAlpha=1;
       for(let i=0;i<fragmentCount;i++){
         // Distribute any unused grid cells evenly instead of leaving one empty corner.
-        const slot=i+Math.floor(((i+.5)*skippedSlots)/fragmentCount);
+        const slot=Math.floor(i*totalSlots/fragmentCount);
         const col=slot%columns,row=Math.floor(slot/columns);
         const seedX=Math.abs(Math.sin((i+1)*127.1+frame*74.7)*43758.5453)%1;
         const seedY=Math.abs(Math.sin((i+1)*269.5+frame*19.19)*24634.6345)%1;
