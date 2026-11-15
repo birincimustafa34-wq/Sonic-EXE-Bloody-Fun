@@ -81,3 +81,17 @@ The **RING SYSTEM 2.0 TEST** sandbox starts in an isolated 72,000-score context 
 Normal ring groups still contain five rings with the original 42-pixel horizontal spacing, collision radius, ring pickup sound, combo timer, and score rules. Their spawn interval is now calculated from current world speed, targeting a stable world-space gap rather than using one fixed time range. Bonus rings remain separate collectibles and keep their existing 60-point pickup reward; their timer is also adjusted for speed while retaining separate early- and late-game cadence.
 
 The Test Lab checks formation IDs and safe vertical geometry, estimated ring-group spacing at all three speed tiers, bonus-ring timer validity, and the isolated showcase stage. Its copyable diagnostic report records the latest formation, active regular/bonus ring counts, current spawn timer, speed-tier samples, and bonus cadence samples.
+
+## High-score pixel glitch layers
+
+The previous early full-screen pixel flood and the two dense pixel clusters have been replaced by three score-gated tiers:
+
+| Score threshold | Opaque fragments |
+|---:|---:|
+| 200,000 | 200 |
+| 500,000 | 500 |
+| 1,000,000 | 1,000 |
+
+Each fragment uses full opacity (source-over, alpha 1) and a small, crisp, varied rectangular shape. Positions are distributed through a screen-wide grid with evenly spaced cells, preventing visual clustering. The maximum tier retains the existing intended top-level intensity; it is not increased. The separate lower-score horizontal tearing and scanline effects remain in place.
+
+The Test Lab now checks all tier boundaries (including the scores immediately before each threshold) and includes the current pixel count, next unlock tier, and tier catalog in its copyable diagnostic report. The source-level distribution check verified exactly 200, 500, and 1,000 unique grid positions, with every screen row populated at each tier. A real browser readability pass on desktop and mobile is still required.
