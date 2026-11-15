@@ -72,3 +72,12 @@ The **BLOOD RAIN TEST** sandbox starts at 100,000 score and previews the crimson
 ## Distance score pacing
 
 The passive score earned from forward movement is multiplied by **1.12** (a 12% increase). Because the base award still scales with the current movement speed, faster play also yields a slightly higher distance score. Ring pickups, boss rewards, and other score awards retain their existing values; the boost is limited to passive travel scoring.
+
+
+## Ring System 2.0 preview
+
+The **RING SYSTEM 2.0 TEST** sandbox starts in an isolated 72,000-score context and cycles through 360, 650, and 850 movement-speed tiers, switching every eight seconds. It previews five formation patterns: **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave**. The sandbox keeps boss milestone encounters suppressed and uses the existing save-isolation snapshot/restore path, so it does not retain records or unlocks.
+
+Normal ring groups still contain five rings with the original 42-pixel horizontal spacing, collision radius, ring pickup sound, combo timer, and score rules. Their spawn interval is now calculated from current world speed, targeting a stable world-space gap rather than using one fixed time range. Bonus rings remain separate collectibles and keep their existing 60-point pickup reward; their timer is also adjusted for speed while retaining separate early- and late-game cadence.
+
+The Test Lab checks formation IDs, estimated ring-group spacing at all three speed tiers, bonus-ring timer validity, and the isolated showcase stage. Its copyable diagnostic report records the latest formation, active regular/bonus ring counts, current spawn timer, speed-tier samples, and bonus cadence samples.
