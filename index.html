@@ -168,6 +168,7 @@
   const SCORE_SIGIL_MULTIPLIER=1.5;
   const DISTANCE_SCORE_MULTIPLIER=1.12;
   const RING_FORMATION_NAMES=Object.freeze(['arc','stair-step','zigzag','risk-reward','wave']);
+  const HIGH_SCORE_GLITCH_TIERS=Object.freeze([{score:200000,pixels:200},{score:500000,pixels:500},{score:1000000,pixels:1000}]);
   const RING_TEST_SPEEDS=Object.freeze([360,650,850]);
   let ringPatternIndex=0,lastRingFormation='none',ringTestTimer=0,ringTestTier=0;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
@@ -2206,6 +2207,11 @@
     ctx.globalAlpha=1;
     ctx.restore();
   }
+  function highScoreGlitchPixelCount(currentScore=score){
+    let count=0;
+    for(const tier of HIGH_SCORE_GLITCH_TIERS){if(currentScore>=tier.score)count=tier.pixels;else break;}
+    return count;
+  }
   function drawHighScoreGlitchLayers(){
     if(score<30000)return;
     ctx.save();
@@ -2227,31 +2233,36 @@
       ctx.fillRect((i*173+Math.floor(elapsed*45))%W,y,46+i*17,1);
     }
 
-    // At 70k, the two dense clusters dissolve into fast, screen-wide pixel interference.
-    const pixelPalette=['#42eaff','#bd6bff','#ff4e9b','#d8ff4a','#ffad45','#f4f0ff'];
-    if(score>=70000){
-      const frame=Math.floor(elapsed*24),cols=Math.ceil(W/13),rows=Math.ceil(H/11);
-      ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-        const seed=Math.abs(Math.sin((col+1)*127.1+(row+1)*311.7+frame*74.7)*43758.5453)%1;
-        if(seed<.30)continue;
-        const blink=Math.sin(elapsed*(27+(col%5)*3)+row*1.7+col*.8);if(blink<-.28)continue;
-        const x=col*13+seed*9,y=row*11+((seed*17)%7),colour=pixelPalette[(col*3+row*5+frame+(seed*10|0))%pixelPalette.length];
-        ctx.globalAlpha=.28+.58*((blink+1)/2);pixelRect(x,y,2+(seed*7|0),2+((1-seed)*5|0),colour);
-        if(seed>.77){ctx.globalAlpha=.72;pixelRect(x+5,y-3,2+(seed*4|0),2,pixelPalette[(col+row+3)%pixelPalette.length]);}
+    // Bright pixel interference now unlocks in three late-game density tiers.
+    // Each fragment is fully opaque and placed in a separate screen-wide grid cell.
+    const fragmentCount=highScoreGlitchPixelCount(score);
+    if(fragmentCount>0){
+      const pixelPalette=['#42eaff','#bd6bff','#ff4e9b','#d8ff4a','#ffad45','#f4f0ff'];
+      const frame=Math.floor(elapsed*18);
+      const columns=Math.ceil(Math.sqrt(fragmentCount*W/H));
+      const rows=Math.ceil(fragmentCount/columns);
+      const cellW=W/columns,cellH=H/rows;
+      const totalSlots=columns*rows,skippedSlots=totalSlots-fragmentCount;
+      ctx.save();
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=1;
+      for(let i=0;i<fragmentCount;i++){
+        // Distribute any unused grid cells evenly instead of leaving one empty corner.
+        const slot=i+Math.floor(((i+.5)*skippedSlots)/fragmentCount);
+        const col=slot%columns,row=Math.floor(slot/columns);
+        const seedX=Math.abs(Math.sin((i+1)*127.1+frame*74.7)*43758.5453)%1;
+        const seedY=Math.abs(Math.sin((i+1)*269.5+frame*19.19)*24634.6345)%1;
+        const shapeSeed=Math.abs(Math.sin((i+1)*78.233+frame*11.7)*19341.846)%1;
+        const colorSeed=Math.abs(Math.sin((i+1)*39.346+frame*3.11)*9631.417)%1;
+        const vertical=shapeSeed>.84;
+        const width=vertical?1+Math.floor(seedX*2):2+Math.floor(shapeSeed*5);
+        const height=vertical?3+Math.floor(colorSeed*3):1+Math.floor(colorSeed*3);
+        const x=col*cellW+seedX*Math.max(0,cellW-width);
+        const y=row*cellH+seedY*Math.max(0,cellH-height);
+        const color=pixelPalette[Math.floor(colorSeed*pixelPalette.length)];
+        pixelRect(x,y,width,height,color);
       }
-      if(frame%7===0||frame%7===1){ctx.globalAlpha=.13;ctx.fillStyle=pixelPalette[frame%pixelPalette.length];ctx.fillRect(0,(frame*19)%H,W,2);}
       ctx.restore();
-    }else if(score>=40000){
-      const pulse40=.5+.5*Math.sin(elapsed*11.4);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let burstIndex=0;burstIndex<2;burstIndex++){
-        const drift=Math.sin(elapsed*(1.7+burstIndex*.35)+burstIndex*2.4),cx=W*(burstIndex===0?.28:.72)+drift*W*.12,cy=H*(burstIndex===0?.34:.62)+Math.sin(elapsed*2.3+burstIndex*2)*H*.075;
-        for(let row=0;row<7;row++)for(let col=0;col<11;col++){
-          const fr=Math.floor(elapsed*13),pattern=(col*7+row*11+fr*3+burstIndex*5)%17;if(pattern>10)continue;
-          const ci=(col*3+row*5+fr+burstIndex*2)%pixelPalette.length;ctx.globalAlpha=.68+.25*pulse40;
-          pixelRect(cx+(col-5)*7+(row%2?2:-2),cy+(row-3)*6,3+(pattern%4),2+(pattern%3),pixelPalette[ci]);
-        }
-      }ctx.restore();
     }
     ctx.globalAlpha=1;
     ctx.restore();
@@ -2719,6 +2730,7 @@
         weather:{rainActive:rainTimer>0,rainType:rainBlend>.01?rainKind:'none',bloodRainActive:rainTimer>0&&rainKind==='blood',rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
           scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
           bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
+      highScorePixelGlitch:{currentPixelCount:highScoreGlitchPixelCount(),tiers:HIGH_SCORE_GLITCH_TIERS.map(tier=>({unlockScore:tier.score,pixels:tier.pixels})),nextTier:HIGH_SCORE_GLITCH_TIERS.find(tier=>score<tier.score)||null,opacity:'100% source-over',distribution:'screen-wide stratified grid'},
       ringSystem:{
         lastFormation:lastRingFormation,availableFormations:RING_FORMATION_NAMES.slice(),
         activeRegularRings:rings.filter(r=>!r.bonus).length,activeBonusRings:rings.filter(r=>r.bonus).length,
@@ -2762,6 +2774,8 @@
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false)}));
+    const glitchTierChecks=[[199999,0],[200000,200],[499999,200],[500000,500],[999999,500],[1000000,1000]];
+    const glitchTierScheduleValid=glitchTierChecks.every(([sample,expected])=>highScoreGlitchPixelCount(sample)===expected)&&HIGH_SCORE_GLITCH_TIERS.length===3;
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
     const ringFormationGeometryValid=RING_FORMATION_NAMES.every(pattern=>{
       const bases=pattern==='risk-reward'?[GROUND-74]:[180,GROUND-132];
@@ -2771,6 +2785,7 @@
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
       ['Distance score boost',DISTANCE_SCORE_MULTIPLIER>=1.1&&DISTANCE_SCORE_MULTIPLIER<=1.2,Math.round(DISTANCE_SCORE_MULTIPLIER*100)+'% speed-scaled travel score'],
+      ['High-score pixel glitch tiers',glitchTierScheduleValid,'200K → 200 · 500K → 500 · 1M → 1,000 fully opaque pixels'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
       ['Speed-aware ring spacing',ringSpacingSamples.every(sample=>sample.worldGap>=1150&&sample.worldGap<=1500)&&ringSpacingSamples[1].worldGap>=ringSpacingSamples[0].worldGap&&ringSpacingSamples[2].worldGap>=ringSpacingSamples[1].worldGap,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px').join(' · ')],
