@@ -41,12 +41,11 @@ The first biome layer adds three score-driven visual regions to the existing cor
 
 ## Randomized Rainfall Layer
 
-The weather system can start one rainfall event in each of four score windows. At the beginning of each run, a threshold is selected randomly from each range:
+The weather system now starts light rain in three early score windows. At the beginning of each run, a threshold is selected randomly from each range:
 
 - 500–5,000
 - 10,000–20,000
 - 80,000–100,000
-- 140,000–175,000
 
 Each rain event lasts around 11–18 seconds. It uses 128 lightweight streak particles with varied lengths, speeds, opacity, and a slight diagonal wind drift. The rain fades in and out instead of switching abruptly. A very subtle cool sky wash and three low-contrast drifting cloud groups appear during the rain.
 
@@ -58,9 +57,19 @@ The Testing Laboratory reports the currently active rainfall timer and each even
 
 ## Blood Rain Layer
 
-Two additional randomized weather events can occur once per run:
+Blood rain now becomes increasingly frequent through seven separate randomized windows:
 
-- **105,000–125,000:** crimson blood rain
-- **180,000–205,000:** a second blood-rain window
+- **110,000–125,000**
+- **140,000–155,000**
+- **170,000–185,000**
+- **200,000–215,000**
+- **230,000–245,000**
+- **260,000–275,000**
+- **285,000–300,000**
 
-Each window receives its own randomized trigger threshold and lasts approximately 13–20 seconds. The effect recolors the falling streaks to vivid crimson with a pale-red highlight, adds a restrained dark-red sky wash, and shifts the drifting clouds toward deep maroon. The normal-rain and blood-rain windows are arranged chronologically with at least 5,000 score points between neighboring windows, so the two weather types never overlap. Rain remains a visual-only effect and does not alter collisions, player physics, or scoring. A dedicated **BLOOD RAIN TEST** sandbox preset previews the layer at 100,000 score.
+The late-game schedule continues up to 300,000 score. Neighboring windows from the 80K region onward are separated by 10,000 or 15,000 points, leaving deliberate quiet intervals between storms. Every window has an independent randomized trigger threshold and lasts approximately 13–20 seconds. The vivid crimson streaks, pale-red highlights, restrained dark-red sky wash, and maroon clouds are retained. Blood rain remains visual-only and does not alter collisions, player physics, or scoring. A dedicated **BLOOD RAIN TEST** sandbox preset previews the layer at 100,000 score.
+
+
+## Distance score pacing
+
+Passive forward-travel scoring receives a **1.12× multiplier**. The underlying award still scales with movement speed, so higher-speed runs earn proportionally more distance points. Collectible ring values, boss rewards, and other fixed rewards are unchanged.
