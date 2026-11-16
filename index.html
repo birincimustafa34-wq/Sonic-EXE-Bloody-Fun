@@ -2695,10 +2695,12 @@
       EXPANSION.flowCharge=100;EXPANSION.flowTimer=0;EXPANSION.parryTimer=0;UPGRADE.counterCooldown=0;
       diveSlam.active=false;diveSlam.cooldown=0;diveSlam.impactTimer=0;
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
-      obstacles.push({type:'block',x:player.x+235,y:GROUND-92,w:54,h:48});
-      obstacles.push({type:'spike',x:player.x+275,y:GROUND-38,w:40,h:38});
+      UPGRADE.lastStandTimer=8;UPGRADE.counterCooldown=0;
+      obstacles.push({type:'block',x:player.x+195,y:GROUND-92,w:54,h:48});
+      obstacles.push({type:'spike',x:player.x+220,y:GROUND-38,w:40,h:38});
       startBossEncounter();
-      boss.warning=999;boss.attackClock=999;bossProjectiles=[{x:player.x+220,y:player.y-64,baseY:player.y-64,w:25,h:18,phase:0,speed:320,kind:'parry-training',colour:'#ffe17a'}];
+      boss.timer=999;boss.duration=999;boss.warning=999;boss.attackClock=999;
+      bossProjectiles=[{x:player.x+200,y:player.y-42,baseY:player.y-42,w:25,h:18,phase:0,speed:320,kind:'parry-training',colour:'#ffe17a'}];
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
       audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
@@ -3044,7 +3046,7 @@
       ['FLOW meter integrity',Number.isFinite(EXPANSION.flowCharge)&&EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(EXPANSION.flowTimer),'Charge '+Math.round(EXPANSION.flowCharge)+'% · '+EXPANSION.flowTimer.toFixed(1)+'s active'],
       ['Dive Slam physics',Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&Number.isFinite(diveSlam.impactX),'Active '+diveSlam.active+' · '+diveSlam.cooldown.toFixed(1)+'s cooldown · '+EXPANSION.diveSlamCount+' impacts'],
       ['Perfect Parry window',Number.isFinite(EXPANSION.parryTimer)&&EXPANSION.parryTimer>=0&&EXPANSION.parryTimer<=.42,'Window '+EXPANSION.parryTimer.toFixed(2)+'s · '+EXPANSION.parryCount+' successful parries'],
-      ['Combat showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='combat-showcase'||((EXPANSION.flowCharge===100||EXPANSION.flowTimer>0)&&diveSlam.cooldown===0&&UPGRADE.counterCooldown===0),'Combat scenario '+(UPGRADE.testScenario==='combat-showcase'?'armed':'ready')],
+      ['Combat showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='combat-showcase'||(EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&UPGRADE.counterCooldown>=0),'Combat scenario '+(UPGRADE.testScenario==='combat-showcase'?'active · '+Math.round(EXPANSION.flowCharge)+'% Flow · '+EXPANSION.parryCount+' parries':'ready')],
       ['Frame-time monitor',FRAME_TIMING.frames===0||Number.isFinite(FRAME_TIMING.averageMs),'Average '+FRAME_TIMING.averageMs.toFixed(1)+'ms · '+FRAME_TIMING.slowFrames+' frames over 20ms'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
@@ -3826,7 +3828,7 @@
         ctx.fillStyle='#baffeb';ctx.fillText('AUDIO LAB // '+audioTestCue.toUpperCase()+' // '+AUDIO_DIAGNOSTICS.events+' SFX EVENTS',18,82);
         ctx.fillStyle='#d8c8e8';ctx.fillText('CONTEXT '+(audio?audio.state:'NOT INITIALIZED')+' // NEXT CUE '+Math.max(0,audioTestTimer).toFixed(1)+'s',18,97);
       }else if(UPGRADE.testScenario==='combat-showcase'){
-        ctx.fillStyle='#bdffe6';ctx.fillText('COMBAT LAB // SPACE JUMP → J PARRY → ↓ SLAM → Z FLOW',18,82);
+        ctx.fillStyle='#bdffe6';ctx.fillText('SPACE JUMP → J PARRY → ↓ SLAM → Z FLOW',18,82);
         ctx.fillStyle='#d8c8e8';ctx.fillText('TRAINING SHOT APPROACHING // FLOW '+Math.round(EXPANSION.flowCharge)+'%',18,97);
       }
     }
