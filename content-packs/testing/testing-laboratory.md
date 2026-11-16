@@ -144,3 +144,7 @@ AudioContext resume is asynchronous and shared across simultaneous requests. Syn
 The randomized **SOUND LOST** event intentionally interrupts background music, but no longer suppresses jump/ring/gameplay SFX. The HUD explicitly labels it as a music-only interruption.
 
 The diagnostic report now contains audio context state, resume counters, custom SFX and synth fallback counts, playback failures, and the last audio error. Frame-time telemetry includes an exponential average, peak frame interval, number of frames above 20 ms, and sample count. These values are observational; they do not alter frame pacing, graphics quality, or game physics.
+
+### AUDIO TEST sandbox
+
+The isolated **AUDIO TEST** scenario runs a clean, obstacle-free preview and plays eight synthesized/custom cues in sequence: jump, ring, emerald, shield, shield break, rush, smash, and hit. Each cue is spaced 1.15 seconds apart. The HUD shows the last cue, total SFX event count, AudioContext state, and time to the next cue. The copyable diagnostic report also records the active cue and number of cues played. It uses the same sandbox save snapshot/restore behavior as other test scenarios.
