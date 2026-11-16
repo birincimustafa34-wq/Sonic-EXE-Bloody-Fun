@@ -305,7 +305,7 @@
   }
   let ringCount = 0;
   function reset() {
-    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=bonusRingDelayForSpeed(50000,speed); scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
     ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;glitchTestTimer=0;glitchTestTier=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
@@ -1122,7 +1122,16 @@
     if(EXPANSION.overdriveTimer>0)speed=Math.min(OVERDRIVE_MAX_SPEED,speed+38);
     if(UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'){
       ringTestTimer-=dt;
-      if(ringTestTimer<=0){ringTestTier=(ringTestTier+1)%RING_TEST_SPEEDS.length;ringTestTimer=8;ringClock=Math.min(ringClock,.25);}
+      if(ringTestTimer<=0){
+        const previousTierSpeed=RING_TEST_SPEEDS[ringTestTier];
+        ringTestTier=(ringTestTier+1)%RING_TEST_SPEEDS.length;
+        const nextTierSpeed=RING_TEST_SPEEDS[ringTestTier];
+        const remainingWorldGap=ringClock*previousTierSpeed;
+        const remainingBonusDistance=ringBonusClock*previousTierSpeed;
+        ringClock=remainingWorldGap/nextTierSpeed;
+        ringBonusClock=remainingBonusDistance/nextTierSpeed;
+        ringTestTimer=8;
+      }
       speed=RING_TEST_SPEEDS[ringTestTier];
     }
     if(UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'){
@@ -2816,7 +2825,12 @@
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false),clearance:value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance()}));
-    const ringSpacingValid=ringSpacingSamples.every(sample=>sample.worldGap>=1200&&sample.worldGap<=1350&&sample.clearance>=40);
+    const ringSpacingBoundsValid=RING_TEST_SPEEDS.every(value=>{
+      const minGap=Math.max(RING_MIN_INTERVAL,(RING_TARGET_WORLD_GAP-RING_WORLD_GAP_JITTER/2)/value)*value;
+      const maxGap=Math.max(RING_MIN_INTERVAL,(RING_TARGET_WORLD_GAP+RING_WORLD_GAP_JITTER/2)/value)*value;
+      return minGap>=1200&&maxGap<=1350&&minGap-ringGroupClearDistance()>=40;
+    });
+    const ringSpacingValid=ringSpacingSamples.every(sample=>sample.worldGap>=1200&&sample.worldGap<=1350&&sample.clearance>=40)&&ringSpacingBoundsValid;
     const glitchTierChecks=[[199999,0],[200000,200],[499999,200],[500000,500],[999999,500],[1000000,1000]];
     const glitchTierScheduleValid=glitchTierChecks.every(([sample,expected])=>highScoreGlitchPixelCount(sample)===expected)&&HIGH_SCORE_GLITCH_TIERS.length===3;
     const glitchShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='pixel-glitch-showcase'||(HIGH_SCORE_GLITCH_TIERS[glitchTestTier]?.pixels===highScoreGlitchPixelCount(score)&&glitchTestTimer>=0);
@@ -2843,6 +2857,7 @@
       ['Risk/reward value split',riskRewardSplitValid,'Two safer outer rings · three elevated 35-point rings'],
       ['Ring pickup and scoring rules',ringRewardRulesValid,'12px regular / 14px bonus · 25px pickup padding · 15/35/60 points · x5 combo cap'],
       ['Speed-aware ring spacing',ringSpacingValid,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px · '+Math.round(sample.clearance)+'px clear').join(' · ')],
+      ['Ring spawn jitter bounds',ringSpacingBoundsValid,'Randomized world gaps stay inside the validated clearance band'],
       ['Bonus ring world-space cadence',bonusCadenceValid,bonusRingSamples.map(sample=>sample.speed+': '+Math.round(sample.early*sample.speed)+' / '+Math.round(sample.late*sample.speed)+'px').join(' · ')],
       ['Bonus ring safe-lane reservation',bonusSpawnGateValid&&bonusTransitValid,'No overlapping bonus/regular groups · bonus lane reserved until pickup window passes'],
       ['Ring showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='ring-showcase'||(RING_TEST_SPEEDS[ringTestTier]===speed&&ringTestTimer>=0),UPGRADE.testScenario==='ring-showcase'?'Tier '+(ringTestTier+1)+' / '+RING_TEST_SPEEDS.length+' · '+Math.round(speed)+' speed':'Ready for isolated multi-speed preview'],
