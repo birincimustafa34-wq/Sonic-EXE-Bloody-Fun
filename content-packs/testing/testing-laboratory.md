@@ -166,3 +166,20 @@ While airborne, **J** opens a 0.42-second parry window and starts a 10-second co
 The **Rift Sentinel** joins the enemy pool at 145,000 score. Its cyan guard is a two-step defense: a powered collision, Echo Wave riposte, or Dive Slam first breaks the guard and exposes the Sentinel for 1.75 seconds. A separate follow-up hit during that window defeats it and unlocks **SENTINEL BROKEN**. A 0.72-second contact lock prevents one continuous powered overlap from registering as both the guard break and the finishing hit. A direct powered-contact guard break also staggers the Sentinel just ahead of the player for 1.05 seconds, with the HUD showing the remaining exposure time. Finishing it through body contact requires a newly activated ability after the guard break; simply holding Flight or one continuous Dash cannot count twice. The diagnostic report exposes the attack serial, guard lock, and stagger state. Its shield state is shown as **GUARDED** or **EXPOSED**. Use the protected, records-disabled **RIFT SENTINEL TEST** scenario to inspect it without risking a normal run.
 
 The copyable diagnostic report adds Perfect Parry attempts, successes, misses, cooldown, and Rift Sentinel active/exposed counts to combatMechanics. Test Lab checks FLOW bounds, Dive Slam timer/impact state, Perfect Parry accounting and window bounds, combat showcase initialization, and the Sentinel sandbox. These source checks do not replace interactive browser timing and feel tests.
+
+
+## Tempest enemy and boss scenarios
+
+The **ENEMY SHOWCASE** now includes **Tempest Herald**, alongside Rift Lantern, Mirror Wraith, and Grave Mantis. The Herald unlocks at 170,000 score. Its **GUST CHARGE** warning draws a target line toward the player's current vertical lane; after the warning expires it performs a short downward lunge. Review that the warning remains visible before the lunge and that its collision uses the normal enemy hit/protection path.
+
+The **TEMPEST ARCHON BOSS TEST** starts an isolated 300,000-score context and launches **THE TEMPEST ARCHON** directly. It is a 52-second encounter with the normal three-core weakness windows and a unique projectile pattern. Early volleys use a narrow diagonal spread; later phases widen the pattern and increase both horizontal speed and vertical drift. Check that the gaps rotate between volleys, that the projectile bolts remain legible, and that Echo Wave can still interact with exposed cores.
+
+## Electrical storm preview
+
+The **ELECTRICAL STORM TEST** starts a 19-second isolated preview of the new storm weather. Normal progression can trigger the event once per run at a randomized threshold in the **310,000–325,000** score band. Storm rain uses a stronger crosswind and a cooler, darker palette. Each lightning strike shows a vertical lane warning for **1.02 seconds**, followed by an active strike lasting **0.24 seconds**. A player outside the warned lane avoids the strike; existing shield/phase/dash/flight protection paths are respected.
+
+The diagnostic report now includes the storm score window, current warning/active timers, total strikes, and unprotected strike hits. New live checks validate the single storm schedule entry, warning/duration bounds, and the absence of overlaps across all 11 normal-rain, blood-rain, and storm windows. Four new Test Lab rows cover Tempest Herald behavior registration, Tempest Archon milestone registration, electrical-storm schedule integrity, and lightning telegraph timing. Source-level checks should not be reported as a complete browser collision test; desktop and touch-device playthroughs remain necessary.
+
+## Particle update allocation
+
+Particle updates now use stable in-place compaction: expired particles are removed without constructing a new filtered array every frame. The same particle objects, motion integration, lifetime cutoff, render order, and visual density are retained. Check frame-time telemetry during particle-heavy moments to evaluate garbage-collection stability; no claim of a fixed FPS gain is made without device-specific profiling.
