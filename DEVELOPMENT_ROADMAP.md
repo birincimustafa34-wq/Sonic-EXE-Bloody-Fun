@@ -240,3 +240,26 @@ Mobile controls include J and Z buttons. The **COMBAT MECHANICS TEST** sandbox o
 The Perfect Parry input is now a timing commitment rather than an automatic counterattack. Pressing **J** while airborne opens a 0.42-second parry window and starts a 10-second cooldown. Only an incoming projectile caught inside the 118-pixel interception radius awards the +240 score / +27 FLOW reward and launches an Echo Wave riposte. A missed window is tracked separately and reduces the remaining cooldown to 5.5 seconds; it does not award score or destroy a nearby enemy. The HUD shows activation, success, and miss feedback, while diagnostics report attempts, successes, misses, and cooldown.
 
 A new elite enemy, **Rift Sentinel**, becomes eligible at 145,000 score. Its cyan guard must be broken before a distinct follow-up hit can defeat it. A powered collision, Echo Wave riposte, or Dive Slam can expose it for 1.75 seconds. The initial powered contact has a 0.72-second contact lock and a 1.05-second forward stagger, holding the Sentinel just ahead of the player long enough to prepare a distinct follow-up attack. Finishing it with body contact requires a newly activated ability (tracked by an attack serial), so a single held flight or one continuous dash cannot count as both hits. The exposed state is visibly distinct and a successful defeat unlocks the **SENTINEL BROKEN** achievement. Test Lab includes a protected, records-disabled **RIFT SENTINEL TEST** scenario, plus checks for its guard state and Perfect Parry accounting.
+
+
+## November 2026 — Tempest content and runtime refinement
+
+### Enemy pack extension
+
+**Tempest Herald** joins the enemy catalog at **170,000 score**. It hovers with a readable warning state, projects a short target line toward the player's current lane, then commits to a fast downward gust dive. The warning and lunge have distinct visual states, and the creature uses a dedicated animated Canvas silhouette rather than a reused generic placeholder. Its behavior remains inside the existing five-enemy capacity and shared collision/reward pipeline.
+
+### Boss pack extension
+
+**THE TEMPEST ARCHON** is added to the 300,000-score milestone as a 52-second, 18,000-reward encounter. It retains the established three-core weakness-window framework while using a unique storm volley: the safe lane shifts across each volley and diagonal drift becomes stronger in later phases. A dedicated Canvas boss model, lightning projectile renderer, entrance cue, Boss Gallery entry, reset flag, and isolated Test Lab scenario are integrated.
+
+### Late-game weather extension
+
+The new **ELECTRICAL STORM** schedule uses one randomized activation threshold in the **310,000–325,000** score band. Storm rain has its own wind, streak, cloud, and sky treatment. Each lightning strike displays a **1.02-second telegraph** before a **0.24-second active strike**; collision is limited to the shown vertical lane, allowing deliberate dodging or protection. The existing rain and blood-rain windows are preserved, and the Test Lab now checks that all 11 windows remain disjoint.
+
+### Runtime allocation refinement
+
+Particle lifetime updates now compact the existing particle array in place rather than allocating a fresh filtered array on every update tick. Particle motion, lifetime rules, drawing, and density are unchanged. This is an allocation/garbage-collection refinement, not a reduction in visual quality.
+
+### Verification scope
+
+The updated inline game script passes a JavaScript parse check and source-level invariants cover the new enemy, boss, projectile style, storm schedule, telegraph timers, and isolated test controls. The Test Lab adds four checks for the Tempest enemy/boss and electrical-storm scheduling/telegraph state. These source checks are not a substitute for a full manual browser playthrough, especially for timing and collision feel.
