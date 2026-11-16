@@ -203,7 +203,9 @@
   let activeBiomeTier=0,biomeIntroTimer=0;
   const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000]];
   const BLOOD_RAIN_SCORE_BANDS=[[110000,125000],[140000,155000],[170000,185000],[200000,215000],[230000,245000],[260000,275000],[285000,300000]];
-  let rainSchedule=[],bloodRainSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
+  const STORM_SCORE_BANDS=[[310000,325000]];
+  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
+  let stormStrikeClock=0,stormStrikeX=0,stormStrikeWarning=0,stormStrikeActive=0,stormFlashTimer=0,stormStrikeCount=0,stormStrikeHits=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
   let dashTimer=0,dashCharges=3;
@@ -951,64 +953,63 @@
   }
   function resetRainWeather(){
     rainDrops=[];rainTimer=0;rainBlend=0;rainWind=0;rainKind='normal';
-    rainSchedule=RAIN_SCORE_BANDS.map(([min,max])=>({
-      min,max,threshold:min+Math.random()*(max-min),duration:11+Math.random()*7,done:false
-    }));
-    bloodRainSchedule=BLOOD_RAIN_SCORE_BANDS.map(([min,max])=>({
-      min,max,threshold:min+Math.random()*(max-min),duration:13+Math.random()*7,done:false
-    }));
+    stormStrikeClock=0;stormStrikeX=0;stormStrikeWarning=0;stormStrikeActive=0;stormFlashTimer=0;stormStrikeCount=0;stormStrikeHits=0;
+    rainSchedule=RAIN_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:11+Math.random()*7,done:false}));
+    bloodRainSchedule=BLOOD_RAIN_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:13+Math.random()*7,done:false}));
+    stormSchedule=STORM_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:17+Math.random()*3,done:false}));
   }
   function startRainEvent(duration,kind='normal'){
-    rainTimer=duration||12;rainWind=52+Math.random()*42;rainKind=kind;
-    const blood=kind==='blood';
-    rainDrops=Array.from({length:blood?150:128},()=>{
+    rainTimer=duration||12;rainWind=kind==='storm'?112+Math.random()*48:52+Math.random()*42;rainKind=kind;
+    const blood=kind==='blood',storm=kind==='storm';if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
+    rainDrops=Array.from({length:storm?142:blood?150:128},()=>{
       const drop=makeRainDrop(true);
-      if(blood){
-        drop.length=13+Math.random()*10;
-        drop.speed=420+Math.random()*220;
-        drop.alpha=.27+Math.random()*.25;
-        drop.width=.9+Math.random()*.7;
-      }
+      if(blood){drop.length=13+Math.random()*10;drop.speed=420+Math.random()*220;drop.alpha=.27+Math.random()*.25;drop.width=.9+Math.random()*.7;}
+      else if(storm){drop.length=16+Math.random()*13;drop.speed=520+Math.random()*230;drop.alpha=.2+Math.random()*.25;drop.width=1+Math.random()*.8;}
       return drop;
     });
   }
   function updateRainWeather(dt){
     if(rainTimer<=0){
-      const nextBlood=bloodRainSchedule.find(event=>!event.done);
-      const nextRain=rainSchedule.find(event=>!event.done);
-      if(nextBlood&&score>=nextBlood.threshold){
-        nextBlood.done=true;
-        startRainEvent(nextBlood.duration,'blood');
-      }else if(nextRain&&score>=nextRain.threshold){
-        nextRain.done=true;startRainEvent(nextRain.duration,'normal');
-      }
+      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done);
+      if(nextStorm&&score>=nextStorm.threshold){nextStorm.done=true;startRainEvent(nextStorm.duration,'storm');}
+      else if(nextBlood&&score>=nextBlood.threshold){nextBlood.done=true;startRainEvent(nextBlood.duration,'blood');}
+      else if(nextRain&&score>=nextRain.threshold){nextRain.done=true;startRainEvent(nextRain.duration,'normal');}
     }else rainTimer=Math.max(0,rainTimer-dt);
     const target=rainTimer>0?1:0;
     rainBlend+=(target-rainBlend)*Math.min(1,dt*1.65);
-    if(rainBlend<.008){rainBlend=0;rainDrops=[];rainKind='normal';return;}
-    for(const drop of rainDrops){
-      drop.x+=(rainWind+drop.drift)*dt;
-      drop.y+=drop.speed*dt;
-      if(drop.y>H+24){
-        drop.y=-drop.length-Math.random()*80;
-        drop.x=Math.random()*(W+100)-50;
-        drop.length=rainKind==='blood'?13+Math.random()*10:11+Math.random()*10;
-        drop.speed=rainKind==='blood'?420+Math.random()*220:390+Math.random()*210;
-        drop.alpha=rainKind==='blood'?.27+Math.random()*.25:.18+Math.random()*.22;
-      }
+    if(rainBlend<.008){rainBlend=0;rainDrops=[];rainKind='normal';}
+    else for(const drop of rainDrops){
+      drop.x+=(rainWind+drop.drift)*dt;drop.y+=drop.speed*dt;
+      if(drop.y>H+24){drop.y=-drop.length-Math.random()*80;drop.x=Math.random()*(W+100)-50;
+        drop.length=rainKind==='blood'?13+Math.random()*10:rainKind==='storm'?16+Math.random()*13:11+Math.random()*10;
+        drop.speed=rainKind==='blood'?420+Math.random()*220:rainKind==='storm'?520+Math.random()*230:390+Math.random()*210;
+        drop.alpha=rainKind==='blood'?.27+Math.random()*.25:rainKind==='storm'?.2+Math.random()*.25:.18+Math.random()*.22;}
       if(drop.x>W+50)drop.x=-30-Math.random()*40;
     }
+    stormFlashTimer=Math.max(0,stormFlashTimer-dt);
+    if(rainTimer>0&&rainKind==='storm'){
+      if(stormStrikeWarning>0){stormStrikeWarning=Math.max(0,stormStrikeWarning-dt);if(stormStrikeWarning===0){stormStrikeActive=.24;stormFlashTimer=.18;burst(stormStrikeX,GROUND-8,'#9cecff',18);}}
+      else if(stormStrikeActive>0){
+        stormStrikeActive=Math.max(0,stormStrikeActive-dt);
+        const hit=player.x+player.w>stormStrikeX-18&&player.x<stormStrikeX+18&&player.y<GROUND;
+        if(hit&&stormStrikeActive>0){
+          if(shieldTimer>0){shieldTimer=0;burst(stormStrikeX,player.y+player.h*.5,'#9cecff',22);sfx('shieldBreak');}
+          else if(expansionProtected()||landingGrace>0){awardScore(90);burst(stormStrikeX,player.y+player.h*.5,'#9cecff',20);}
+          else{stormStrikeHits++;expansionHit(stormStrikeX,player.y+player.h*.5,'#9cecff');}
+          stormStrikeActive=0;
+        }
+      }else{stormStrikeClock-=dt;if(stormStrikeClock<=0){stormStrikeX=96+expansionRandom()*270;stormStrikeWarning=1.02;stormStrikeClock=4.6+expansionRandom()*1.5;stormStrikeCount++;}}
+    }else{stormStrikeWarning=0;stormStrikeActive=0;}
   }
   function drawRainWeather(){
     if(rainBlend<=.008)return;
-    const blood=rainKind==='blood';
+    const blood=rainKind==='blood',storm=rainKind==='storm';
     ctx.save();
     ctx.globalAlpha=rainBlend;
     const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
     if(blood){
-      skyWash.addColorStop(0,'rgba(125,16,34,.105)');
-      skyWash.addColorStop(.55,'rgba(102,9,28,.065)');
-      skyWash.addColorStop(1,'rgba(75,5,22,.11)');
+      skyWash.addColorStop(0,'rgba(125,16,34,.105)');skyWash.addColorStop(.55,'rgba(102,9,28,.065)');skyWash.addColorStop(1,'rgba(75,5,22,.11)');
+    }else if(storm){skyWash.addColorStop(0,'rgba(20,49,72,.19)');skyWash.addColorStop(.55,'rgba(13,34,59,.12)');skyWash.addColorStop(1,'rgba(8,23,42,.2)');
     }else{
       skyWash.addColorStop(0,'rgba(116,151,177,.045)');
       skyWash.addColorStop(.55,'rgba(92,130,154,.025)');
@@ -1020,7 +1021,7 @@
       {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
       {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
     ];
-    ctx.fillStyle=blood?'rgba(54,12,27,.16)':'rgba(115,139,160,.075)';
+    ctx.fillStyle=blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':'rgba(115,139,160,.075)';
     for(const cloud of cloudGroups){
       const {x,y,w,h}=cloud;
       ctx.beginPath();
@@ -1032,20 +1033,23 @@
     ctx.lineCap='round';
     for(const drop of rainDrops){
       ctx.globalAlpha=rainBlend*drop.alpha;
-      ctx.strokeStyle=blood?'rgba(255,48,70,.94)':'rgba(176,207,225,.9)';
+      ctx.strokeStyle=blood?'rgba(255,48,70,.94)':storm?'rgba(132,203,255,.94)':'rgba(176,207,225,.9)';
       ctx.lineWidth=drop.width;
       ctx.beginPath();
       ctx.moveTo(drop.x,drop.y);
       ctx.lineTo(drop.x+drop.length*.19,drop.y+drop.length);
       ctx.stroke();
       ctx.globalAlpha=rainBlend*drop.alpha*.48;
-      ctx.strokeStyle=blood?'rgba(255,137,145,.92)':'rgba(218,235,244,.8)';
+      ctx.strokeStyle=blood?'rgba(255,137,145,.92)':storm?'rgba(219,246,255,.88)':'rgba(218,235,244,.8)';
       ctx.lineWidth=Math.max(.55,drop.width*.55);
       ctx.beginPath();
       ctx.moveTo(drop.x-1,drop.y+drop.length*.24);
       ctx.lineTo(drop.x+drop.length*.1,drop.y+drop.length*.82);
       ctx.stroke();
     }
+    if(storm&&stormStrikeWarning>0){ctx.globalAlpha=.34+.28*Math.sin(elapsed*24);ctx.strokeStyle='#a9eaff';ctx.lineWidth=2;ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(stormStrikeX,12);ctx.lineTo(stormStrikeX,GROUND);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#dff8ff';ctx.font='bold 9px Consolas,monospace';ctx.textAlign='center';ctx.fillText('LIGHTNING IN '+stormStrikeWarning.toFixed(1)+'s',stormStrikeX,26);}
+    if(storm&&stormStrikeActive>0){ctx.globalAlpha=.9;ctx.shadowColor='#8de6ff';ctx.shadowBlur=22;ctx.strokeStyle='#e6fbff';ctx.lineWidth=7;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(stormStrikeX,0);ctx.lineTo(stormStrikeX-9,GROUND*.28);ctx.lineTo(stormStrikeX+8,GROUND*.42);ctx.lineTo(stormStrikeX-5,GROUND*.66);ctx.lineTo(stormStrikeX+2,GROUND);ctx.stroke();ctx.strokeStyle='#62cfff';ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;ctx.textAlign='left';}
+    if(stormFlashTimer>0){ctx.globalAlpha=stormFlashTimer/.18*.16;ctx.fillStyle='#a8eaff';ctx.fillRect(0,0,W,GROUND);ctx.globalAlpha=1;}
     ctx.restore();
   }
   function drawBiomeLayers(){
@@ -1615,8 +1619,7 @@
     for(const em of emeralds){em.x-=speed*dt;em.phase+=dt*4;}
     for(const sh of shields){sh.x-=speed*dt;sh.phase+=dt*4;}
     for(const sigil of scoreSigils){sigil.x-=speed*dt;sigil.phase+=dt*5.2;}
-    for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;p.life-=dt;}
-    particles=particles.filter(p=>p.life>0);
+    let aliveParticles=0;for(let i=0;i<particles.length;i++){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;p.life-=dt;if(p.life>0)particles[aliveParticles++]=p;}particles.length=aliveParticles;
     const playerBox={x:player.x+7,y:player.y+5,w:player.w-13,h:player.h-8};
     rings=rings.filter(r=>{
       const dx=(player.x+player.w*.5)-r.x,dy=(player.y+player.h*.5)-r.y;
