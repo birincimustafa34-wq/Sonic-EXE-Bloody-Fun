@@ -73,6 +73,7 @@ Sonic_EXE_Bloody_Flight_Sandbox/
 - J (havada): 0,42 saniyelik PERFECT PARRY penceresi aç; başarılı savurma için gelen mermiyi pencere içinde yakala
 - Z: FLOW göstergesi %100 olduğunda 4,5 saniyelik FLOW BURST etkinleştir
 - X / Shift: Shadow Dash
+- Y: RIFT REPRISE — yaklaşık 0,68 saniye önceki dikey konumuna dön; 0,58 saniye koruma, 23 saniye bekleme süresi.
 - ← / A ve → / D: geri / ileri hareket
 - Uçuş sırasında ↑ / ↓: havada hareket et
 - P veya ESC: duraklat / devam et
@@ -115,3 +116,23 @@ Havadayken **J**, 0,42 saniyelik bir PERFECT PARRY penceresi açar ve 10 saniyel
 
 ### Performans notu
 Parçacık güncellemesi, her karede yeni bir filtrelenmiş dizi üretmek yerine mevcut diziyi yerinde sıkıştırır. Böylece parçacıkların yaşam süresi ve çizimi korunurken kare başına geçici dizi tahsisi azaltılır; görsel parçacık sayısı veya efekt kalitesi düşürülmez.
+
+
+## 10) Rift Reprise, Rift Lancer, Cinder Regent ve Cinderfall
+
+### RIFT REPRISE — Y
+**Y** ile oyuncunun yaklaşık **0,68 saniye önceki dikey konumuna ve hızına** geri dönersin. Bu, tüm dünyayı geri saran bir zaman durdurma değildir; yalnızca karakterin dikey hareketini düzeltir. Etkinleştiğinde **0,58 saniyelik** kısa bir koruma penceresi açar ve tekrar kullanılmadan önce **23 saniye** bekleme süresi gerekir. Oyun, son 1,15 saniyeyi 0,075 saniyelik aralıklarla örnekler ve en fazla 24 konum kaydı tutar. Yetenek, eski ve yeni tehlike/çarpışma koruma yollarına bağlanmıştır; HUD'da etkinlik ve bekleme süresi görünür.
+
+### RIFT LANCER
+**195.000** skordan itibaren havuzda yer alabilen yeni elit düşmandır. Mor zırhlı gövdesi ve uzun mızrağı kendisine özel Canvas çizimleriyle oluşturulur. Hücumdan önce oyuncunun yüksekliğine **0,72 saniyelik LANCE LOCK** telegraph'ı yerleştirir; ardından yaklaşık **0,38 saniyelik** hızlı bir dalış/hücum gerçekleştirir. Uyarı çizgisini gördüğünde dikey şerit değiştirmek saldırıdan kaçınmanın temel yoludur.
+
+### THE CINDER REGENT
+**330.000** skorda başlayan, **56 saniyelik** ve yenildiğinde **22.000 puan** veren yeni boss karşılaşmasıdır. Mevcut üç çekirdekli zayıflık penceresi sistemini kullanır. Kendine özgü saldırısı, aşamalar ilerledikçe genişleyen ve hızlanan çapraz kül parçacığı salvolarıdır; her salvo farklı güvenli boşluk bırakır. Boss'un taç benzeri silueti, merkezindeki parlak kor ve yörüngedeki köz parçaları Canvas üzerinde ayrı ayrı canlandırılır.
+
+### CINDERFALL
+**355.000–370.000** puan bandında her koşuda bir kez rastgele eşikte başlayan **18–22 saniyelik** kül yağışıdır. Rüzgârla sürüklenen amber renkli köz/kül parçaları ve daha sıcak, isli bir gökyüzü görünümü kullanır. Bu hava olayı **tamamen görseldir; çarpışma veya hasar üretmez** ve oyuncuyu ek bir rastgele tehlikeyle cezalandırmaz.
+
+### Test Lab ve performans
+Test Lab'e **RIFT LANCER TEST**, **CINDER REGENT BOSS** ve **CINDERFALL WEATHER** yalıtılmış senaryoları eklendi. Reprise geçmiş örnekleri, yeni boss/düşman kayıtları, hava aralığı ayrıklığı, parçacık bütçesi ve senaryo başlatma durumları canlı tanılama kontrollerinde izlenir.
+
+Parçacık güncellemesi diziyi yerinde sıkıştırmayı sürdürür. Ek olarak, patlama/ışık parçacığı üretimi **1.800 etkin parçacık** üst sınırıyla korunur: mevcut parçacıklar silinmez veya seyreltilmez; olağan oynanışta efektler aynı şekilde işlenir, yalnızca olağanüstü yoğunlukta yeni kozmetik parçacık eklenmesi sınırlanır. Bu sınır bir FPS garantisi değildir; cihaz bazlı performans ölçümü ayrıca yapılmalıdır.
