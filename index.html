@@ -2627,7 +2627,8 @@
     {id:'mirrorWraith',name:'Mirror Wraith',unlock:72000,color:'#91eaff',w:82,h:68,points:610,kind:'blink'},
     {id:'graveMantis',name:'Grave Mantis',unlock:108000,color:'#8ee5a2',w:104,h:88,points:780,kind:'dash'},
     {id:'riftSentinel',name:'Rift Sentinel',unlock:145000,color:'#65e9e1',w:88,h:94,points:980,kind:'sentinel'},
-    {id:'tempestHerald',name:'Tempest Herald',unlock:170000,color:'#72dfff',w:106,h:84,points:1120,kind:'storm'}
+    {id:'tempestHerald',name:'Tempest Herald',unlock:170000,color:'#72dfff',w:106,h:84,points:1120,kind:'storm'},
+    {id:'riftLancer',name:'Rift Lancer',unlock:195000,color:'#e4a0ff',w:98,h:82,points:1360,kind:'lancer'}
   ];
   const EXPANSION_HAZARDS = [
     {id:'laser',name:'Laser Grid',unlock:30000},
@@ -2665,7 +2666,7 @@
     nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
     runSamples:[],ghostSamples:[],ghostClock:0,ghostAppearanceTimer:0,ghostAppearanceClock:0,ghostAppearanceCount:0,adaptiveFactor:1,
     boss85Done:false,boss110Done:false,boss135Done:false,boss165Done:false,
-    boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,
+    boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,boss300Done:false,boss330Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
     menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
   };
@@ -2691,10 +2692,10 @@
   const UPGRADE_BOSSES=[
     ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE ABSOLUTE',150000],
     ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
-    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000],['THE TEMPEST ARCHON',300000]
+    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000],['THE TEMPEST ARCHON',300000],['THE CINDER REGENT',330000]
   ];
 
-  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done','boss300Done'];
+  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done','boss300Done','boss330Done'];
   function setupTestingScenario(id){
     if(!UPGRADE.testMode)return;
     for(const key of TEST_BOSS_FLAGS)EXPANSION[key]=true;
@@ -2985,7 +2986,7 @@
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
     EXPANSION.boss85Done=false;EXPANSION.boss110Done=false;EXPANSION.boss135Done=false;EXPANSION.boss165Done=false;
     EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;EXPANSION.boss185Done=false;
-    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.collapseAnnounced=false;
+    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.boss330Done=false;EXPANSION.collapseAnnounced=false;
     resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
   }
@@ -3149,10 +3150,12 @@
       ['Lightning telegraph safety',Number.isFinite(stormStrikeWarning)&&Number.isFinite(stormStrikeActive)&&stormStrikeWarning>=0&&stormStrikeWarning<=1.02&&stormStrikeActive>=0&&stormStrikeActive<=.24&&stormStrikeHits<=stormStrikeCount,'Warning '+stormStrikeWarning.toFixed(2)+'s · active '+stormStrikeActive.toFixed(2)+'s · '+stormStrikeHits+'/'+stormStrikeCount+' hits'],
       ['Weather window separation',sortedWeatherBands.length===11&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===9&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
       ['Tempest Herald attack',EXPANSION_ENEMIES.some(d=>d.id==='tempestHerald'&&d.kind==='storm'&&d.unlock===170000),'170K aerial elite · telegraphed dive / gust attack'],
+      ['Rift Lancer catalog',EXPANSION_ENEMIES.some(d=>d.id==='riftLancer'&&d.kind==='lancer'&&d.unlock===195000),'195K elite · lane lock warning · committed lunge'],
+      ['Cinder Regent milestone',UPGRADE_BOSSES.some(b=>b[0]==='THE CINDER REGENT'&&b[1]===330000)&&TEST_BOSS_FLAGS.includes('boss330Done'),'330K boss · own projectile pattern and model'],
       ['Tempest Archon boss',UPGRADE_BOSSES.some(b=>b[0]==='THE TEMPEST ARCHON'&&b[1]===300000)&&TEST_BOSS_FLAGS.includes('boss300Done')&&(!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||EXPANSION.boss?.kind==='tempest'),'300K boss · diagonal lightning formations · 3 core weak-point windows'],
       ['Electrical storm sandbox isolation',!UPGRADE.testMode||UPGRADE.testScenario!=='storm-showcase'||(rainTimer>0&&rainKind==='storm'&&UPGRADE.lastStandTimer>0&&spawnClock>=999&&EXPANSION.spawnClock>=999&&stormSchedule[0]?.done===true),'Storm preview active · hazards/spawns suppressed · records disabled'],
       ['Tempest Archon sandbox staging',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(EXPANSION.boss?.kind==='tempest'&&UPGRADE.lastStandTimer>0&&EXPANSION.spawnClock>=999&&EXPANSION.hazardClock>=999),'Boss preview active · isolated spawns · protected test runner'],
-      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
+      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm','lancer'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
@@ -3223,7 +3226,7 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN']],all=labels.concat(extra);
+      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN'],['cinder-regent','CINDER REGENT']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
@@ -3397,7 +3400,7 @@
     bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
     bossIntroTimer=3.0;shake=.28;flash=.24;
     burst(W-165,120,'#d477ff',30);
-    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'?'bossArchitect':kind==='tempest'?'shield':null;
+    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'||kind==='cinderRegent'?'bossArchitect':kind==='tempest'?'shield':null;
     sfx(bossCue||'smash');
   }
   function updateExpansionBoss(dt,playerBox){
@@ -3415,17 +3418,19 @@
       const center=Math.max(75,Math.min(GROUND-90,playerBox.y+playerBox.h*.5));
       const standardOffsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
       const tempestOffsets=stage===1?[-105,-35,35,105]:stage===2?[-154,-77,0,77,154]:[-180,-120,-60,0,60,120,180];
-      const offsets=b.kind==='tempest'?tempestOffsets:b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
-      const gapIndex=b.kind==='tempest'?(b.volley*2+1)%offsets.length:(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
+      const cinderOffsets=stage===1?[-108,-36,36,108]:stage===2?[-162,-108,-54,0,54,108,162]:[-198,-144,-90,-36,18,72,126,180];
+      const offsets=b.kind==='tempest'?tempestOffsets:b.kind==='cinderRegent'?cinderOffsets:b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
+      const gapIndex=b.kind==='tempest'?(b.volley*2+1)%offsets.length:b.kind==='cinderRegent'?(b.volley*3+stage)%offsets.length:(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
       offsets.forEach((off,i)=>{
         if(i===gapIndex)return;
         const y=Math.max(28,Math.min(GROUND-22,center+off));
-        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
-        const shotSpeed=b.kind==='tempest'?(stage===3?600:stage===2?520:455):b.kind==='redJudge'?(stage===3?590:stage===2?510:430):b.kind==='paleArchitect'?(stage===3?560:stage===2?475:405):(stage===3?520:stage===2?440:365);
+        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='cinderRegent'?'#ffb16f':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
+        const shotSpeed=b.kind==='tempest'?(stage===3?600:stage===2?520:455):b.kind==='cinderRegent'?(stage===3?625:stage===2?535:455):b.kind==='redJudge'?(stage===3?590:stage===2?510:430):b.kind==='paleArchitect'?(stage===3?560:stage===2?475:405):(stage===3?520:stage===2?440:365);
         const tempestDrift=b.kind==='tempest'?(stage===1?(i%2===0?72:-72):stage===2?(i%2===0?142:-142):(i-offsets.length/2)*58):0;
-        EXPANSION.shots.push({x:W-115,y:y,w:b.kind==='tempest'?27:23,h:b.kind==='tempest'?23:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:b.kind==='tempest'?'tempestArc':'standard'});
+        const cinderDrift=b.kind==='cinderRegent'?(i-(offsets.length-1)/2)*(stage===1?48:stage===2?68:86)*(b.volley%2===0?1:-1):0;
+        EXPANSION.shots.push({x:W-115,y:y,w:b.kind==='tempest'?27:b.kind==='cinderRegent'?26:23,h:b.kind==='tempest'?23:b.kind==='cinderRegent'?22:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='cinderRegent'?cinderDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:b.kind==='tempest'?'tempestArc':b.kind==='cinderRegent'?'cinderArc':'standard'});
       });
-      b.attackClock=b.kind==='tempest'?(stage===3?.82:stage===2?1.12:1.58):b.kind==='staticChoir'?(stage===3?1.02:stage===2?1.28:1.62):b.kind==='redJudge'?(stage===3?.98:stage===2?1.26:1.62):(stage===3?1.18:stage===2?1.55:2.0);
+      b.attackClock=b.kind==='tempest'?(stage===3?.82:stage===2?1.12:1.58):b.kind==='cinderRegent'?(stage===3?.96:stage===2?1.28:1.72):b.kind==='staticChoir'?(stage===3?1.02:stage===2?1.28:1.62):b.kind==='redJudge'?(stage===3?.98:stage===2?1.26:1.62):(stage===3?1.18:stage===2?1.55:2.0);
       burst(W-115,b.timer%2?70:130,b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':b.kind==='final'?'#f2edff':'#bd6bff',9);
     }
     if(b.kind==='last'||b.kind==='final'){
@@ -3456,6 +3461,7 @@
       if(b.kind==='absolute')expansionAchievement('absolute','THE ABSOLUTE');
       if(b.kind==='last')expansionAchievement('last-signal','LAST SIGNAL');
       if(b.kind==='final'){UPGRADE.finalBossDefeated=true;expansionAchievement('unwritten','THE UNWRITTEN');}
+      if(b.kind==='cinderRegent')expansionAchievement('cinder-regent','CINDER REGENT');
       expansionAchievement('boss-breaker','BOSS BREAKER');
     }
   }
@@ -3558,7 +3564,8 @@
       {at:215000,key:'boss215Done',name:'THE RED JUDGE',duration:40,reward:8200,kind:'redJudge'},
       {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'},
       {at:275000,key:'boss275Done',name:'THE PALE ARCHITECT',duration:48,reward:15000,kind:'paleArchitect'},
-      {at:300000,key:'boss300Done',name:'THE TEMPEST ARCHON',duration:52,reward:18000,kind:'tempest'}
+      {at:300000,key:'boss300Done',name:'THE TEMPEST ARCHON',duration:52,reward:18000,kind:'tempest'},
+      {at:330000,key:'boss330Done',name:'THE CINDER REGENT',duration:56,reward:22000,kind:'cinderRegent'}
     ];
     for(const b of nextBosses){
       if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
@@ -3596,6 +3603,13 @@
       if(e.kind==='orbit'){
         const orbitPhase=e.phase*1.15;e.y=e.baseY+Math.sin(orbitPhase)*42;
         if(e.x<W+330)e.y+=(player.y+Math.cos(orbitPhase*1.7)*38-e.y)*Math.min(1,dt*extScale*.2);
+      }
+      if(e.kind==='lancer'){
+        e.attackWarning=Math.max(0,(e.attackWarning||0)-dt);e.attackLunge=Math.max(0,(e.attackLunge||0)-dt);
+        if(e.attackWarning>0&&e.attackWarning<=dt){e.attackWarning=0;e.attackLunge=.38;burst(e.x+e.w*.28,e.y+e.h*.5,'#e4a0ff',20);}
+        if(e.attackWarning>0)e.y=e.baseY+Math.sin(e.phase*1.25)*13;
+        else if(e.attackLunge>0){e.y+=(e.attackTargetY-e.y)*Math.min(1,dt*8);e.x-=speed*dt*.92;}
+        else{e.y=e.baseY+Math.sin(e.phase*1.15)*19;e.attackClock-=dt;if(e.attackClock<=0&&e.x<W+430){e.attackTargetY=Math.max(34,Math.min(GROUND-e.h-8,player.y+player.h*.5-e.h*.5));e.attackWarning=.72;e.attackClock=2.65+expansionRandom()*.45;}}
       }
       if(e.kind==='storm'){
         e.attackWarning=Math.max(0,(e.attackWarning||0)-dt);e.attackLunge=Math.max(0,(e.attackLunge||0)-dt);
@@ -3917,7 +3931,7 @@
     }
     if(EXPANSION.boss){
       const b=EXPANSION.boss;ctx.save();ctx.globalCompositeOperation='lighter';
-      const c=b.kind==='tempest'?'#79ddff':b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#d477ff';
+      const c=b.kind==='tempest'?'#79ddff':b.kind==='cinderRegent'?'#ffb16f':b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#d477ff';
       ctx.shadowColor=c;ctx.shadowBlur=24;ctx.strokeStyle=c;ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(b.x,b.y,55+Math.sin(b.phase)*5,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle='#090611';ctx.beginPath();ctx.moveTo(b.x,b.y-50);ctx.lineTo(b.x+47,b.y-15);ctx.lineTo(b.x+39,b.y+39);ctx.lineTo(b.x,b.y+54);ctx.lineTo(b.x-39,b.y+39);ctx.lineTo(b.x-47,b.y-15);ctx.closePath();ctx.fill();ctx.stroke();
@@ -3942,14 +3956,23 @@
         ctx.strokeStyle='#d8f7ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,72,50,b.phase*.18,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#061522';ctx.strokeStyle='#79ddff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-53);ctx.lineTo(44,-20);ctx.lineTo(36,34);ctx.lineTo(0,51);ctx.lineTo(-36,34);ctx.lineTo(-44,-20);ctx.closePath();ctx.fill();ctx.stroke();
         ctx.strokeStyle='#b7efff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-22,-34);ctx.lineTo(-39,-63);ctx.lineTo(-10,-49);ctx.moveTo(22,-34);ctx.lineTo(39,-63);ctx.lineTo(10,-49);ctx.stroke();ctx.fillStyle='#e8fbff';ctx.shadowBlur=12;ctx.fillRect(-19,-9,12,6);ctx.fillRect(7,-9,12,6);
         for(let k=0;k<4;k++){const a=b.phase*1.5+k*Math.PI/2;ctx.strokeStyle=k%2?'#d477ff':'#79ddff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(Math.cos(a)*55,Math.sin(a)*38);ctx.lineTo(Math.cos(a)*72,Math.sin(a)*50);ctx.stroke();}ctx.restore();
+      }else if(b.kind==='cinderRegent'){
+        ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.sin(b.phase*.55)*.06);ctx.strokeStyle='#ffb16f';ctx.lineWidth=5;ctx.shadowColor='#ff7a40';ctx.shadowBlur=24;
+        ctx.beginPath();ctx.moveTo(-63,-15);ctx.lineTo(-48,-58);ctx.lineTo(-23,-32);ctx.lineTo(-8,-75);ctx.lineTo(12,-31);ctx.lineTo(44,-61);ctx.lineTo(54,-12);ctx.stroke();
+        ctx.fillStyle='#16090b';ctx.strokeStyle='#ffb16f';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-42,-24);ctx.lineTo(0,-48);ctx.lineTo(42,-24);ctx.lineTo(34,35);ctx.lineTo(0,55);ctx.lineTo(-34,35);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.globalCompositeOperation='lighter';ctx.fillStyle='#fff0c6';ctx.shadowColor='#ff9a4d';ctx.shadowBlur=18;ctx.beginPath();ctx.ellipse(0,4,13,22,Math.sin(b.phase)*.16,0,Math.PI*2);ctx.fill();
+        for(let k=0;k<7;k++){const a=b.phase*(k%2?-.8:.65)+k*Math.PI*2/7,rx=61+Math.sin(b.phase*2+k)*5,ry=43+Math.cos(b.phase*1.7+k)*4;ctx.fillStyle=k%2?'#e98b56':'#ffd29a';ctx.beginPath();ctx.arc(Math.cos(a)*rx,Math.sin(a)*ry,3+(k%3),0,Math.PI*2);ctx.fill();}
+        ctx.strokeStyle='rgba(255,208,154,.6)';ctx.lineWidth=2;ctx.setLineDash([4,7]);ctx.beginPath();ctx.ellipse(0,0,83,59,b.phase*.28,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
       }
       for(let k=0;k<3;k++){const a=b.phase*.5+k*Math.PI*2/3;const cx=b.x+Math.cos(a)*31,cy=b.y+Math.sin(a)*31;ctx.fillStyle=k<b.cores?'#ffe17a':'#4b3b55';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();}
       ctx.globalAlpha=.45+.4*Math.sin(b.phase*4);ctx.fillStyle=c;ctx.fillRect(b.x-23,b.y-4,46,7);
       if(b.weaknessTimer>0){ctx.globalAlpha=.9;ctx.strokeStyle='#fff2a3';ctx.lineWidth=4;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(b.x,b.y,68,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
       ctx.globalAlpha=1;ctx.restore();
     }
-    for(const sh of EXPANSION.shots){ctx.save();ctx.fillStyle=sh.color;ctx.shadowColor=sh.color;ctx.shadowBlur=sh.kind==='tempestArc'?18:13;
-      if(sh.kind==='tempestArc'){ctx.strokeStyle='#e6faff';ctx.lineWidth=3;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(sh.x,sh.y+sh.h*.72);ctx.lineTo(sh.x+sh.w*.32,sh.y+sh.h*.28);ctx.lineTo(sh.x+sh.w*.48,sh.y+sh.h*.68);ctx.lineTo(sh.x+sh.w,sh.y+sh.h*.12);ctx.stroke();pixelRect(sh.x+sh.w*.42,sh.y+sh.h*.38,5,5,sh.color);}else pixelRect(sh.x,sh.y,sh.w,sh.h,sh.color);ctx.restore();}
+    for(const sh of EXPANSION.shots){ctx.save();ctx.fillStyle=sh.color;ctx.shadowColor=sh.color;ctx.shadowBlur=sh.kind==='tempestArc'||sh.kind==='cinderArc'?18:13;
+      if(sh.kind==='tempestArc'){ctx.strokeStyle='#e6faff';ctx.lineWidth=3;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(sh.x,sh.y+sh.h*.72);ctx.lineTo(sh.x+sh.w*.32,sh.y+sh.h*.28);ctx.lineTo(sh.x+sh.w*.48,sh.y+sh.h*.68);ctx.lineTo(sh.x+sh.w,sh.y+sh.h*.12);ctx.stroke();pixelRect(sh.x+sh.w*.42,sh.y+sh.h*.38,5,5,sh.color);}
+      else if(sh.kind==='cinderArc'){ctx.translate(sh.x+sh.w/2,sh.y+sh.h/2);ctx.rotate(sh.phase*.45);ctx.fillStyle='#2b120f';ctx.beginPath();ctx.moveTo(-sh.w*.62,0);ctx.lineTo(-sh.w*.2,-sh.h*.55);ctx.lineTo(sh.w*.62,-sh.h*.22);ctx.lineTo(sh.w*.42,sh.h*.5);ctx.lineTo(-sh.w*.24,sh.h*.58);ctx.closePath();ctx.fill();ctx.strokeStyle='#ffd09a';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff0ca';ctx.fillRect(-2,-2,5,4);}
+      else pixelRect(sh.x,sh.y,sh.w,sh.h,sh.color);ctx.restore();}
     for(const w of EXPANSION.echoWaves){ctx.save();ctx.globalAlpha=Math.max(0,w.life);ctx.strokeStyle='#d477ff';ctx.lineWidth=4;ctx.shadowColor='#d477ff';ctx.shadowBlur=16;ctx.beginPath();ctx.arc(w.x,w.y,18+(1.1-w.life)*35,0,Math.PI*2);ctx.stroke();ctx.restore();}
   }
   function drawExpansionOverlay(){
