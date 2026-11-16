@@ -69,7 +69,11 @@ Sonic_EXE_Bloody_Flight_Sandbox/
 ## 7) Kontroller
 
 - SPACE / ↑ / W: zıpla (havada ikinci kez bas: double jump)
-- ↓ / S: kay
+- ↓ / S: yerde kay; havadayken en az 78 px yüksekteyken DIVE SLAM başlat
+- J (havada): 0,42 saniyelik PERFECT PARRY penceresi aç
+- Z: FLOW göstergesi %100 olduğunda 4,5 saniyelik FLOW BURST etkinleştir
+- X / Shift: Shadow Dash
+- ← / A ve → / D: geri / ileri hareket
 - Uçuş sırasında ↑ / ↓: havada hareket et
 - P veya ESC: duraklat / devam et
 - M: sesi aç / kapat
@@ -77,3 +81,16 @@ Sonic_EXE_Bloody_Flight_Sandbox/
 ## Küçük not
 
 Bu proje, orijinal Bloody Flight oyununun düzenlenebilir geliştirme sürümüdür. İstediğin zaman yeni PNG'ler, sesler ve ayarlarla kendi varyantını oluşturabilirsin. Kod yapısını daha sonra karakter animasyonları, farklı seviyeler, yeni düşmanlar ve yeni güçlendirmeler eklemek için de genişletebilirsin.
+
+## 8) Yeni savaş mekanikleri
+
+### FLOW ve FLOW BURST
+Halka toplamak, near-miss yapmak, uçuşta düşman yok etmek, Shadow Dash ile engel kırmak, DIVE SLAM isabeti ve PERFECT PARRY başarıları FLOW göstergesini doldurur. Gösterge %100 olduğunda **Z** ile 4,5 saniyelik FLOW BURST açılır. Bu sırada puan ödülleri 1,25× olur, yatay hareket 1,28× hızlanır ve bir Shadow Dash yükü yenilenir. FLOW BURST sırasında gösterge yeniden dolmaz.
+
+### DIVE SLAM
+Oyuncu uçuşta değilken havadaysa ve yerden en az 78 piksel uzaktaysa **↓** basışı hızlı bir dalış başlatır. Yere iniş, yakındaki spike/block/rock engellerine, Collapse hazard alanlarına ve ağır yer düşmanlarına hasar veren bir şok dalgası üretir. DIVE SLAM'ın 2,35 saniyelik bekleme süresi vardır.
+
+### PERFECT PARRY ve RIPOSTE
+Havadayken **J**, 0,42 saniyelik bir PERFECT PARRY penceresi açar. Bu pencere içindeyken 118 piksel yakınlıktaki bir boss mermisine denk gelmek mermiyi yok eder, puan ve FLOW verir. Başarılı parry oyuncuyu hafifçe yukarı sektirir ve ileri doğru bir Echo Wave RIPOSTE gönderir; bu dalga özel düşmanları ve zayıflık penceresindeki boss çekirdeklerini vurabilir.
+
+**COMBAT MECHANICS TEST**, bu üç mekaniği records-disabled bir eğitim senaryosunda denemek için TEST LAB'e eklenmiştir.
