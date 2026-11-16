@@ -413,7 +413,7 @@
 
   function activateShadowDash(){
     if(state!=='running'||dashCharges<=0||dashTimer>0)return;
-    dashCharges--;
+    dashCharges--;EXPANSION.attackSerial=(EXPANSION.attackSerial||0)+1;
     dashTimer=.22;
     player.sliding=false;
     burst(player.x+player.w*.5,player.y+player.h*.5,'#bd55ff',18);
@@ -457,6 +457,7 @@
   function handlePlayerAbility(code){
     const handled=handleExpansionKey(code)||handleUltimateKey(code);
     if(!handled)return false;
+    EXPANSION.attackSerial=(EXPANSION.attackSerial||0)+1;
     const groundedCounter=code==='KeyJ'&&player.flight<=0&&player.y>=GROUND-player.h-8;
     if(!groundedCounter)registerAbilityUse(code);
     return true;
@@ -694,7 +695,7 @@
       particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
     }
   }
-  function activateFlight() { if(EXPANSION.mode==='NO FLIGHT'){awardScore(125);burst(player.x+20,player.y+20,'#74eaff',12);return;} diveSlam.active=false;landingGrace=0; flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
+  function activateFlight() { if(EXPANSION.mode==='NO FLIGHT'){awardScore(125);burst(player.x+20,player.y+20,'#74eaff',12);return;} EXPANSION.attackSerial=(EXPANSION.attackSerial||0)+1;diveSlam.active=false;landingGrace=0; flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
   function spawnWorldDetail(){
     const type=Math.floor(Math.random()*3);
     const y=type===2?GROUND-70:105+Math.random()*155;
@@ -782,7 +783,7 @@
       const e=EXPANSION.enemies[i],grounded=e.kind==='heavy'||e.kind==='stomp'||e.kind==='sentinel';
       if(grounded&&Math.abs(e.x+e.w/2-center)<=154){
         if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0){
-          e.guardBrokenTimer=1.75;awardScore(210);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
+          e.guardBrokenTimer=1.75;e.guardBreakSerial=EXPANSION.attackSerial||0;awardScore(210);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
         }else{
           awardScore(e.points+150);EXPANSION.enemyKills++;if(e.id==='riftSentinel')expansionAchievement('sentinel-break','SENTINEL BROKEN');
           burst(e.x+e.w/2,e.y+e.h/2,e.color||'#ff985d',24);EXPANSION.enemies.splice(i,1);
@@ -2643,7 +2644,7 @@
     gravityShiftTimer:0,gravityShiftClock:0,gravityShiftScale:1,
     echoDashTimer:0,echoDashCooldown:0,magnetTimer:0,magnetCooldown:0,
     reboundCharges:0,reboundCooldown:0,overdriveTimer:0,overdriveCooldown:0,
-    flowCharge:0,flowTimer:0,flowActivations:0,parryTimer:0,parryCount:0,parryAttempts:0,parryMisses:0,combatToast:'',combatToastTimer:0,diveSlamCount:0,diveSlamBreaks:0,
+    flowCharge:0,flowTimer:0,flowActivations:0,parryTimer:0,parryCount:0,parryAttempts:0,parryMisses:0,attackSerial:0,combatToast:'',combatToastTimer:0,diveSlamCount:0,diveSlamBreaks:0,
     glitchShieldTimer:0,glitchShieldCooldown:0,voidStepTimer:0,voidStepCooldown:0,
     soundlessTimer:0,wasSoundless:false,scoreGlitchTimer:0,fakeScore:0,
     falseOverTimer:0,memoryFlashTimer:0,shadowPursuitClock:0,
@@ -2743,7 +2744,7 @@
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
       const d=EXPANSION_ENEMIES.find(x=>x.id==='riftSentinel');
       if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
-        x:W+180,y:GROUND-d.h,baseY:GROUND-d.h,phase:0,attack:1.2,bounty:false,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0});expansionRememberEntity(d.name);}
+        x:W+180,y:GROUND-d.h,baseY:GROUND-d.h,phase:0,attack:1.2,bounty:false,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0});expansionRememberEntity(d.name);}
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
       audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
@@ -2943,7 +2944,7 @@
     EXPANSION.gravityShiftTimer=0;EXPANSION.gravityShiftClock=18+expansionRandom()*8;EXPANSION.gravityShiftScale=1;
     EXPANSION.echoDashTimer=0;EXPANSION.echoDashCooldown=0;EXPANSION.magnetTimer=0;EXPANSION.magnetCooldown=0;
     EXPANSION.reboundCharges=0;EXPANSION.reboundCooldown=0;EXPANSION.overdriveTimer=0;EXPANSION.overdriveCooldown=0;
-    EXPANSION.flowCharge=0;EXPANSION.flowTimer=0;EXPANSION.flowActivations=0;EXPANSION.parryTimer=0;EXPANSION.parryCount=0;EXPANSION.parryAttempts=0;EXPANSION.parryMisses=0;EXPANSION.combatToast='';EXPANSION.combatToastTimer=0;EXPANSION.diveSlamCount=0;EXPANSION.diveSlamBreaks=0;
+    EXPANSION.flowCharge=0;EXPANSION.flowTimer=0;EXPANSION.flowActivations=0;EXPANSION.parryTimer=0;EXPANSION.parryCount=0;EXPANSION.parryAttempts=0;EXPANSION.parryMisses=0;EXPANSION.attackSerial=0;EXPANSION.combatToast='';EXPANSION.combatToastTimer=0;EXPANSION.diveSlamCount=0;EXPANSION.diveSlamBreaks=0;
     EXPANSION.glitchShieldTimer=0;EXPANSION.glitchShieldCooldown=0;EXPANSION.voidStepTimer=0;EXPANSION.voidStepCooldown=0;
     EXPANSION.soundlessTimer=0;EXPANSION.wasSoundless=false;EXPANSION.scoreGlitchTimer=0;EXPANSION.fakeScore=0;
     EXPANSION.falseOverTimer=0;EXPANSION.memoryFlashTimer=0;EXPANSION.shadowPursuitClock=28+expansionRandom()*12;
@@ -3324,7 +3325,7 @@
     const bounty=expansionRandom()<.16;
     const e={id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
       x:W+70,y:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,baseY:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,phase:expansionRandom()*6,
-      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0};
+      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0};
     EXPANSION.enemies.push(e);expansionRememberEntity(d.name);
   }
   function spawnExpansionHazard(){
@@ -3557,12 +3558,13 @@
         const poweredContact=player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0;
         if(e.id==='riftSentinel'&&(e.guardHitLock||0)>0)continue;
         if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)>0&&poweredContact){
+          if((EXPANSION.attackSerial||0)<=(e.guardBreakSerial||0))continue;
           awardScore(e.points+150);EXPANSION.enemyKills++;expansionAchievement('sentinel-break','SENTINEL BROKEN');
           burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',32);EXPANSION.enemies.splice(i,1);continue;
         }
         if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0&&poweredContact){
           if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
-          e.guardBrokenTimer=1.75;e.guardHitLock=.72;e.guardStaggerTimer=.72;e.x=player.x+player.w+12;awardScore(140);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',26);sfx('shieldBreak');continue;
+          e.guardBrokenTimer=1.75;e.guardBreakSerial=EXPANSION.attackSerial||0;e.guardHitLock=.72;e.guardStaggerTimer=.72;e.x=player.x+player.w+12;awardScore(140);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',26);sfx('shieldBreak');continue;
         }
         if(player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){
           awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;EXPANSION.perfectStreak++;
@@ -3678,7 +3680,7 @@
         const e=EXPANSION.enemies[j];
         if(wave.x>e.x-10&&wave.x<e.x+e.w+20&&Math.abs(wave.y-(e.y+e.h/2))<e.h*.8){
           if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0){
-            e.guardBrokenTimer=1.75;awardScore(180);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
+            e.guardBrokenTimer=1.75;e.guardBreakSerial=EXPANSION.attackSerial||0;awardScore(180);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
           }else{
             awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
             if(e.id==='riftSentinel')expansionAchievement('sentinel-break','SENTINEL BROKEN');
