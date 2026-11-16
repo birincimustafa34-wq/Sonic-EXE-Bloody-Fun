@@ -9,7 +9,8 @@ window.BLOODY_FLIGHT_CONFIG = {
   subtitle: "BLOODY FLIGHT EDITION",
   startMessage: "The blood moon is rising. The forest is watching.",
   initialSpeed: 360,
-  maxSpeed: 650,
+  // Base engine cap; temporary Overdrive adds up to 38 speed (888 total by default).
+  maxSpeed: 850,
   speedRamp: 8.5,
   gravity: 1750,
   jumpPower: 650,
