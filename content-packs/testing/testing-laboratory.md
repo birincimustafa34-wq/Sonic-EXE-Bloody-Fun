@@ -32,6 +32,7 @@ All scenarios are started from the title screen or Game Over screen.
 | BOSS TEST | THE STATIC CHOIR at its late-game score context |
 | SYNERGY TEST | Starts at 60,000 score with the relevant ability cooldowns ready for all three combinations |
 | HAZARD TEST | Laser Grid, Gravity Zone, and Spike Corridor |
+| RING SYSTEM 2.0 TEST | Starts at 72,000 score; cycles through four speed tiers and five ring formations |
 | GLASS WASTES | Starts at 80,000 score to review the first biome |
 | STATIC CATHEDRAL | Starts at 160,000 score to review the second biome |
 | ECLIPSE ABYSS | Starts at 230,000 score to review the third biome |
@@ -76,11 +77,46 @@ The passive score earned from forward movement is multiplied by **1.12** (a 12% 
 
 ## Ring System 2.0 preview
 
-The **RING SYSTEM 2.0 TEST** sandbox starts in an isolated 72,000-score context and cycles through 360, 650, and 850 movement-speed tiers, switching every eight seconds. It previews five formation patterns: **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave**. The sandbox keeps boss milestone encounters suppressed and uses the existing save-isolation snapshot/restore path, so it does not retain records or unlocks.
+The **RING SYSTEM 2.0 TEST** sandbox starts in an isolated 72,000-score context and cycles through four movement-speed tiers every eight seconds: **360** (initial), **650** (mid-tier), **850** (configured base cap), and **888** (default Overdrive cap). All five formations rotate during the run: **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave**. Remaining ring and bonus timers are converted to preserve their remaining world-space distance at each speed transition. The sandbox suppresses milestone boss starts and uses the existing save-isolation snapshot/restore path, so it does not retain records or unlocks.
 
-Normal ring groups still contain five rings with the original 42-pixel horizontal spacing, collision radius, ring pickup sound, combo timer, and score rules. Their spawn interval is now calculated from current world speed, targeting a stable world-space gap rather than using one fixed time range. Bonus rings remain separate collectibles and keep their existing 60-point pickup reward; their timer is also adjusted for speed while retaining separate early- and late-game cadence.
+### Regular ring groups
 
-The Test Lab checks formation IDs and safe vertical geometry, estimated ring-group spacing at all three speed tiers, bonus-ring timer validity, and the isolated showcase stage. Its copyable diagnostic report records the latest formation, active regular/bonus ring counts, current spawn timer, speed-tier samples, and bonus cadence samples.
+Normal groups contain five rings with **42-pixel horizontal spacing**. Regular ring radius remains 12, pickup padding remains 25, and the existing collision test is unchanged in behavior. The configured base speed cap is now 850 to match the engine's previous actual cap; Overdrive retains its +38 speed (888 by default).
+
+Group start-to-start spacing targets **1,280 world pixels**, with randomized variation of ±35 world pixels. The interval is calculated from current speed and clamped to 1.45–7.2 seconds. At the four default test speeds, deterministic spacing is approximately:
+
+| Speed | Group interval | World-space gap |
+|---:|---:|---:|
+| 360 | 3.56 s | 1,280 px |
+| 650 | 1.97 s | 1,280 px |
+| 850 | 1.51 s | 1,280 px |
+| 888 | 1.45 s | 1,287 px |
+
+The default group-clear distance is 1,198 pixels, so even the fastest tier retains a positive gap after the last ring leaves the screen. The 1.45-second lower bound prevents high-speed flooding; the 7.2-second upper bound keeps spacing predictable during temporary slow effects.
+
+### Formation and reward readability
+
+- **Arc:** smooth elevated curve
+- **Stair-step:** ascending or descending steps
+- **Zigzag:** alternating high/low path
+- **Risk-reward:** two safer outer rings worth 15 points each, framing three elevated rings worth 35 points each
+- **Wave:** shallow alternating wave
+
+The five-ring group size, 42-pixel spacing, 15/35 regular ring values, 60-point bonus value, x5 combo cap, configured combo window, pickup sound, and bonus-ring no-combo behavior are preserved. Mobile controls are untouched.
+
+### Bonus-ring scheduling
+
+Bonus rings still unlock at **50,000 score** and retain the early/late cadence split at **70,000 score**. After the initial unlock warm-up, the early cadence targets about **9,200 world pixels** between bonuses and the late cadence targets about **6,400 world pixels**, converted to seconds using current speed with bounded delays and ±10% timing variation.
+
+When a bonus timer expires, the scheduler waits until no regular or bonus ring is active, then reserves the bonus ring's travel lane before the next regular group may spawn. This replaces the previous fixed ringClock > 1.1 condition, which could miss the short post-group gap at high speed. The bonus remains a separate 60-point pickup and does not enter the regular ring combo.
+
+### Test Lab checks and limitations
+
+The diagnostic report includes the active formation, active regular/bonus ring counts, target gap, current clearance, speed-tier interval samples, early/late bonus world-distance samples, and showcase tier. Source-level checks cover all five formation geometries, the risk/reward value split, unchanged pickup/scoring constants, nominal and randomized spacing bounds, final-ring clearance, bonus cadence distances, bonus spawn gating, transit reservation, and sandbox tier validity.
+
+The scenario is isolated by the existing test-mode save snapshot/restore behavior; best score, achievements, unlocks, archive statistics, and other persistent records are not retained. These checks do not replace browser gameplay testing. Desktop and mobile browser passes are still needed for visual readability around hazards, real-run bonus frequency, collection feel, and frame-time/performance.
+
+
 
 ## High-score pixel glitch layers
 
