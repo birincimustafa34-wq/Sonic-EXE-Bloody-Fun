@@ -56,7 +56,7 @@
 <body>
 <div id="shell">
   <div id="frame">
-    <canvas id="game" width="960" height="540" aria-label="Sonic.EXE Bloody Flight game"></canvas>
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Sonic.EXE Bloody Flight game"></canvas>
     <div id="overlay">
       <h1 id="title">SONIC.EXE</h1>
       <p id="subtitle">BLOODY FLIGHT EDITION<br>
@@ -400,14 +400,15 @@
     stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*245,a:.2+Math.random()*.65,size:Math.random()<.8?2:3}));
   }
   function begin(testMode=false,testScenario='free') {
-    if (state==='paused') { state='running'; lastTime=performance.now(); overlay.classList.add('hidden'); initAudio(); startMusic(); requestAnimationFrame(loop); return; }
+    if (state==='paused') { state='running'; lastTime=performance.now(); overlay.classList.add('hidden'); canvas.focus({preventScroll:true}); initAudio(); startMusic(); requestAnimationFrame(loop); return; }
     UPGRADE.testMode=!!testMode;
     UPGRADE.testScenario=UPGRADE.testMode?(testScenario||'free'):'';
     UPGRADE.testSnapshot=UPGRADE.testMode?JSON.parse(JSON.stringify(EXPANSION_STORE)):null;
     applyExpansionRandomMode();reset();state='running';initAudio();startMusic();
     if(UPGRADE.testMode)setupTestingScenario(UPGRADE.testScenario);
-    overlay.classList.add('hidden');lastTime=performance.now();requestAnimationFrame(loop);
+    overlay.classList.add('hidden');canvas.focus({preventScroll:true});lastTime=performance.now();requestAnimationFrame(loop);
   }
+  canvas.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}));
   startBtn.addEventListener('click',()=>begin(false));
 
   function activateShadowDash(){
