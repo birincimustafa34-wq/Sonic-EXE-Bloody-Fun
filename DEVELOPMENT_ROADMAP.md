@@ -223,3 +223,13 @@ Rendering work was reduced without changing canvas resolution, sprite output, ef
 Test Lab now records audio resume/SFX fallback diagnostics and frame-time averages/peaks/slow-frame counts. These metrics are observational and do not automatically lower visual quality or alter gameplay. Source-level syntax and targeted checks should be accompanied by real browser play tests on desktop and mobile.
 
 The Test Lab includes a dedicated **AUDIO TEST** sandbox that plays eight gameplay cues in sequence and displays the AudioContext state and SFX event count, allowing both audible confirmation and diagnostic inspection without waiting for random gameplay events.
+
+## Combat Mechanics Pack — FLOW / DIVE SLAM / PERFECT PARRY
+
+The combat layer now has three connected player-driven systems:
+
+- **FLOW:** a 0–100 skill meter charged by pickups, near-misses, air kills, dash breaks, slam hits, and successful parries. **Z** activates a 4.5-second scoring/movement burst and restores one Shadow Dash charge.
+- **DIVE SLAM:** pressing **↓** while sufficiently airborne begins a fast downward attack. Its landing shockwave clears nearby ground obstacles and Collapse hazards, and can crush heavy ground enemies. Cooldown: 2.35 seconds.
+- **PERFECT PARRY / RIPOSTE:** **J** while airborne opens a 0.42-second timing window. Intercepting a nearby boss projectile awards score and FLOW, rebounds the player, and sends an Echo Wave forward to attack enemies or exposed boss cores.
+
+Mobile controls include J and Z buttons. The **COMBAT MECHANICS TEST** sandbox offers a records-disabled training stage with a temporary safety window, held boss volleys, staged ground targets, and an approaching practice projectile. Test Lab reports the three mechanics' counters and live cooldown/charge state. Source syntax and initial integration checks passed; interactive timing and balance still require hands-on desktop/mobile browser play.
