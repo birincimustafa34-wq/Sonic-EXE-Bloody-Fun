@@ -55,3 +55,11 @@ Empty paths use the built-in synthesized sound cues. Custom audio files are opti
 - The in-game M key still mutes playback and sound effects.
 - The temporary SOUND LOST horror event suppresses music and SFX as before.
 - Keep source audio files reasonably short and compressed for browser performance.
+
+## Default asset availability and fallback behavior
+
+The repository does not bundle the optional MP3/WAV files listed above. The default `config.js` therefore leaves the music and core custom SFX paths empty, avoiding repeated 404 requests on a fresh clone or GitHub Pages deployment. The built-in Web Audio synthesizer remains the default source for jump, ring, emerald, shield, hit, and other cues. Add your own files and set the corresponding config paths to enable custom playback.
+
+Custom SFX use a small reusable voice pool (up to four simultaneous voices per cue). If a configured custom file fails to load or a browser rejects playback, the game falls back to the synthesized cue. AudioContext resume is awaited before synthesized notes are scheduled; gameplay input and pause recovery both request audio resume.
+
+The **SOUND LOST** horror event is a background-music blackout only. Jump, ring, and other gameplay feedback sounds remain active. The browser can suspend Web Audio while a tab is hidden or loses focus; the game pauses safely on focus loss and resumes audio after the player returns and resumes the run.
