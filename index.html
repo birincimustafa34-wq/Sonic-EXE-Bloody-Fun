@@ -2710,7 +2710,7 @@
       EXPANSION.flowCharge=100;EXPANSION.flowTimer=0;EXPANSION.parryTimer=0;UPGRADE.counterCooldown=0;
       diveSlam.active=false;diveSlam.cooldown=0;diveSlam.impactTimer=0;
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
-      UPGRADE.lastStandTimer=8;UPGRADE.counterCooldown=0;
+      UPGRADE.lastStandTimer=999;UPGRADE.counterCooldown=0;
       obstacles.push({type:'block',x:player.x+195,y:GROUND-92,w:54,h:48});
       obstacles.push({type:'spike',x:player.x+220,y:GROUND-38,w:40,h:38});
       startBossEncounter();
@@ -3843,7 +3843,7 @@
         ctx.fillStyle='#d8c8e8';ctx.fillText('CONTEXT '+(audio?audio.state:'NOT INITIALIZED')+' // NEXT CUE '+Math.max(0,audioTestTimer).toFixed(1)+'s',18,97);
       }else if(UPGRADE.testScenario==='combat-showcase'){
         ctx.fillStyle='#bdffe6';ctx.fillText('SPACE JUMP → J PARRY → ↓ SLAM → Z FLOW',18,82);
-        ctx.fillStyle='#d8c8e8';ctx.fillText('TRAINING SHOT APPROACHING // FLOW '+Math.round(EXPANSION.flowCharge)+'%',18,97);
+        ctx.fillStyle='#d8c8e8';ctx.fillText('FLOW '+Math.round(EXPANSION.flowCharge)+'% / BURSTS '+EXPANSION.flowActivations+' · PARRY '+EXPANSION.parryCount+' · SLAM '+EXPANSION.diveSlamCount+' · BREAK '+EXPANSION.diveSlamBreaks,18,97);
       }
     }
     if(UPGRADE.synergyToastTimer>0){
