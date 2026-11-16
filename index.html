@@ -73,9 +73,9 @@
     <button class="touch" data-key="ArrowLeft">◀ BACK</button>
     <button class="touch" data-key="Space">JUMP / FLY ↑</button>
     <button class="touch" data-key="ArrowRight">FORWARD ▶</button>
-    <button class="touch" data-key="ArrowDown">SLIDE / FLY ↓</button>
+    <button class="touch" data-key="ArrowDown">SLIDE / FLY / DIVE ↓</button>
     <button class="touch" data-key="KeyX">SHADOW DASH x3 ✦</button>
-    <button class="touch" data-key="KeyJ">PARRY J ✧</button>
+    <button class="touch" data-key="KeyJ">PERFECT PARRY J ✧</button>
     <button class="touch" data-key="KeyZ">FLOW BURST Z ⚡</button>
   </div>
 </div>
@@ -745,7 +745,7 @@
   }
   function chargeFlow(amount){if(!Number.isFinite(amount)||amount<=0||EXPANSION.flowTimer>0)return 0;const before=EXPANSION.flowCharge;EXPANSION.flowCharge=Math.min(100,before+amount);return EXPANSION.flowCharge-before;}
   function perfectParrySuccess(x,y,color){
-    EXPANSION.parryTimer=0;EXPANSION.parryCount++;chargeFlow(27);awardScore(240);
+    EXPANSION.parryTimer=0;EXPANSION.parryCount++;EXPANSION.combatToast='PERFECT PARRY';EXPANSION.combatToastTimer=1.1;chargeFlow(27);awardScore(240);
     // A timed parry becomes an aerial recovery and sends a riposte wave forward.
     player.vy=-300;player.jumps=Math.max(1,player.jumps);player.y=Math.max(24,player.y-8);
     EXPANSION.echoWaves.push({x:player.x+player.w,y:player.y+player.h*.5,life:1.1});
@@ -779,10 +779,15 @@
       }
     }
     for(let i=EXPANSION.enemies.length-1;i>=0;i--){
-      const e=EXPANSION.enemies[i],grounded=e.kind==='heavy'||e.kind==='stomp';
+      const e=EXPANSION.enemies[i],grounded=e.kind==='heavy'||e.kind==='stomp'||e.kind==='sentinel';
       if(grounded&&Math.abs(e.x+e.w/2-center)<=154){
-        awardScore(e.points+150);EXPANSION.enemyKills++;
-        burst(e.x+e.w/2,e.y+e.h/2,e.color||'#ff985d',24);EXPANSION.enemies.splice(i,1);diveSlam.impactHits++;
+        if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0){
+          e.guardBrokenTimer=1.75;awardScore(210);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
+        }else{
+          awardScore(e.points+150);EXPANSION.enemyKills++;if(e.id==='riftSentinel')expansionAchievement('sentinel-break','SENTINEL BROKEN');
+          burst(e.x+e.w/2,e.y+e.h/2,e.color||'#ff985d',24);EXPANSION.enemies.splice(i,1);
+        }
+        diveSlam.impactHits++;
       }
     }
     for(const h of EXPANSION.hazards){
@@ -1378,7 +1383,15 @@
       }
     }
     EXPANSION.flowTimer=Math.max(0,EXPANSION.flowTimer-dt);
-    EXPANSION.parryTimer=Math.max(0,EXPANSION.parryTimer-dt);
+    if(EXPANSION.parryTimer>0){
+      const remainingParry=EXPANSION.parryTimer-dt;
+      if(remainingParry<=0){
+        EXPANSION.parryTimer=0;EXPANSION.parryMisses++;
+        UPGRADE.counterCooldown=Math.min(UPGRADE.counterCooldown,5.5);
+        EXPANSION.combatToast='PARRY MISSED';EXPANSION.combatToastTimer=.95;
+      }else EXPANSION.parryTimer=remainingParry;
+    }
+
     scoreMultiplierTimer=Math.max(0,scoreMultiplierTimer-dt);
     if(score>=100000){scoreSigilClock-=dt;if(scoreSigilClock<=0&&scoreSigils.length===0){addScoreSigil();scoreSigilClock=24+Math.random()*12;}}
     dashTimer=Math.max(0,dashTimer-dt);
@@ -2599,7 +2612,8 @@
     {id:'bloodwing',name:'Bloodwing',unlock:95000,color:'#ff315d',w:90,h:60,points:690,kind:'dash'},
     {id:'riftLantern',name:'Rift Lantern',unlock:38000,color:'#ffd47a',w:62,h:78,points:410,kind:'orbit'},
     {id:'mirrorWraith',name:'Mirror Wraith',unlock:72000,color:'#91eaff',w:82,h:68,points:610,kind:'blink'},
-    {id:'graveMantis',name:'Grave Mantis',unlock:108000,color:'#8ee5a2',w:104,h:88,points:780,kind:'dash'}
+    {id:'graveMantis',name:'Grave Mantis',unlock:108000,color:'#8ee5a2',w:104,h:88,points:780,kind:'dash'},
+    {id:'riftSentinel',name:'Rift Sentinel',unlock:145000,color:'#65e9e1',w:88,h:94,points:980,kind:'sentinel'}
   ];
   const EXPANSION_HAZARDS = [
     {id:'laser',name:'Laser Grid',unlock:30000},
@@ -2629,7 +2643,7 @@
     gravityShiftTimer:0,gravityShiftClock:0,gravityShiftScale:1,
     echoDashTimer:0,echoDashCooldown:0,magnetTimer:0,magnetCooldown:0,
     reboundCharges:0,reboundCooldown:0,overdriveTimer:0,overdriveCooldown:0,
-    flowCharge:0,flowTimer:0,flowActivations:0,parryTimer:0,parryCount:0,diveSlamCount:0,diveSlamBreaks:0,
+    flowCharge:0,flowTimer:0,flowActivations:0,parryTimer:0,parryCount:0,parryAttempts:0,parryMisses:0,combatToast:'',combatToastTimer:0,diveSlamCount:0,diveSlamBreaks:0,
     glitchShieldTimer:0,glitchShieldCooldown:0,voidStepTimer:0,voidStepCooldown:0,
     soundlessTimer:0,wasSoundless:false,scoreGlitchTimer:0,fakeScore:0,
     falseOverTimer:0,memoryFlashTimer:0,shadowPursuitClock:0,
@@ -2716,6 +2730,20 @@
       startBossEncounter();
       boss.timer=999;boss.duration=999;boss.warning=999;boss.attackClock=999;
       bossProjectiles=[{x:player.x+200,y:player.y-42,baseY:player.y-42,w:25,h:18,phase:0,speed:320,kind:'parry-training',colour:'#ffe17a'}];
+    }else if(id==='sentinel-showcase'){
+      score=150000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];
+      EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;
+      EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;
+      EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
+      UPGRADE.lastStandTimer=999;
+      player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      const d=EXPANSION_ENEMIES.find(x=>x.id==='riftSentinel');
+      if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
+        x:W+180,y:GROUND-d.h,baseY:GROUND-d.h,phase:0,attack:1.2,bounty:false,passed:false,hit:false,guardBrokenTimer:0});expansionRememberEntity(d.name);}
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
       audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
@@ -2805,12 +2833,10 @@
       burst(player.x+player.w/2,player.y+player.h/2,'#ff8a45',34);sfx('smash');return true;
     }
     if(code==='KeyJ'&&UPGRADE.counterCooldown<=0){
-      if(player.flight<=0&&player.y>=GROUND-player.h-8)return true;
-      UPGRADE.counterCooldown=13.5;EXPANSION.parryTimer=.42;const b=EXPANSION.boss;
-      if(b&&b.weaknessTimer>0&&b.cores>0){b.cores--;awardScore(550);burst(b.x-45,b.y,'#7ff5ed',24);if(b.cores<=0)b.timer=.1;}
-      else{let target=-1,best=260;for(let i=0;i<EXPANSION.enemies.length;i++){const d=Math.hypot(EXPANSION.enemies[i].x-player.x,EXPANSION.enemies[i].y-player.y);if(d<best){best=d;target=i;}}
-        if(target>=0){const e=EXPANSION.enemies.splice(target,1)[0];awardScore(e.points+260);EXPANSION.enemyKills++;burst(e.x+e.w/2,e.y+e.h/2,'#7ff5ed',24);}else awardScore(90);}
-      burst(player.x+player.w/2,player.y+player.h/2,'#7ff5ed',20);return true;
+      if(player.flight<=0&&player.y>=GROUND-player.h-8){EXPANSION.combatToast='JUMP TO PARRY';EXPANSION.combatToastTimer=.85;return true;}
+      UPGRADE.counterCooldown=10;EXPANSION.parryTimer=.42;EXPANSION.parryAttempts++;
+      EXPANSION.combatToast='PARRY NOW';EXPANSION.combatToastTimer=.55;
+      burst(player.x+player.w/2,player.y+player.h/2,'#7ff7ed',18);sfx('shield');return true;
     }
     if(code==='KeyH'&&UPGRADE.decoyCooldown<=0){UPGRADE.decoyCooldown=19;UPGRADE.decoyTimer=4.5;burst(player.x+155,player.y+24,'#d477ff',18);return true;}
     if(code==='KeyT'&&UPGRADE.lightningCooldown<=0){
@@ -2917,7 +2943,7 @@
     EXPANSION.gravityShiftTimer=0;EXPANSION.gravityShiftClock=18+expansionRandom()*8;EXPANSION.gravityShiftScale=1;
     EXPANSION.echoDashTimer=0;EXPANSION.echoDashCooldown=0;EXPANSION.magnetTimer=0;EXPANSION.magnetCooldown=0;
     EXPANSION.reboundCharges=0;EXPANSION.reboundCooldown=0;EXPANSION.overdriveTimer=0;EXPANSION.overdriveCooldown=0;
-    EXPANSION.flowCharge=0;EXPANSION.flowTimer=0;EXPANSION.flowActivations=0;EXPANSION.parryTimer=0;EXPANSION.parryCount=0;EXPANSION.diveSlamCount=0;EXPANSION.diveSlamBreaks=0;
+    EXPANSION.flowCharge=0;EXPANSION.flowTimer=0;EXPANSION.flowActivations=0;EXPANSION.parryTimer=0;EXPANSION.parryCount=0;EXPANSION.parryAttempts=0;EXPANSION.parryMisses=0;EXPANSION.combatToast='';EXPANSION.combatToastTimer=0;EXPANSION.diveSlamCount=0;EXPANSION.diveSlamBreaks=0;
     EXPANSION.glitchShieldTimer=0;EXPANSION.glitchShieldCooldown=0;EXPANSION.voidStepTimer=0;EXPANSION.voidStepCooldown=0;
     EXPANSION.soundlessTimer=0;EXPANSION.wasSoundless=false;EXPANSION.scoreGlitchTimer=0;EXPANSION.fakeScore=0;
     EXPANSION.falseOverTimer=0;EXPANSION.memoryFlashTimer=0;EXPANSION.shadowPursuitClock=28+expansionRandom()*12;
@@ -2976,7 +3002,7 @@
           bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
       audio:{contextState:audio?audio.state:'not-created',resumeAttempts:AUDIO_DIAGNOSTICS.resumeAttempts,resumeSuccesses:AUDIO_DIAGNOSTICS.resumeSuccesses,resumeFailures:AUDIO_DIAGNOSTICS.resumeFailures,sfxEvents:AUDIO_DIAGNOSTICS.events,synthFallbacks:AUDIO_DIAGNOSTICS.synthFallbacks,customPlays:AUDIO_DIAGNOSTICS.customPlays,customPlayFailures:AUDIO_DIAGNOSTICS.customPlayFailures,musicPlayFailures:AUDIO_DIAGNOSTICS.musicPlayFailures,configuredCustomSounds:Object.keys(customSfx),failedCustomSounds:Object.keys(customSfx).filter(name=>customSfx[name].failed),lastError:AUDIO_DIAGNOSTICS.lastError,sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='audio-showcase'?{lastCue:audioTestCue,cuesPlayed:audioTestIndex,secondsUntilNextCue:Number(Math.max(0,audioTestTimer).toFixed(2))}:null},
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
-      combatMechanics:{flow:{charge:EXPANSION.flowCharge,activeSeconds:Number(EXPANSION.flowTimer.toFixed(2)),activations:EXPANSION.flowActivations},diveSlam:{active:diveSlam.active,cooldown:Number(diveSlam.cooldown.toFixed(2)),impacts:EXPANSION.diveSlamCount,objectsBroken:EXPANSION.diveSlamBreaks},perfectParry:{windowSeconds:Number(EXPANSION.parryTimer.toFixed(2)),successfulParries:EXPANSION.parryCount}},
+      combatMechanics:{flow:{charge:EXPANSION.flowCharge,activeSeconds:Number(EXPANSION.flowTimer.toFixed(2)),activations:EXPANSION.flowActivations},diveSlam:{active:diveSlam.active,cooldown:Number(diveSlam.cooldown.toFixed(2)),impacts:EXPANSION.diveSlamCount,objectsBroken:EXPANSION.diveSlamBreaks},perfectParry:{windowSeconds:Number(EXPANSION.parryTimer.toFixed(2)),attempts:EXPANSION.parryAttempts,successfulParries:EXPANSION.parryCount,misses:EXPANSION.parryMisses,cooldown:Number(UPGRADE.counterCooldown.toFixed(2))},riftSentinel:{active:EXPANSION.enemies.filter(e=>e.id==='riftSentinel').length,exposed:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardBrokenTimer||0)>0).length}},
       highScorePixelGlitch:{currentPixelCount:highScoreGlitchPixelCount(),tiers:HIGH_SCORE_GLITCH_TIERS.map(tier=>({unlockScore:tier.score,pixels:tier.pixels})),nextTier:HIGH_SCORE_GLITCH_TIERS.find(tier=>score<tier.score)||null,opacity:'100% source-over',distribution:'screen-wide stratified grid',sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'?{tier:glitchTestTier+1,score:HIGH_SCORE_GLITCH_TIERS[glitchTestTier].score,pixels:highScoreGlitchPixelCount(),secondsUntilNextTier:Number(Math.max(0,glitchTestTimer).toFixed(2))}:null},
       ringSystem:{
         lastFormation:lastRingFormation,availableFormations:RING_FORMATION_NAMES.slice(),
@@ -3017,7 +3043,7 @@
       ['C · Echo Dash',EXPANSION.echoDashCooldown],['V · Magnet Core',EXPANSION.magnetCooldown],
       ['B · Chaos Rebound',EXPANSION.reboundCooldown],['R · Overdrive',EXPANSION.overdriveCooldown],
       ['G · Glitch Shield',EXPANSION.glitchShieldCooldown],['F · Void Step',EXPANSION.voidStepCooldown],
-      ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Air Counter',UPGRADE.counterCooldown],
+      ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Perfect Parry',UPGRADE.counterCooldown],
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
     const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
@@ -3037,6 +3063,8 @@
     const glitchLayoutsValid=glitchLayoutResults.every(result=>result.uniqueSlots===result.count&&result.allRowsUsed&&result.minPerRow>0);
     const glitchShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='pixel-glitch-showcase'||(HIGH_SCORE_GLITCH_TIERS[glitchTestTier]?.pixels===highScoreGlitchPixelCount(score)&&glitchTestTimer>=0);
     const audioShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='audio-showcase'||(audioTestIndex>=0&&audioTestTimer>=0&&typeof audioTestCue==='string');
+    const parryAccountingValid=[EXPANSION.parryAttempts,EXPANSION.parryCount,EXPANSION.parryMisses,EXPANSION.parryTimer].every(Number.isFinite)&&EXPANSION.parryAttempts===EXPANSION.parryCount+EXPANSION.parryMisses+(EXPANSION.parryTimer>0?1:0);
+    const sentinelShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='sentinel-showcase'||EXPANSION.enemies.some(e=>e.id==='riftSentinel'&&Number.isFinite(e.guardBrokenTimer)&&e.guardBrokenTimer>=0)||EXPANSION_STORE.codex.includes('Rift Sentinel');
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
     const bonusCadenceValid=bonusRingSamples.every(sample=>sample.early*sample.speed>=9150&&sample.early*sample.speed<=9250&&sample.late*sample.speed>=6350&&sample.late*sample.speed<=6450&&sample.early>sample.late);
     const bonusTransitSamples=RING_TEST_SPEEDS.map(value=>({speed:value,reserve:bonusRingTransitTimeForSpeed(value),travel:bonusRingTransitDistance()}));
@@ -3060,8 +3088,10 @@
       ['Audio SFX showcase',audioShowcaseValid,UPGRADE.testScenario==='audio-showcase'?audioTestIndex+' cues · last '+audioTestCue:'Ready for isolated eight-cue audio preview'],
       ['FLOW meter integrity',Number.isFinite(EXPANSION.flowCharge)&&EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(EXPANSION.flowTimer),'Charge '+Math.round(EXPANSION.flowCharge)+'% · '+EXPANSION.flowTimer.toFixed(1)+'s active'],
       ['Dive Slam physics',Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&Number.isFinite(diveSlam.impactX),'Active '+diveSlam.active+' · '+diveSlam.cooldown.toFixed(1)+'s cooldown · '+EXPANSION.diveSlamCount+' impacts'],
+      ['Perfect Parry accounting',parryAccountingValid,EXPANSION.parryAttempts+' attempts · '+EXPANSION.parryCount+' success · '+EXPANSION.parryMisses+' misses'],
       ['Perfect Parry window',Number.isFinite(EXPANSION.parryTimer)&&EXPANSION.parryTimer>=0&&EXPANSION.parryTimer<=.42,'Window '+EXPANSION.parryTimer.toFixed(2)+'s · '+EXPANSION.parryCount+' successful parries'],
       ['Combat showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='combat-showcase'||(EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&UPGRADE.counterCooldown>=0),'Combat scenario '+(UPGRADE.testScenario==='combat-showcase'?'active · '+Math.round(EXPANSION.flowCharge)+'% Flow · '+EXPANSION.parryCount+' parries':'ready')],
+      ['Rift Sentinel sandbox',sentinelShowcaseValid,'145K elite · guard break window '+(EXPANSION.enemies.find(e=>e.id==='riftSentinel')?.guardBrokenTimer||0).toFixed(1)+'s'],
       ['Frame-time monitor',FRAME_TIMING.frames===0||Number.isFinite(FRAME_TIMING.averageMs),'Average '+FRAME_TIMING.averageMs.toFixed(1)+'ms · '+FRAME_TIMING.slowFrames+' frames over 20ms'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
@@ -3080,7 +3110,7 @@
       ['Rain schedule',rainSchedule.length===3&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Blood rain schedule',bloodRainSchedule.length===7&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Weather window separation',sortedWeatherBands.length===10&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===8&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
-      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
+      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
@@ -3122,7 +3152,7 @@
         '<button type="button" data-sandbox="ring-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#2a1b12;color:#ffe6ad;border:1px solid #a9823d;border-radius:3px">RING SYSTEM 2.0 TEST</button>'+
         '<button type="button" data-sandbox="pixel-glitch-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#251b36;color:#e8d9ff;border:1px solid #926bc5;border-radius:3px">PIXEL GLITCH TEST</button>'+
         '<button type="button" data-sandbox="audio-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#12302d;color:#d5fff3;border:1px solid #4caa96;border-radius:3px">AUDIO TEST</button>'+
-        '<button type="button" data-sandbox="combat-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#183028;color:#bdffe6;border:1px solid #55a987;border-radius:3px">COMBAT MECHANICS TEST</button>'+
+        '<button type="button" data-sandbox="combat-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#183028;color:#bdffe6;border:1px solid #55a987;border-radius:3px">COMBAT MECHANICS TEST</button>'+ '<button type="button" data-sandbox="sentinel-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#123238;color:#bafcff;border:1px solid #4eabb0;border-radius:3px">RIFT SENTINEL TEST</button>'+
         '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
         '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
@@ -3149,7 +3179,7 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT']],all=labels.concat(extra);
+      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
@@ -3213,7 +3243,7 @@
     EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements,archive,skin,lab};
     const mobileControls=document.getElementById('mobileControls');
     if(mobileControls&&!mobileControls.querySelector('[data-expansion-power]')){
-      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyK','CHAOS EXPLOSION'],['KeyJ','AIR COUNTER'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
+      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyK','CHAOS EXPLOSION'],['KeyJ','PERFECT PARRY'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
       const powerButton=document.createElement('button');powerButton.className='touch';powerButton.dataset.expansionPower='true';let powerIndex=0;
       powerButton.style.fontSize='9px';powerButton.style.padding='5px 2px';
       powerButton.textContent='POWER: '+powers[powerIndex][1];
@@ -3293,8 +3323,8 @@
     const y=GROUND-165-expansionRandom()*Math.max(20,GROUND-245);
     const bounty=expansionRandom()<.16;
     const e={id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
-      x:W+70,y:d.kind==='heavy'?GROUND-d.h:y,baseY:y,phase:expansionRandom()*6,
-      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false};
+      x:W+70,y:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,baseY:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,phase:expansionRandom()*6,
+      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0};
     EXPANSION.enemies.push(e);expansionRememberEntity(d.name);
   }
   function spawnExpansionHazard(){
@@ -3386,6 +3416,7 @@
   function updateExpansion(dt){
     if(state!=='running')return;
     EXPANSION.elapsed+=dt;
+    EXPANSION.combatToastTimer=Math.max(0,EXPANSION.combatToastTimer-dt);if(EXPANSION.combatToastTimer===0)EXPANSION.combatToast='';
     // The player's shadow double is a rare hallucination confined to the 20K–30K score band.
     if(score>=20000&&score<30000){
       if(EXPANSION.ghostAppearanceTimer>0){
@@ -3500,8 +3531,8 @@
     const extScale=1;
     const playerBox={x:player.x+5,y:player.y+4,w:player.w-10,h:player.h-7};
     for(let i=EXPANSION.enemies.length-1;i>=0;i--){
-      const e=EXPANSION.enemies[i];e.phase+=dt*extScale*3;
-      const pressure=(UPGRADE.bloodMoonTimer>0?1.16:score>=180000?1.12:score>=100000?1.06:1);e.x-=speed*dt*extScale*pressure*(e.kind==='dash'?1.48:e.kind==='heavy'?.88:e.kind==='orbit'?.92:1.16);
+      const e=EXPANSION.enemies[i];e.phase+=dt*extScale*3;e.guardBrokenTimer=Math.max(0,(e.guardBrokenTimer||0)-dt);
+      const pressure=(UPGRADE.bloodMoonTimer>0?1.16:score>=180000?1.12:score>=100000?1.06:1);e.x-=speed*dt*extScale*pressure*(e.kind==='dash'?1.48:e.kind==='heavy'?.88:e.kind==='sentinel'?.92:e.kind==='orbit'?.92:1.16);
       if(e.kind==='hover')e.y=e.baseY+Math.sin(e.phase)*25;
       if(e.kind==='dash'&&e.x<W+430)e.y+=(player.y+Math.sin(e.phase*2)*35-e.y)*Math.min(1,dt*extScale*.8);
       if(e.kind==='pull'&&e.x<W+390){const target=player.y-12;e.y+=(target-e.y)*Math.min(1,dt*extScale*.28);}
@@ -3513,6 +3544,7 @@
       if(e.kind==='serpent')e.y=e.baseY+Math.sin(e.phase*1.7)*58;
       if(e.kind==='blink'&&Math.sin(e.phase*1.25)>.97)e.y=player.y-10;
       if(e.kind==='heavy')e.y=GROUND-e.h+Math.sin(e.phase)*3;
+      if(e.kind==='sentinel')e.y=GROUND-e.h+Math.sin(e.phase*.65)*1.8;
       if(e.kind==='orbit'){
         const orbitPhase=e.phase*1.15;
         e.y=e.baseY+Math.sin(orbitPhase)*42;
@@ -3521,10 +3553,15 @@
       const box={x:e.x+7,y:e.y+6,w:e.w-14,h:e.h-12};
       if(landingGrace>0){if(e.x<-160)EXPANSION.enemies.splice(i,1);continue;}
       if(rectHit(playerBox,box,4)){
+        const poweredContact=player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0;
+        if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0&&poweredContact){
+          if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
+          e.guardBrokenTimer=1.75;awardScore(140);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',26);sfx('shieldBreak');continue;
+        }
         if(player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){
           awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;EXPANSION.perfectStreak++;
           if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
-          burst(e.x+e.w/2,e.y+e.h/2,e.color,25);EXPANSION.enemies.splice(i,1);continue;
+          burst(e.x+e.w/2,e.y+e.h/2,e.color,25);if(e.id==='riftSentinel')expansionAchievement('sentinel-break','SENTINEL BROKEN');EXPANSION.enemies.splice(i,1);continue;
         }
         if(shieldTimer>0){shieldTimer=0;burst(e.x+e.w/2,e.y+e.h/2,e.color,16);EXPANSION.enemies.splice(i,1);awardScore(65);sfx('shieldBreak');continue;}
         if(EXPANSION.reboundCharges>0){EXPANSION.reboundCharges=0;burst(e.x+e.w/2,e.y+e.h/2,e.color,20);EXPANSION.enemies.splice(i,1);awardScore(220);continue;}
@@ -3634,8 +3671,14 @@
       for(let j=EXPANSION.enemies.length-1;j>=0&&!consumed;j--){
         const e=EXPANSION.enemies[j];
         if(wave.x>e.x-10&&wave.x<e.x+e.w+20&&Math.abs(wave.y-(e.y+e.h/2))<e.h*.8){
-          awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
-          burst(e.x+e.w/2,e.y+e.h/2,e.color,22);EXPANSION.enemies.splice(j,1);consumed=true;
+          if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0){
+            e.guardBrokenTimer=1.75;awardScore(180);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',28);
+          }else{
+            awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;if(e.bounty)expansionAchievement('first-bounty','BOUNTY CLAIMED');
+            if(e.id==='riftSentinel')expansionAchievement('sentinel-break','SENTINEL BROKEN');
+            burst(e.x+e.w/2,e.y+e.h/2,e.color,22);EXPANSION.enemies.splice(j,1);
+          }
+          consumed=true;
         }
       }
       const b=EXPANSION.boss;
@@ -3679,7 +3722,16 @@
       ctx.shadowColor=c;ctx.shadowBlur=e.bounty?25:14;ctx.strokeStyle=c;ctx.lineWidth=e.bounty?4:2;
       ctx.beginPath();ctx.ellipse(x+e.w/2,y+e.h/2,e.w*.54,e.h*.42,Math.sin(e.phase)*.12,0,Math.PI*2);ctx.stroke();
       ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
-      if(e.id==='batSwarm'){for(let k=0;k<7;k++)drawUpgradeBat(x+13+k*11,y+24+Math.sin(e.phase*2+k)*9,.48,c,e.phase+k,.9);}
+      if(e.id==='riftSentinel'){
+        const exposed=(e.guardBrokenTimer||0)>0, cx=x+e.w/2, cy=y+e.h/2;
+        ctx.save();ctx.shadowColor=exposed?'#ff9d69':c;ctx.shadowBlur=exposed?9:20;
+        ctx.fillStyle='#0b1720';ctx.strokeStyle=exposed?'#ff9d69':c;ctx.lineWidth=4;
+        ctx.beginPath();ctx.moveTo(cx,y+7);ctx.lineTo(x+e.w-9,y+27);ctx.lineTo(x+e.w-15,y+e.h-13);ctx.lineTo(cx,y+e.h-4);ctx.lineTo(x+15,y+e.h-13);ctx.lineTo(x+9,y+27);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.fillStyle=exposed?'#ffcfad':'#d8ffff';ctx.fillRect(cx-17,y+36,9,5);ctx.fillRect(cx+8,y+36,9,5);
+        if(exposed){ctx.strokeStyle='#ffcfad';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-5,y+47);ctx.lineTo(cx+5,y+57);ctx.lineTo(cx-3,y+68);ctx.stroke();}
+        else{ctx.strokeStyle='#bafcff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,53,e.phase*.25,e.phase*.25+Math.PI*1.55);ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,43,-e.phase*.2,-e.phase*.2+Math.PI*1.25);ctx.stroke();}
+        ctx.shadowBlur=0;ctx.textAlign='center';ctx.font='bold 9px Consolas,monospace';ctx.fillStyle=exposed?'#ffb99b':'#bafcff';ctx.fillText(exposed?'EXPOSED':'GUARDED',cx,y-4);ctx.restore();
+      }else if(e.id==='batSwarm'){for(let k=0;k<7;k++)drawUpgradeBat(x+13+k*11,y+24+Math.sin(e.phase*2+k)*9,.48,c,e.phase+k,.9);}
       else if(e.id==='shadowBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.15,'#09040f',e.phase,.96);ctx.fillStyle='#a56cff';ctx.fillRect(x+26,y+19,5,3);ctx.fillRect(x+39,y+19,5,3);}
       else if(e.id==='alphaBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.8,'#190511',e.phase,1);ctx.fillStyle='#ff315d';ctx.fillRect(x+40,y+24,7,4);ctx.fillRect(x+58,y+24,7,4);}
       else if(e.id==='phantomBats'){for(let k=0;k<4;k++)drawUpgradeBat(x+18+k*19,y+26+Math.sin(e.phase+k)*14,.72,'#9adfff',e.phase+k,.38);}
@@ -3842,8 +3894,8 @@
         ctx.fillStyle='#baffeb';ctx.fillText('AUDIO LAB // '+audioTestCue.toUpperCase()+' // '+AUDIO_DIAGNOSTICS.events+' SFX EVENTS',18,82);
         ctx.fillStyle='#d8c8e8';ctx.fillText('CONTEXT '+(audio?audio.state:'NOT INITIALIZED')+' // NEXT CUE '+Math.max(0,audioTestTimer).toFixed(1)+'s',18,97);
       }else if(UPGRADE.testScenario==='combat-showcase'){
-        ctx.fillStyle='#bdffe6';ctx.fillText('SPACE JUMP → J PARRY → ↓ SLAM → Z FLOW',18,82);
-        ctx.fillStyle='#d8c8e8';ctx.fillText('FLOW '+Math.round(EXPANSION.flowCharge)+'% / BURSTS '+EXPANSION.flowActivations+' · PARRY '+EXPANSION.parryCount+' · SLAM '+EXPANSION.diveSlamCount+' · BREAK '+EXPANSION.diveSlamBreaks,18,97);
+        ctx.fillStyle='#bdffe6';ctx.fillText('SPACE JUMP → J PERFECT PARRY → ↓ DIVE SLAM → Z FLOW',18,82);
+        ctx.fillStyle='#d8c8e8';ctx.fillText('FLOW '+Math.round(EXPANSION.flowCharge)+'% / BURSTS '+EXPANSION.flowActivations+' · PARRY '+EXPANSION.parryCount+'/'+EXPANSION.parryAttempts+' · SLAM '+EXPANSION.diveSlamCount+' · BREAK '+EXPANSION.diveSlamBreaks,18,97);
       }
     }
     if(UPGRADE.synergyToastTimer>0){
@@ -3891,6 +3943,7 @@
     if(EXPANSION.flowTimer>0){ctx.textAlign='right';ctx.fillStyle='#bdffe6';ctx.font='bold 12px Consolas,monospace';ctx.fillText('FLOW BURST  '+EXPANSION.flowTimer.toFixed(1)+'s',W-20,176);}
     else if(EXPANSION.flowCharge>=100){ctx.textAlign='right';ctx.fillStyle='#ffe17a';ctx.font='bold 11px Consolas,monospace';ctx.fillText('FLOW READY [Z]',W-20,176);}
     if(EXPANSION.parryTimer>0){ctx.textAlign='right';ctx.fillStyle='#9af7ef';ctx.font='bold 11px Consolas,monospace';ctx.fillText('PARRY WINDOW  '+EXPANSION.parryTimer.toFixed(2)+'s',W-20,194);}
+    if(EXPANSION.combatToastTimer>0){ctx.save();ctx.globalAlpha=Math.min(1,EXPANSION.combatToastTimer*1.4);ctx.textAlign='center';ctx.font='bold 16px Consolas,monospace';ctx.fillStyle=EXPANSION.combatToast==='PERFECT PARRY'?'#a8fff3':EXPANSION.combatToast==='PARRY MISSED'?'#ff9eaa':'#d8faff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;ctx.fillText(EXPANSION.combatToast,W/2,122);ctx.restore();}
     if(diveSlam.active){ctx.textAlign='right';ctx.fillStyle='#ffb477';ctx.font='bold 11px Consolas,monospace';ctx.fillText('DIVE SLAM // IMPACT IMMINENT',W-20,212);}
     else if(player.jumps>0&&player.flight<=0){ctx.textAlign='right';ctx.fillStyle=diveSlam.cooldown>0?'#ad8999':'#ffb477';ctx.font='bold 10px Consolas,monospace';ctx.fillText(diveSlam.cooldown>0?'DIVE RECHARGING '+diveSlam.cooldown.toFixed(1)+'s':'↓ DIVE SLAM READY',W-20,212);}
     if(EXPANSION.boss){
