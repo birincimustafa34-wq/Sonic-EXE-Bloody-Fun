@@ -743,6 +743,14 @@
     burst(W-185,115,'#f4f0ff',46);burst(W-185,115,'#884cff',40);
   }
   function chargeFlow(amount){if(!Number.isFinite(amount)||amount<=0||EXPANSION.flowTimer>0)return 0;const before=EXPANSION.flowCharge;EXPANSION.flowCharge=Math.min(100,before+amount);return EXPANSION.flowCharge-before;}
+  function perfectParrySuccess(x,y,color){
+    EXPANSION.parryTimer=0;EXPANSION.parryCount++;chargeFlow(27);awardScore(240);
+    // A timed parry becomes an aerial recovery and sends a riposte wave forward.
+    player.vy=-300;player.jumps=Math.max(1,player.jumps);player.y=Math.max(24,player.y-8);
+    EXPANSION.echoWaves.push({x:player.x+player.w,y:player.y+player.h*.5,life:1.1});
+    burst(x,y,color||'#ffe17a',22);burst(player.x+player.w/2,player.y+player.h/2,'#9af7ef',18);
+    sfx('rush');
+  }
   function awardScore(points){const multiplier=(scoreMultiplierTimer>0?SCORE_SIGIL_MULTIPLIER:1)*(EXPANSION.overdriveTimer>0?1.5:1)*(EXPANSION.flowTimer>0?1.25:1);const earned=(Number(points)||0)*multiplier;score+=earned;return earned;}
   function awardFlightDestroy(basePoints,x,y,color){
     const earned=Math.round(basePoints*flightComboMultiplier);
@@ -767,6 +775,13 @@
       const o=obstacles[i],near=Math.abs(o.x+o.w/2-center)<=154;
       if(near&&groundTypes.has(o.type)&&o.y+o.h>=GROUND-110){
         awardScore(165);burst(o.x+o.w/2,o.y+o.h/2,'#ff985d',20);obstacles.splice(i,1);diveSlam.impactHits++;
+      }
+    }
+    for(let i=EXPANSION.enemies.length-1;i>=0;i--){
+      const e=EXPANSION.enemies[i],grounded=e.kind==='heavy'||e.kind==='stomp';
+      if(grounded&&Math.abs(e.x+e.w/2-center)<=154){
+        awardScore(e.points+150);EXPANSION.enemyKills++;EXPANSION.diveSlamBreaks++;
+        burst(e.x+e.w/2,e.y+e.h/2,e.color||'#ff985d',24);EXPANSION.enemies.splice(i,1);diveSlam.impactHits++;
       }
     }
     for(const h of EXPANSION.hazards){
@@ -833,8 +848,7 @@
       shot.y=shot.baseY+Math.sin(shot.phase)*wave;
       const box={x:shot.x-10,y:shot.y-9,w:shot.w+5,h:shot.h+5};
       if(EXPANSION.parryTimer>0&&Math.hypot(shot.x-(player.x+player.w/2),shot.y-(player.y+player.h/2))<118){
-        bossProjectiles.splice(i,1);EXPANSION.parryTimer=0;EXPANSION.parryCount++;chargeFlow(27);
-        awardScore(240);burst(shot.x,shot.y,shot.colour||'#ffe17a',22);burst(player.x+player.w/2,player.y+player.h/2,'#9af7ef',18);sfx('rush');continue;
+        bossProjectiles.splice(i,1);perfectParrySuccess(shot.x,shot.y,shot.colour||'#ffe17a');continue;
       }
       if(rectHit(playerBox,box,2)){
         if(dashTimer>0){burst(shot.x,shot.y,'#c95cff',16);awardScore(35);}
@@ -3345,8 +3359,7 @@
       const sh=EXPANSION.shots[i];sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;sh.y+=Math.sin(sh.phase)*12+(sh.vy||0)*dt*slowFactor;
       const box={x:sh.x,y:sh.y,w:sh.w,h:sh.h};
       if(EXPANSION.parryTimer>0&&Math.hypot(sh.x+sh.w/2-(player.x+player.w/2),sh.y+sh.h/2-(player.y+player.h/2))<118){
-        EXPANSION.shots.splice(i,1);EXPANSION.parryTimer=0;EXPANSION.parryCount++;chargeFlow(27);
-        awardScore(240);burst(sh.x+sh.w/2,sh.y+sh.h/2,sh.color||'#ffe17a',22);burst(player.x+player.w/2,player.y+player.h/2,'#9af7ef',18);sfx('rush');continue;
+        EXPANSION.shots.splice(i,1);perfectParrySuccess(sh.x+sh.w/2,sh.y+sh.h/2,sh.color||'#ffe17a');continue;
       }
       if(rectHit(playerBox,box,3)){
         if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||player.flight>0||dashTimer>0){
