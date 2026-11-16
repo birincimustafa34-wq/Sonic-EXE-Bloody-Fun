@@ -204,7 +204,8 @@
   const RAIN_SCORE_BANDS=[[500,5000],[10000,20000],[80000,100000]];
   const BLOOD_RAIN_SCORE_BANDS=[[110000,125000],[140000,155000],[170000,185000],[200000,215000],[230000,245000],[260000,275000],[285000,300000]];
   const STORM_SCORE_BANDS=[[310000,325000]];
-  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
+  const CINDERFALL_SCORE_BANDS=[[355000,370000]];
+  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let stormStrikeClock=0,stormStrikeX=0,stormStrikeWarning=0,stormStrikeActive=0,stormFlashTimer=0,stormStrikeCount=0,stormStrikeHits=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -691,8 +692,10 @@
     shields.push({x:W+35,y:GROUND-145-Math.random()*95,w:30,h:30,phase:Math.random()*6});
   }
   function addScoreSigil(){const high=Math.random()<.5;scoreSigils.push({x:W+48,y:high?72+Math.random()*92:GROUND-118-Math.random()*42,w:34,h:34,phase:Math.random()*6});}
+  const MAX_PARTICLES=1800;
   function burst(x,y,color,count=12) {
-    for(let i=0;i<count;i++) {
+    const emit=Math.min(Math.max(0,count|0),Math.max(0,MAX_PARTICLES-particles.length));
+    for(let i=0;i<emit;i++) {
       const a=Math.random()*Math.PI*2, v=55+Math.random()*220;
       particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
     }
@@ -957,22 +960,25 @@
     rainSchedule=RAIN_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:11+Math.random()*7,done:false}));
     bloodRainSchedule=BLOOD_RAIN_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:13+Math.random()*7,done:false}));
     stormSchedule=STORM_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:17+Math.random()*3,done:false}));
+    cinderfallSchedule=CINDERFALL_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:18+Math.random()*4,done:false}));
   }
   function startRainEvent(duration,kind='normal'){
-    rainTimer=duration||12;rainWind=kind==='storm'?112+Math.random()*48:52+Math.random()*42;rainKind=kind;
-    const blood=kind==='blood',storm=kind==='storm';if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
-    rainDrops=Array.from({length:storm?142:blood?150:128},()=>{
+    rainTimer=duration||12;rainWind=kind==='storm'?112+Math.random()*48:kind==='cinder'?54+Math.random()*38:52+Math.random()*42;rainKind=kind;
+    const blood=kind==='blood',storm=kind==='storm',cinder=kind==='cinder';if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
+    rainDrops=Array.from({length:storm?142:blood?150:cinder?104:128},()=>{
       const drop=makeRainDrop(true);
       if(blood){drop.length=13+Math.random()*10;drop.speed=420+Math.random()*220;drop.alpha=.27+Math.random()*.25;drop.width=.9+Math.random()*.7;}
       else if(storm){drop.length=16+Math.random()*13;drop.speed=520+Math.random()*230;drop.alpha=.2+Math.random()*.25;drop.width=1+Math.random()*.8;}
+      else if(cinder){drop.length=2+Math.random()*3.5;drop.speed=65+Math.random()*92;drop.drift=28+Math.random()*64;drop.alpha=.22+Math.random()*.3;drop.width=1+Math.random()*1.2;}
       return drop;
     });
   }
   function updateRainWeather(dt){
     if(rainTimer<=0){
-      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done);
+      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done),nextCinder=cinderfallSchedule.find(event=>!event.done);
       if(nextStorm&&score>=nextStorm.threshold){nextStorm.done=true;startRainEvent(nextStorm.duration,'storm');}
       else if(nextBlood&&score>=nextBlood.threshold){nextBlood.done=true;startRainEvent(nextBlood.duration,'blood');}
+      else if(nextCinder&&score>=nextCinder.threshold){nextCinder.done=true;startRainEvent(nextCinder.duration,'cinder');}
       else if(nextRain&&score>=nextRain.threshold){nextRain.done=true;startRainEvent(nextRain.duration,'normal');}
     }else rainTimer=Math.max(0,rainTimer-dt);
     const target=rainTimer>0?1:0;
@@ -981,9 +987,9 @@
     else for(const drop of rainDrops){
       drop.x+=(rainWind+drop.drift)*dt;drop.y+=drop.speed*dt;
       if(drop.y>H+24){drop.y=-drop.length-Math.random()*80;drop.x=Math.random()*(W+100)-50;
-        drop.length=rainKind==='blood'?13+Math.random()*10:rainKind==='storm'?16+Math.random()*13:11+Math.random()*10;
-        drop.speed=rainKind==='blood'?420+Math.random()*220:rainKind==='storm'?520+Math.random()*230:390+Math.random()*210;
-        drop.alpha=rainKind==='blood'?.27+Math.random()*.25:rainKind==='storm'?.2+Math.random()*.25:.18+Math.random()*.22;}
+        drop.length=rainKind==='blood'?13+Math.random()*10:rainKind==='storm'?16+Math.random()*13:rainKind==='cinder'?2+Math.random()*3.5:11+Math.random()*10;
+        drop.speed=rainKind==='blood'?420+Math.random()*220:rainKind==='storm'?520+Math.random()*230:rainKind==='cinder'?65+Math.random()*92:390+Math.random()*210;
+        drop.alpha=rainKind==='blood'?.27+Math.random()*.25:rainKind==='storm'?.2+Math.random()*.25:rainKind==='cinder'?.22+Math.random()*.3:.18+Math.random()*.22;}
       if(drop.x>W+50)drop.x=-30-Math.random()*40;
     }
     stormFlashTimer=Math.max(0,stormFlashTimer-dt);
@@ -1003,13 +1009,14 @@
   }
   function drawRainWeather(){
     if(rainBlend<=.008)return;
-    const blood=rainKind==='blood',storm=rainKind==='storm';
+    const blood=rainKind==='blood',storm=rainKind==='storm',cinder=rainKind==='cinder';
     ctx.save();
     ctx.globalAlpha=rainBlend;
     const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
     if(blood){
       skyWash.addColorStop(0,'rgba(125,16,34,.105)');skyWash.addColorStop(.55,'rgba(102,9,28,.065)');skyWash.addColorStop(1,'rgba(75,5,22,.11)');
     }else if(storm){skyWash.addColorStop(0,'rgba(20,49,72,.19)');skyWash.addColorStop(.55,'rgba(13,34,59,.12)');skyWash.addColorStop(1,'rgba(8,23,42,.2)');
+    }else if(cinder){skyWash.addColorStop(0,'rgba(72,52,41,.19)');skyWash.addColorStop(.55,'rgba(48,34,30,.12)');skyWash.addColorStop(1,'rgba(31,20,19,.18)');
     }else{
       skyWash.addColorStop(0,'rgba(116,151,177,.045)');
       skyWash.addColorStop(.55,'rgba(92,130,154,.025)');
@@ -1021,7 +1028,7 @@
       {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
       {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
     ];
-    ctx.fillStyle=blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':'rgba(115,139,160,.075)';
+    ctx.fillStyle=blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':cinder?'rgba(45,32,29,.24)':'rgba(115,139,160,.075)';
     for(const cloud of cloudGroups){
       const {x,y,w,h}=cloud;
       ctx.beginPath();
@@ -1033,6 +1040,7 @@
     ctx.lineCap='round';
     for(const drop of rainDrops){
       ctx.globalAlpha=rainBlend*drop.alpha;
+      if(cinder){ctx.fillStyle='#e39b62';ctx.fillRect(drop.x,drop.y,drop.width+1,drop.length+1);ctx.globalAlpha=rainBlend*drop.alpha*.62;ctx.fillStyle='#ffe0a8';ctx.fillRect(drop.x-1,drop.y,1,Math.max(1,drop.length*.65));continue;}
       ctx.strokeStyle=blood?'rgba(255,48,70,.94)':storm?'rgba(132,203,255,.94)':'rgba(176,207,225,.9)';
       ctx.lineWidth=drop.width;
       ctx.beginPath();
@@ -1047,6 +1055,7 @@
       ctx.lineTo(drop.x+drop.length*.1,drop.y+drop.length*.82);
       ctx.stroke();
     }
+    if(cinder){ctx.globalAlpha=.72;ctx.textAlign='center';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#f2bd83';ctx.fillText('CINDERFALL // WIND-BORNE ASH',W/2,25);}
     if(storm&&stormStrikeWarning>0){ctx.globalAlpha=.34+.28*Math.sin(elapsed*24);ctx.strokeStyle='#a9eaff';ctx.lineWidth=2;ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(stormStrikeX,12);ctx.lineTo(stormStrikeX,GROUND);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#dff8ff';ctx.font='bold 9px Consolas,monospace';ctx.textAlign='center';ctx.fillText('LIGHTNING IN '+stormStrikeWarning.toFixed(1)+'s',stormStrikeX,26);}
     if(storm&&stormStrikeActive>0){ctx.globalAlpha=.9;ctx.shadowColor='#8de6ff';ctx.shadowBlur=22;ctx.strokeStyle='#e6fbff';ctx.lineWidth=7;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(stormStrikeX,0);ctx.lineTo(stormStrikeX-9,GROUND*.28);ctx.lineTo(stormStrikeX+8,GROUND*.42);ctx.lineTo(stormStrikeX-5,GROUND*.66);ctx.lineTo(stormStrikeX+2,GROUND);ctx.stroke();ctx.strokeStyle='#62cfff';ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;ctx.textAlign='left';}
     if(stormFlashTimer>0){ctx.globalAlpha=stormFlashTimer/.18*.16;ctx.fillStyle='#a8eaff';ctx.fillRect(0,0,W,GROUND);ctx.globalAlpha=1;}
