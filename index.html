@@ -2980,7 +2980,6 @@
     EXPANSION.phaseTimer=0;EXPANSION.phaseCooldown=0;EXPANSION.timeFractureTimer=0;EXPANSION.timeFractureCooldown=0;
     EXPANSION.gravityShiftTimer=0;EXPANSION.gravityShiftClock=18+expansionRandom()*8;EXPANSION.gravityShiftScale=1;
     EXPANSION.echoDashTimer=0;EXPANSION.echoDashCooldown=0;EXPANSION.magnetTimer=0;EXPANSION.magnetCooldown=0;
-    EXPANSION.repriseTimer=0;EXPANSION.repriseCooldown=0;EXPANSION.positionHistory=[];EXPANSION.historyClock=0;
     EXPANSION.reboundCharges=0;EXPANSION.reboundCooldown=0;EXPANSION.overdriveTimer=0;EXPANSION.overdriveCooldown=0;
     EXPANSION.flowCharge=0;EXPANSION.flowTimer=0;EXPANSION.flowActivations=0;EXPANSION.parryTimer=0;EXPANSION.parryCount=0;EXPANSION.parryAttempts=0;EXPANSION.parryMisses=0;EXPANSION.attackSerial=0;EXPANSION.combatToast='';EXPANSION.combatToastTimer=0;EXPANSION.diveSlamCount=0;EXPANSION.diveSlamBreaks=0;
     EXPANSION.glitchShieldTimer=0;EXPANSION.glitchShieldCooldown=0;EXPANSION.voidStepTimer=0;EXPANSION.voidStepCooldown=0;
@@ -3090,8 +3089,8 @@
       ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Perfect Parry',UPGRADE.counterCooldown],
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
-    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
-    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false),clearance:value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance()}));
@@ -3160,10 +3159,13 @@
       ['Blood rain schedule',bloodRainSchedule.length===7&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Electrical storm schedule',stormSchedule.length===1&&stormSchedule[0].min===STORM_SCORE_BANDS[0][0]&&stormSchedule[0].max===STORM_SCORE_BANDS[0][1]&&(rainKind!=='storm'||stormTimerSafe()),rainKind==='storm'?'ELECTRICAL STORM · '+rainTimer.toFixed(1)+'s':'310K–325K late-game event'],
       ['Cinderfall schedule',cinderfallSchedule.length===1&&cinderfallSchedule[0].min===CINDERFALL_SCORE_BANDS[0][0]&&cinderfallSchedule[0].max===CINDERFALL_SCORE_BANDS[0][1],rainKind==='cinder'?'CINDERFALL · '+rainTimer.toFixed(1)+'s':'355K–370K late-game event'],
+      ['Cinderfall sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='cinderfall-showcase'||(cinderfallSchedule[0]?.done===true&&UPGRADE.lastStandTimer>0),'Non-damaging ash preview · spawn-safe isolated scene'],
       ['Lightning telegraph safety',Number.isFinite(stormStrikeWarning)&&Number.isFinite(stormStrikeActive)&&stormStrikeWarning>=0&&stormStrikeWarning<=1.02&&stormStrikeActive>=0&&stormStrikeActive<=.24&&stormStrikeHits<=stormStrikeCount,'Warning '+stormStrikeWarning.toFixed(2)+'s · active '+stormStrikeActive.toFixed(2)+'s · '+stormStrikeHits+'/'+stormStrikeCount+' hits'],
       ['Weather window separation',sortedWeatherBands.length===12&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===10&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
       ['Tempest Herald attack',EXPANSION_ENEMIES.some(d=>d.id==='tempestHerald'&&d.kind==='storm'&&d.unlock===170000),'170K aerial elite · telegraphed dive / gust attack'],
       ['Rift Lancer attack',EXPANSION_ENEMIES.some(d=>d.id==='riftLancer'&&d.kind==='lancer'&&d.unlock===195000),'195K elite · lane lock · high-speed lunge'],
+      ['Rift Lancer sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='lancer-showcase'||EXPANSION_STORE.codex.includes('Rift Lancer'),'Isolated showcase · codex-only test registration'],
+      ['Cinder Regent sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='cinder-boss-showcase'||(EXPANSION.boss?.kind==='cinderRegent'||EXPANSION.bossesDefeated>0),'Protected 56s boss practice · no normal records'],
       ['Cinder Regent registration',UPGRADE_BOSSES.some(b=>b[0]==='THE CINDER REGENT'&&b[1]===330000),'330K boss · cinder volley pattern'],
       ['Rift Lancer catalog',EXPANSION_ENEMIES.some(d=>d.id==='riftLancer'&&d.kind==='lancer'&&d.unlock===195000),'195K elite · lane lock warning · committed lunge'],
       ['Cinder Regent milestone',UPGRADE_BOSSES.some(b=>b[0]==='THE CINDER REGENT'&&b[1]===330000)&&TEST_BOSS_FLAGS.includes('boss330Done'),'330K boss · own projectile pattern and model'],
@@ -3178,7 +3180,7 @@
       ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
       ['Sandbox isolation',!UPGRADE.testMode||!!UPGRADE.testSnapshot,(UPGRADE.testMode?'ACTIVE · '+UPGRADE.testScenario:'INACTIVE')],
       ['Diagnostic report',typeof buildDiagnosticReport==='function'&&!!JSON.stringify({state,score,elapsed}),'Report serializer ready'],
-      ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'12 cooldown timers checked'],
+      ['Ability cooldown values',cooldowns.every(x=>Number.isFinite(x[1])),'13 cooldown timers checked'],
       ['Canvas renderer',!!ctx&&typeof drawPlayer==='function','Canvas '+W+'×'+H],
       ['Particle burst budget',Number.isInteger(MAX_PARTICLES)&&MAX_PARTICLES>=1000&&particles.length<=MAX_PARTICLES,particles.length+'/'+MAX_PARTICLES+' active particles'],
       ['Menu controls',!!(EXPANSION.menuButtons&&EXPANSION.menuButtons.skin&&EXPANSION.menuButtons.lab&&typeof EXPANSION.menuButtons.skin.onclick==='function'&&typeof EXPANSION.menuButtons.lab.onclick==='function'),'Skin and Test Lab buttons connected'],
@@ -3359,13 +3361,6 @@
       else player.vy*=.35;
       player.jumps=Math.min(player.jumps,1);EXPANSION.repriseTimer=.58;EXPANSION.repriseCooldown=23;
       player.invuln=Math.max(player.invuln,.58);burst(player.x+player.w/2,player.y+player.h/2,'#b8a0ff',26);burst(player.x+player.w/2,player.y+player.h/2,'#72eaff',15);sfx('flight');return true;
-    }
-    if(code==='KeyY'&&EXPANSION.repriseCooldown<=0){
-      const targetTime=EXPANSION.elapsed-.68,history=EXPANSION.positionHistory;let sample=null;
-      for(let i=history.length-1;i>=0;i--){if(history[i].time<=targetTime){sample=history[i];break;}}
-      if(sample){player.y=Math.max(24,Math.min(GROUND-player.h,sample.y));player.vy=Math.max(-520,Math.min(520,sample.vy*.55));}else player.vy*=.35;
-      player.jumps=Math.min(player.jumps,1);EXPANSION.repriseTimer=.58;EXPANSION.repriseCooldown=23;player.invuln=Math.max(player.invuln,.58);
-      burst(player.x+player.w/2,player.y+player.h/2,'#b8a0ff',26);burst(player.x+player.w/2,player.y+player.h/2,'#72eaff',15);sfx('flight');return true;
     }
     if(code==='KeyZ'&&EXPANSION.flowCharge>=100&&EXPANSION.flowTimer<=0){
       EXPANSION.flowCharge=0;EXPANSION.flowTimer=4.5;EXPANSION.flowActivations++;
