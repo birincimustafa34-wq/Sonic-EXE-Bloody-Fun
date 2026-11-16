@@ -97,3 +97,21 @@ Havadayken **J**, 0,42 saniyelik bir PERFECT PARRY penceresi açar ve 10 saniyel
 145.000 skordan itibaren Rift Sentinel ortaya çıkabilir. Önce cyan kalkanını kırmalısın; bunu güçlü bir çarpışma, Echo Wave veya DIVE SLAM ile yapabilirsin. Kalkan 1,75 saniye boyunca açık kalır ve bu sırada yapacağın ayrı bir ikinci isabet düşmanı yok eder. Tek bir kesintisiz Dash/Uçuş teması iki vuruş olarak sayılmaz; doğrudan çarpışmayla kalkanı kırdığında Sentinel 1,05 saniye önünde sendeleyerek ikinci saldırı için fırsat verir. Gövde temasıyla bitirici vuruş için kalkan kırıldıktan sonra ayrı bir yeteneği yeniden etkinleştirmelisin. Düşmanın üzerinde **GUARDED / EXPOSED** durumu görünür. Onu yenmek **SENTINEL BROKEN** başarımını açar.
 
 **COMBAT MECHANICS TEST** ve yeni **RIFT SENTINEL TEST**, bu savaş mekaniklerini records-disabled eğitim alanında denemek için TEST LAB'e eklenmiştir.
+
+
+## 9) Tempest paketi — yeni düşman, boss ve hava olayı
+
+### TEMPEST HERALD
+170.000 puandan itibaren ortaya çıkabilen Tempest Herald, havada süzülen elektrik temalı bir avcıdır. Oyuncunun bulunduğu yüksekliği hedeflemeden önce **GUST CHARGE** uyarısını ve nişan çizgisini gösterir; ardından kısa, hızlı bir dalış gerçekleştirir. Uyarı sırasında şerit değiştirmek, havalanmak veya uygun bir koruma yeteneği kullanmak saldırıdan kaçınmayı sağlar. Düşmanın kanatları ve elektrik halesi Canvas üzerinde çizilir ve saldırı durumuna göre animasyonları değişir.
+
+### THE TEMPEST ARCHON
+300.000 puanda başlayan 52 saniyelik boss karşılaşmasıdır ve yenildiğinde 18.000 puan ödül verir. Üç çekirdekli mevcut zayıflık penceresi sistemini kullanır; ancak saldırı biçimi kendine özgüdür: her aşamada daha geniş ve daha hızlı çapraz elektrik salvoları gönderir. Salvolarda değişen güvenli boşluğu takip etmek ve zayıflık penceresinde Echo Wave ile çekirdeklere karşılık vermek gerekir. Boss'un kanatları, zırhı ve dönen enerji halkası ayrı Canvas çizimleriyle canlandırılır.
+
+### ELECTRICAL STORM
+310.000–325.000 puan aralığında her koşuda bir kez rastgele seçilen eşikte etkinleşebilen elektrik fırtınasıdır. Daha kuvvetli mavi yağmur ve koyu fırtına bulutlarına ek olarak, yıldırım düşmeden önce yaklaşık **1,02 saniyelik** dikey uyarı çizgisi görünür; gerçek yıldırım darbesi yaklaşık **0,24 saniye** sürer. Yatay konumunu değiştirerek uyarı alanından çıkabilir veya geçerli koruma yeteneğini kullanabilirsin. Darbe alanı önceden gösterildiğinden saldırı rastgele ve uyarısız bir hasar değildir.
+
+### Test Lab
+**ENEMY SHOWCASE** artık Tempest Herald'ı da içerir. Yeni **ELECTRICAL STORM TEST** ve **TEMPEST ARCHON BOSS TEST** senaryoları, normal kayıtlarına dokunmadan fırtınayı ve boss karşılaşmasını ayrı ayrı denetlemeye yarar. Test Lab ayrıca yıldırım uyarı/darbe sayaçlarını, yeni hava aralığının ayrıklığını ve Tempest varlıklarının kayıtlarını kontrol eder.
+
+### Performans notu
+Parçacık güncellemesi, her karede yeni bir filtrelenmiş dizi üretmek yerine mevcut diziyi yerinde sıkıştırır. Böylece parçacıkların yaşam süresi ve çizimi korunurken kare başına geçici dizi tahsisi azaltılır; görsel parçacık sayısı veya efekt kalitesi düşürülmez.
