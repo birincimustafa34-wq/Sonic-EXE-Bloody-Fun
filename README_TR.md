@@ -136,3 +136,18 @@ Parçacık güncellemesi, her karede yeni bir filtrelenmiş dizi üretmek yerine
 Test Lab'e **RIFT LANCER TEST**, **CINDER REGENT BOSS** ve **CINDERFALL WEATHER** yalıtılmış senaryoları eklendi. Reprise geçmiş örnekleri, yeni boss/düşman kayıtları, hava aralığı ayrıklığı, parçacık bütçesi ve senaryo başlatma durumları canlı tanılama kontrollerinde izlenir.
 
 Parçacık güncellemesi diziyi yerinde sıkıştırmayı sürdürür. Ek olarak, patlama/ışık parçacığı üretimi **1.800 etkin parçacık** üst sınırıyla korunur: mevcut parçacıklar silinmez veya seyreltilmez; olağan oynanışta efektler aynı şekilde işlenir, yalnızca olağanüstü yoğunlukta yeni kozmetik parçacık eklenmesi sınırlanır. Bu sınır bir FPS garantisi değildir; cihaz bazlı performans ölçümü ayrıca yapılmalıdır.
+
+
+## 11) GitHub Pages yayın kurulumu
+
+Depo, `main` dalına gönderilen her değişiklikte kök dizindeki oyun dosyalarını GitHub Pages'e dağıtmak için `.github/workflows/deploy-pages.yml` iş akışını kullanır.
+
+İlk kurulumda Pages kaynağı henüz seçilmemişse bir defaya mahsus:
+1. GitHub deposunda **Settings → Pages** sayfasını aç.
+2. **Build and deployment → Source** bölümünde **GitHub Actions** seç.
+3. Sonraki `main` gönderimleri dağıtımı otomatik başlatır; **Actions** sekmesinde `Deploy game to GitHub Pages` akışının sonucunu görebilirsin.
+
+Canlı adres:
+`https://birincimustafa34-wq.github.io/Sonic-EXE-Bloody-Fun/`
+
+Not: Kaynak kodunun `main` dalında bulunması, Pages sitesinin ayrıca etkinleştirildiği anlamına gelmez. Site 404 verirse önce Settings → Pages kaynağını ve Actions dağıtım durumunu kontrol et. Ana oyun girişi `index.html` dosyasıdır.
