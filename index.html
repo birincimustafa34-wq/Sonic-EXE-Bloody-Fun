@@ -92,7 +92,7 @@
   const CONFIG = Object.assign({
     title:'SONIC.EXE', subtitle:'BLOODY FLIGHT EDITION',
     startMessage:'The blood moon is rising. The forest is watching.',
-    initialSpeed:360, maxSpeed:650, speedRamp:8.5, gravity:1750,
+    initialSpeed:360, maxSpeed:850, speedRamp:8.5, gravity:1750,
     jumpPower:650, doubleJumpPower:565, flightDuration:10,
     shieldDuration:9, ringComboWindow:3.35, groundHeight:92,
     usePlayerImage:false,
@@ -167,9 +167,15 @@
   let scoreMultiplierTimer=0;
   const SCORE_SIGIL_MULTIPLIER=1.5;
   const DISTANCE_SCORE_MULTIPLIER=1.12;
+  const BASE_MAX_SPEED=Math.max(Number(CONFIG.initialSpeed)||360,Number(CONFIG.maxSpeed)||850);
+  const OVERDRIVE_MAX_SPEED=Math.min(900,BASE_MAX_SPEED+38);
+  const RING_GROUP_SIZE=5,RING_GROUP_SPACING=42,RING_GROUP_SPAWN_OFFSET=35,RING_GROUP_OFFSCREEN_MARGIN=35;
+  const REGULAR_RING_RADIUS=12,BONUS_RING_RADIUS=14,RING_PICKUP_PADDING=25;
+  const RING_LOW_SCORE=15,RING_HIGH_SCORE=35,RING_BONUS_SCORE=60,RING_COMBO_CAP=5;
+  const RING_TARGET_WORLD_GAP=1280,RING_WORLD_GAP_JITTER=70,RING_MIN_INTERVAL=1.45,RING_MAX_INTERVAL=7.2;
   const RING_FORMATION_NAMES=Object.freeze(['arc','stair-step','zigzag','risk-reward','wave']);
   const HIGH_SCORE_GLITCH_TIERS=Object.freeze([{score:200000,pixels:200},{score:500000,pixels:500},{score:1000000,pixels:1000}]);
-  const RING_TEST_SPEEDS=Object.freeze([360,650,850]);
+  const RING_TEST_SPEEDS=Object.freeze([...new Set([Number(CONFIG.initialSpeed)||360,Math.min(650,BASE_MAX_SPEED),BASE_MAX_SPEED,OVERDRIVE_MAX_SPEED])]);
   let ringPatternIndex=0,lastRingFormation='none',ringTestTimer=0,ringTestTier=0;
   let glitchTestTimer=0,glitchTestTier=0;
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
@@ -299,7 +305,7 @@
   }
   let ringCount = 0;
   function reset() {
-    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=bonusRingDelayForSpeed(50000,speed); scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
     ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;glitchTestTimer=0;glitchTestTier=0;
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
@@ -526,47 +532,61 @@
     obstacles.push({type:'lateentity',variant,tier,name:d.name,role:d.role,behavior:d.behavior,color:d.color,drain:d.drain,points:d.points,w:d.w,h:d.h,x:W+95,y,baseY,phase:Math.random()*6,attackClock:.75+Math.random()*.9,shiftTimer:.8+Math.random()*1.1,warning:0,diveTime:0,targetY:baseY,speedFactor:1.18+tier*.006,passed:false});
   }
   function ringFormationOffset(pattern,index,direction=1){
-    const t=index/4;
+    const t=index/(RING_GROUP_SIZE-1);
     switch(pattern){
       case 'arc':return -Math.sin(t*Math.PI)*46;
       case 'stair-step':return direction*(index-2)*24;
       case 'zigzag':return index%2===0?-36:36;
-      case 'risk-reward':return -Math.sin(t*Math.PI)*92;
+      // Two lower-value outer rings frame a three-ring elevated reward line.
+      case 'risk-reward':return index===0||index===RING_GROUP_SIZE-1?0:-132;
       case 'wave':return Math.sin(t*Math.PI*2)*32;
       default:return -Math.sin(t*Math.PI)*46;
     }
   }
+  function ringGroupClearDistance(){
+    return W+RING_GROUP_SPAWN_OFFSET+(RING_GROUP_SIZE-1)*RING_GROUP_SPACING+RING_GROUP_OFFSCREEN_MARGIN;
+  }
   function ringGroupIntervalForSpeed(currentSpeed=speed,randomize=true){
-    const safeSpeed=Math.max(320,Number(currentSpeed)||360);
-    const base=Math.max(1.55,Math.min(3.1,1300/safeSpeed));
-    return base+(randomize?.08+Math.random()*.14:.15);
+    const safeSpeed=Math.max(180,Number(currentSpeed)||360);
+    const targetGap=RING_TARGET_WORLD_GAP+(randomize?(Math.random()-.5)*RING_WORLD_GAP_JITTER:0);
+    return Math.max(RING_MIN_INTERVAL,Math.min(RING_MAX_INTERVAL,targetGap/safeSpeed));
   }
   function bonusRingDelayForSpeed(currentScore=score,currentSpeed=speed,randomize=true){
     const lateGame=currentScore>=70000;
     const targetDistance=lateGame?6400:9200;
-    const minDelay=lateGame?5.8:10;
-    const maxDelay=lateGame?9.6:18;
-    const safeSpeed=Math.max(320,Number(currentSpeed)||360);
+    const minDelay=lateGame?5.5:8;
+    const maxDelay=lateGame?18:26;
+    const safeSpeed=Math.max(180,Number(currentSpeed)||360);
     const base=Math.max(minDelay,Math.min(maxDelay,targetDistance/safeSpeed));
     return base*(randomize?.9+Math.random()*.2:1);
   }
-  function addRingGroup(patternOverride=null,startX=W+35){
+  function bonusRingTransitDistance(){
+    const pickupTailX=player.x+player.w*.5-(BONUS_RING_RADIUS+RING_PICKUP_PADDING);
+    return Math.max(0,W+RING_GROUP_SPAWN_OFFSET-pickupTailX);
+  }
+  function bonusRingTransitTimeForSpeed(currentSpeed=speed){
+    return bonusRingTransitDistance()/Math.max(180,Number(currentSpeed)||360)+.25;
+  }
+  function bonusRingSpawnReady(activeRings){
+    return !activeRings.some(r=>r.bonus)&&!activeRings.some(r=>!r.bonus);
+  }
+  function addRingGroup(patternOverride=null,startX=W+RING_GROUP_SPAWN_OFFSET){
     const pattern=patternOverride||RING_FORMATION_NAMES[ringPatternIndex%RING_FORMATION_NAMES.length];
     if(!patternOverride)ringPatternIndex=(ringPatternIndex+1)%RING_FORMATION_NAMES.length;
     lastRingFormation=pattern;
     const high=Math.random()<.5;
     const base=pattern==='risk-reward'?GROUND-74:(high?145+Math.random()*70:GROUND-132);
     const direction=Math.random()<.5?-1:1;
-    for(let i=0;i<5;i++){
+    for(let i=0;i<RING_GROUP_SIZE;i++){
       const y=Math.max(58,Math.min(GROUND-58,base+ringFormationOffset(pattern,i,direction)));
-      rings.push({x:startX+i*42,y,r:12,high:y<GROUND-155,formation:pattern});
+      rings.push({x:startX+i*RING_GROUP_SPACING,y,r:REGULAR_RING_RADIUS,high:y<GROUND-155,formation:pattern});
     }
     return pattern;
   }
   function addBonusRing() {
     const high=Math.random()<.5;
     const y=high?72+Math.random()*95:GROUND-90-Math.random()*48;
-    rings.push({x:W+35,y,r:14,high,bonus:true});
+    rings.push({x:W+RING_GROUP_SPAWN_OFFSET,y,r:BONUS_RING_RADIUS,high,bonus:true});
   }
   function addEmerald() {
     emeralds.push({x:W+35,y:GROUND-150-Math.random()*65,w:28,h:32,phase:Math.random()*6});
@@ -1097,9 +1117,9 @@
   function update(dt) {
     elapsed+=dt; awardScore(dt*(10+speed*.012)*DISTANCE_SCORE_MULTIPLIER);updateBiomeTransition(dt);updateRainWeather(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
-    speed=Math.min(850,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
+    speed=Math.min(BASE_MAX_SPEED,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
-    if(EXPANSION.overdriveTimer>0)speed=Math.min(900,speed+38);
+    if(EXPANSION.overdriveTimer>0)speed=Math.min(OVERDRIVE_MAX_SPEED,speed+38);
     if(UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'){
       ringTestTimer-=dt;
       if(ringTestTimer<=0){ringTestTier=(ringTestTier+1)%RING_TEST_SPEEDS.length;ringTestTimer=8;ringClock=Math.min(ringClock,.25);}
@@ -1202,8 +1222,10 @@
     spawnClock-=dt; ringClock-=dt; emeraldClock-=dt; shieldClock-=dt; glitchClock-=dt;
     if(score>=50000){
       ringBonusClock-=dt;
-      if(ringBonusClock<=0&&!rings.some(r=>!r.bonus)&&ringClock>1.1){
+      if(ringBonusClock<=0&&bonusRingSpawnReady(rings)){
         addBonusRing();
+        // Reserve the bonus ring's travel lane before the next regular group enters.
+        ringClock=Math.max(ringClock,bonusRingTransitTimeForSpeed(speed));
         ringBonusClock=bonusRingDelayForSpeed(score,speed);
       }
     }
@@ -1429,15 +1451,15 @@
     const playerBox={x:player.x+7,y:player.y+5,w:player.w-13,h:player.h-8};
     rings=rings.filter(r=>{
       const dx=(player.x+player.w*.5)-r.x,dy=(player.y+player.h*.5)-r.y;
-      if(Math.hypot(dx,dy)<r.r+25){
+      if(Math.hypot(dx,dy)<r.r+RING_PICKUP_PADDING){
         if(r.bonus){
-          awardScore(60);ringCount++;sfx('ring');
+          awardScore(RING_BONUS_SCORE);ringCount++;sfx('ring');
           burst(r.x,r.y,'#ff552e',16);
           return false;
         }
         const previousCombo=combo;
-        combo=comboTimer>0?Math.min(5,combo+1):1; comboTimer=Number(CONFIG.ringComboWindow)||2.35; bestCombo=Math.max(bestCombo,combo);
-        const points=(r.high?35:15)*combo*(rushTimer>0?2:1); awardScore(points); ringCount++; sfx('ring');
+        combo=comboTimer>0?Math.min(RING_COMBO_CAP,combo+1):1; comboTimer=Number(CONFIG.ringComboWindow)||2.35; bestCombo=Math.max(bestCombo,combo);
+        const points=(r.high?RING_HIGH_SCORE:RING_LOW_SCORE)*combo*(rushTimer>0?2:1); awardScore(points); ringCount++; sfx('ring');
         burst(r.x,r.y,'#97000c',6);
         if(combo===5 && previousCombo<5){rushTimer=5;awardScore(275);expansionAchievement('combo-finisher','COMBO FINISHER');sfx('rush');burst(r.x,r.y,'#c00016',26);}
         return false;
@@ -2753,9 +2775,13 @@
         nextGroupInSeconds:Number(Math.max(0,ringClock).toFixed(2)),
         intervalAtCurrentSpeed:Number(ringGroupIntervalForSpeed(speed,false).toFixed(2)),
         estimatedWorldGap:Math.round(speed*ringGroupIntervalForSpeed(speed,false)),
-        speedSamples:RING_TEST_SPEEDS.map(value=>({speed:value,interval:Number(ringGroupIntervalForSpeed(value,false).toFixed(2)),worldGap:Math.round(value*ringGroupIntervalForSpeed(value,false))})),
-        bonusSamples:RING_TEST_SPEEDS.map(value=>({speed:value,earlyDelay:Number(bonusRingDelayForSpeed(60000,value,false).toFixed(2)),lateDelay:Number(bonusRingDelayForSpeed(80000,value,false).toFixed(2))})),
-        sandboxTest:UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'?{tier:ringTestTier+1,speed:RING_TEST_SPEEDS[ringTestTier],secondsUntilNextTier:Number(Math.max(0,ringTestTimer).toFixed(2))}:null
+        targetWorldGap:RING_TARGET_WORLD_GAP,groupClearDistance:ringGroupClearDistance(),
+        clearanceAtCurrentSpeed:Math.round(speed*ringGroupIntervalForSpeed(speed,false)-ringGroupClearDistance()),
+        bonusSpawnReady:bonusRingSpawnReady(rings),
+        bonusTransitReserveSeconds:Number(bonusRingTransitTimeForSpeed(speed).toFixed(2)),
+        speedSamples:RING_TEST_SPEEDS.map(value=>({speed:value,interval:Number(ringGroupIntervalForSpeed(value,false).toFixed(2)),worldGap:Math.round(value*ringGroupIntervalForSpeed(value,false)),clearance:Math.round(value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance())})),
+        bonusSamples:RING_TEST_SPEEDS.map(value=>({speed:value,earlyDelay:Number(bonusRingDelayForSpeed(60000,value,false).toFixed(2)),lateDelay:Number(bonusRingDelayForSpeed(80000,value,false).toFixed(2)),earlyWorldGap:Math.round(value*bonusRingDelayForSpeed(60000,value,false)),lateWorldGap:Math.round(value*bonusRingDelayForSpeed(80000,value,false))})),
+        sandboxTest:UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'?{tier:ringTestTier+1,tierCount:RING_TEST_SPEEDS.length,speed:RING_TEST_SPEEDS[ringTestTier],secondsUntilNextTier:Number(Math.max(0,ringTestTimer).toFixed(2))}:null
       },
       playerSkin:UPGRADE.selectedSkin,
       activeEntities:{
@@ -2789,15 +2815,23 @@
     const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
-    const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false)}));
+    const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false),clearance:value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance()}));
+    const ringSpacingValid=ringSpacingSamples.every(sample=>sample.worldGap>=1200&&sample.worldGap<=1350&&sample.clearance>=40);
     const glitchTierChecks=[[199999,0],[200000,200],[499999,200],[500000,500],[999999,500],[1000000,1000]];
     const glitchTierScheduleValid=glitchTierChecks.every(([sample,expected])=>highScoreGlitchPixelCount(sample)===expected)&&HIGH_SCORE_GLITCH_TIERS.length===3;
     const glitchShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='pixel-glitch-showcase'||(HIGH_SCORE_GLITCH_TIERS[glitchTestTier]?.pixels===highScoreGlitchPixelCount(score)&&glitchTestTimer>=0);
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
+    const bonusCadenceValid=bonusRingSamples.every(sample=>sample.early*sample.speed>=9150&&sample.early*sample.speed<=9250&&sample.late*sample.speed>=6350&&sample.late*sample.speed<=6450&&sample.early>sample.late);
+    const bonusTransitSamples=RING_TEST_SPEEDS.map(value=>({speed:value,reserve:bonusRingTransitTimeForSpeed(value),travel:bonusRingTransitDistance()}));
+    const bonusTransitValid=bonusTransitSamples.every(sample=>sample.reserve>0&&Math.abs(sample.reserve*sample.speed-(sample.travel+sample.speed*.25))<1);
+    const bonusSpawnGateValid=bonusRingSpawnReady([])&&!bonusRingSpawnReady([{bonus:true}])&&!bonusRingSpawnReady([{bonus:false}]);
     const ringFormationGeometryValid=RING_FORMATION_NAMES.every(pattern=>{
       const bases=pattern==='risk-reward'?[GROUND-74]:[180,GROUND-132];
-      return bases.every(base=>[-1,1].every(direction=>Array.from({length:5},(_,i)=>base+ringFormationOffset(pattern,i,direction)).every(y=>y>=58&&y<=GROUND-58)));
+      return bases.every(base=>[-1,1].every(direction=>Array.from({length:RING_GROUP_SIZE},(_,i)=>base+ringFormationOffset(pattern,i,direction)).every(y=>y>=58&&y<=GROUND-58)));
     });
+    const riskRewardYs=Array.from({length:RING_GROUP_SIZE},(_,i)=>GROUND-74+ringFormationOffset('risk-reward',i));
+    const riskRewardSplitValid=riskRewardYs.filter(y=>y<GROUND-155).length===3&&riskRewardYs.filter(y=>y>=GROUND-155).length===2;
+    const ringRewardRulesValid=RING_GROUP_SIZE===5&&RING_GROUP_SPACING===42&&REGULAR_RING_RADIUS===12&&BONUS_RING_RADIUS===14&&RING_PICKUP_PADDING===25&&RING_LOW_SCORE===15&&RING_HIGH_SCORE===35&&RING_BONUS_SCORE===60&&RING_COMBO_CAP===5&&Number(CONFIG.ringComboWindow)>0;
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
@@ -2806,8 +2840,11 @@
       ['Pixel glitch showcase sandbox',glitchShowcaseValid,UPGRADE.testScenario==='pixel-glitch-showcase'?'Tier '+(glitchTestTier+1)+' · '+highScoreGlitchPixelCount(score)+' pixels':'Ready for isolated 8-second tier preview'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
-      ['Speed-aware ring spacing',ringSpacingSamples.every(sample=>sample.worldGap>=1150&&sample.worldGap<=1500)&&ringSpacingSamples[1].worldGap>=ringSpacingSamples[0].worldGap&&ringSpacingSamples[2].worldGap>=ringSpacingSamples[1].worldGap,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px').join(' · ')],
-      ['Bonus ring cadence',bonusRingSamples.every(sample=>Number.isFinite(sample.early)&&Number.isFinite(sample.late)&&sample.early>0&&sample.late>0),'Speed-scaled early and late bonus intervals valid'],
+      ['Risk/reward value split',riskRewardSplitValid,'Two safer outer rings · three elevated 35-point rings'],
+      ['Ring pickup and scoring rules',ringRewardRulesValid,'12px regular / 14px bonus · 25px pickup padding · 15/35/60 points · x5 combo cap'],
+      ['Speed-aware ring spacing',ringSpacingValid,ringSpacingSamples.map(sample=>sample.speed+': '+Math.round(sample.worldGap)+'px · '+Math.round(sample.clearance)+'px clear').join(' · ')],
+      ['Bonus ring world-space cadence',bonusCadenceValid,bonusRingSamples.map(sample=>sample.speed+': '+Math.round(sample.early*sample.speed)+' / '+Math.round(sample.late*sample.speed)+'px').join(' · ')],
+      ['Bonus ring safe-lane reservation',bonusSpawnGateValid&&bonusTransitValid,'No overlapping bonus/regular groups · bonus lane reserved until pickup window passes'],
       ['Ring showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='ring-showcase'||(RING_TEST_SPEEDS[ringTestTier]===speed&&ringTestTimer>=0),UPGRADE.testScenario==='ring-showcase'?'Tier '+(ringTestTier+1)+' / '+RING_TEST_SPEEDS.length+' · '+Math.round(speed)+' speed':'Ready for isolated multi-speed preview'],
       ['Player physics', [player.x,player.y,player.vy].every(Number.isFinite),'X '+Math.round(player.x)+' · Y '+Math.round(player.y)],
       ['Horizontal movement bounds',player.x>=74&&player.x<=370,'Allowed X range: 74–370'],
@@ -3558,7 +3595,7 @@
       ctx.textAlign='left';ctx.font='bold 11px Consolas,monospace';ctx.fillStyle='#d9b6ff';
       ctx.fillText('TEST SANDBOX // RECORDS DISABLED',18,66);
       if(UPGRADE.testScenario==='ring-showcase'){
-        ctx.fillStyle='#ffe6ad';ctx.fillText('RING LAB // SPEED '+Math.round(speed)+' // '+lastRingFormation.toUpperCase(),18,82);
+        ctx.fillStyle='#ffe6ad';ctx.fillText('RING LAB // TIER '+(ringTestTier+1)+'/'+RING_TEST_SPEEDS.length+' // SPEED '+Math.round(speed)+' // '+lastRingFormation.toUpperCase(),18,82);
         ctx.fillStyle='#d8c8e8';ctx.fillText('NEXT SPEED TIER IN '+Math.max(0,ringTestTimer).toFixed(1)+'s',18,97);
       }else if(UPGRADE.testScenario==='pixel-glitch-showcase'){
         ctx.fillStyle='#e8d9ff';ctx.fillText('PIXEL GLITCH LAB // TIER '+(glitchTestTier+1)+' // '+highScoreGlitchPixelCount(score)+' OPAQUE PIXELS',18,82);
