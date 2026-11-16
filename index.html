@@ -3566,7 +3566,7 @@
         }
         if(e.id==='riftSentinel'&&(e.guardBrokenTimer||0)<=0&&poweredContact){
           if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
-          e.guardBrokenTimer=1.75;e.guardBreakSerial=EXPANSION.attackSerial||0;e.guardHitLock=.72;e.guardStaggerTimer=.72;e.x=player.x+player.w+12;awardScore(140);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',26);sfx('shieldBreak');continue;
+          e.guardBrokenTimer=1.75;e.guardBreakSerial=EXPANSION.attackSerial||0;e.guardHitLock=.72;e.guardStaggerTimer=1.05;e.x=player.x+player.w+12;awardScore(140);burst(e.x+e.w/2,e.y+e.h/2,'#65e9e1',26);sfx('shieldBreak');continue;
         }
         if(player.flight>0||dashTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.phaseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0){
           awardScore(e.points+(e.bounty?700:0));EXPANSION.enemyKills++;EXPANSION.perfectStreak++;
@@ -3740,7 +3740,7 @@
         ctx.fillStyle=exposed?'#ffcfad':'#d8ffff';ctx.fillRect(cx-17,y+36,9,5);ctx.fillRect(cx+8,y+36,9,5);
         if(exposed){ctx.strokeStyle='#ffcfad';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-5,y+47);ctx.lineTo(cx+5,y+57);ctx.lineTo(cx-3,y+68);ctx.stroke();}
         else{ctx.strokeStyle='#bafcff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,53,e.phase*.25,e.phase*.25+Math.PI*1.55);ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,43,-e.phase*.2,-e.phase*.2+Math.PI*1.25);ctx.stroke();}
-        ctx.shadowBlur=0;ctx.textAlign='center';ctx.font='bold 9px Consolas,monospace';ctx.fillStyle=exposed?'#ffb99b':'#bafcff';ctx.fillText(exposed?'EXPOSED':'GUARDED',cx,y-4);ctx.restore();
+        ctx.shadowBlur=0;ctx.textAlign='center';ctx.font='bold 9px Consolas,monospace';ctx.fillStyle=exposed?'#ffb99b':'#bafcff';ctx.fillText(exposed?'EXPOSED '+(e.guardBrokenTimer||0).toFixed(1)+'s':'GUARDED',cx,y-4);ctx.restore();
       }else if(e.id==='batSwarm'){for(let k=0;k<7;k++)drawUpgradeBat(x+13+k*11,y+24+Math.sin(e.phase*2+k)*9,.48,c,e.phase+k,.9);}
       else if(e.id==='shadowBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.15,'#09040f',e.phase,.96);ctx.fillStyle='#a56cff';ctx.fillRect(x+26,y+19,5,3);ctx.fillRect(x+39,y+19,5,3);}
       else if(e.id==='alphaBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.8,'#190511',e.phase,1);ctx.fillStyle='#ff315d';ctx.fillRect(x+40,y+24,7,4);ctx.fillRect(x+58,y+24,7,4);}
