@@ -262,4 +262,4 @@ Particle lifetime updates now compact the existing particle array in place rathe
 
 ### Verification scope
 
-The updated inline game script passes a JavaScript parse check and source-level invariants cover the new enemy, boss, projectile style, storm schedule, telegraph timers, and isolated test controls. The Test Lab adds four checks for the Tempest enemy/boss and electrical-storm scheduling/telegraph state. These source checks are not a substitute for a full manual browser playthrough, especially for timing and collision feel.
+The updated inline game script passes a JavaScript parse check and source-level invariants cover the new enemy, boss, projectile style, storm schedule, telegraph timers, and isolated test controls. The Test Lab adds six checks for the Tempest enemy/boss, electrical-storm scheduling/telegraph state, and both isolated scenario launch states. These source checks are not a substitute for a full manual browser playthrough, especially for timing and collision feel.
