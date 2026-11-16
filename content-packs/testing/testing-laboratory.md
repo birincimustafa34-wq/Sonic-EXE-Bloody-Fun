@@ -17,6 +17,8 @@ The lab reports:
 - Enemy ID and movement archetype validity
 - Skin unlock and persistence state
 - Ability cooldowns and synergy state
+- AudioContext state, resume attempts/success/failures, SFX fallback counts, custom-audio playback failures, and the last audio error
+- Average/peak frame interval, number of frames over 20 ms, and measured frame count
 - Canvas availability, menu event bindings, and local-storage accessibility
 
 **REFRESH / RE-RUN CHECKS** rebuilds the diagnostic snapshot. **COPY DIAGNOSTIC REPORT** creates a structured JSON snapshot with player position, current entities, hazards, boss state, biome, skin, ability cooldowns, synergies, and sandbox status. It attempts to copy the report to the clipboard; when clipboard access is unavailable, the report is shown in a selectable text area. **CLOSE PANEL** hides the panel.
@@ -131,3 +133,14 @@ The previous early full-screen pixel flood and the two dense pixel clusters have
 Each fragment uses full opacity (source-over, alpha 1) and a small, crisp, varied rectangular shape. Positions are distributed through a screen-wide grid with evenly spaced cells, preventing visual clustering. The maximum tier retains the existing intended top-level intensity; it is not increased. The separate lower-score horizontal tearing and scanline effects remain in place.
 
 The Test Lab now checks all tier boundaries (including the scores immediately before each threshold) and includes the current pixel count, next unlock tier, and tier catalog in its copyable diagnostic report. The isolated **PIXEL GLITCH TEST** sandbox cycles through all three tiers every eight seconds (200K / 200, 500K / 500, and 1M / 1,000), suppresses normal spawns for a cleaner preview, and keeps records disabled. The source-level distribution check verified exactly 200, 500, and 1,000 unique grid positions, with every screen row populated at each tier. A real browser readability pass on desktop and mobile is still required.
+
+
+## Audio reliability and frame-time diagnostics
+
+The default repository does not include the optional MP3/WAV files. Their config paths are blank by default, so the game uses its built-in Web Audio sound effects without requesting missing media files. When custom files are configured, the game reuses a small voice pool and falls back to synthesized cues if a custom asset cannot play.
+
+AudioContext resume is asynchronous and shared across simultaneous requests. Synthesized notes are only scheduled after the context reaches the running state. Gameplay input and returning from a pause both request resume. Losing browser focus or hiding the tab pauses the run and clears held controls, preventing the game from advancing while the audio context is suspended.
+
+The randomized **SOUND LOST** event intentionally interrupts background music, but no longer suppresses jump/ring/gameplay SFX. The HUD explicitly labels it as a music-only interruption.
+
+The diagnostic report now contains audio context state, resume counters, custom SFX and synth fallback counts, playback failures, and the last audio error. Frame-time telemetry includes an exponential average, peak frame interval, number of frames above 20 ms, and sample count. These values are observational; they do not alter frame pacing, graphics quality, or game physics.
