@@ -211,3 +211,13 @@ Before integrating future modules, re-check:
 - Skin unlock conditions and player rendering
 - Daily challenge, archive, and local save behavior
 - Mobile layout and menu access
+
+## Audio reliability and rendering efficiency
+
+The audio layer now waits for AudioContext resume before scheduling synthesized notes and coalesces concurrent resume requests. Custom audio uses a reusable voice pool instead of cloning a new audio element for every pickup; rejected or unavailable custom playback falls back to the built-in synthesized sound. Because the repository does not bundle the optional MP3/WAV files, default config paths are blank to avoid missing-asset network requests.
+
+The **SOUND LOST** horror event remains a music-only interruption. Gameplay confirmations such as jump and ring pickup continue to play. When the browser loses focus or hides the tab, the run pauses and clears held controls; returning and resuming requests audio wake-up again.
+
+Rendering work was reduced without changing canvas resolution, sprite output, effect thresholds, or gameplay rules: full-canvas snapshots for glitch tearing were replaced with narrow strip copies, high-score glitch pixel positions/shapes are cached per density tier instead of recalculated with multiple trigonometric calls every frame, and background trees are drawn in a single pass rather than allocating two filtered arrays per frame.
+
+Test Lab now records audio resume/SFX fallback diagnostics and frame-time averages/peaks/slow-frame counts. These metrics are observational and do not automatically lower visual quality or alter gameplay. Source-level syntax and targeted checks should be accompanied by real browser play tests on desktop and mobile.
