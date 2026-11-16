@@ -775,10 +775,8 @@
     diveSlam.cooldown=Math.max(diveSlam.cooldown,2.35);
     chargeFlow(12+diveSlam.impactHits*9);
     if(diveSlam.impactHits===0)awardScore(30);
-    diveSlamCount: {
-      EXPANSION.diveSlamCount++;
-      EXPANSION.diveSlamBreaks+=diveSlam.impactHits;
-    }
+    EXPANSION.diveSlamCount++;
+    EXPANSION.diveSlamBreaks+=diveSlam.impactHits;
     burst(center,GROUND-6,'#ff995c',18+diveSlam.impactHits*7);
     shake=Math.max(shake,diveSlam.impactHits>0?.18:.10);flash=Math.max(flash,.07);sfx('smash');
   }
@@ -1364,6 +1362,8 @@
         ringBonusClock=bonusRingDelayForSpeed(score,speed);
       }
     }
+    EXPANSION.flowTimer=Math.max(0,EXPANSION.flowTimer-dt);
+    EXPANSION.parryTimer=Math.max(0,EXPANSION.parryTimer-dt);
     scoreMultiplierTimer=Math.max(0,scoreMultiplierTimer-dt);
     if(score>=100000){scoreSigilClock-=dt;if(scoreSigilClock<=0&&scoreSigils.length===0){addScoreSigil();scoreSigilClock=24+Math.random()*12;}}
     dashTimer=Math.max(0,dashTimer-dt);
@@ -2692,7 +2692,7 @@
       obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];
       spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;
       EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
-      EXPANSION.flowCharge=100;EXPANSION.flowTimer=0;EXPANSION.parryTimer=0;EXPANSION.counterCooldown=0;
+      EXPANSION.flowCharge=100;EXPANSION.flowTimer=0;EXPANSION.parryTimer=0;UPGRADE.counterCooldown=0;
       diveSlam.active=false;diveSlam.cooldown=0;diveSlam.impactTimer=0;
       player.x=132;player.y=GROUND-player.h-126;player.vy=0;player.jumps=1;player.flight=0;player.sliding=false;
       obstacles.push({type:'block',x:player.x+98,y:GROUND-92,w:54,h:48});
@@ -3044,7 +3044,7 @@
       ['FLOW meter integrity',Number.isFinite(EXPANSION.flowCharge)&&EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(EXPANSION.flowTimer),'Charge '+Math.round(EXPANSION.flowCharge)+'% · '+EXPANSION.flowTimer.toFixed(1)+'s active'],
       ['Dive Slam physics',Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&Number.isFinite(diveSlam.impactX),'Active '+diveSlam.active+' · '+diveSlam.cooldown.toFixed(1)+'s cooldown · '+EXPANSION.diveSlamCount+' impacts'],
       ['Perfect Parry window',Number.isFinite(EXPANSION.parryTimer)&&EXPANSION.parryTimer>=0&&EXPANSION.parryTimer<=.42,'Window '+EXPANSION.parryTimer.toFixed(2)+'s · '+EXPANSION.parryCount+' successful parries'],
-      ['Combat showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='combat-showcase'||(EXPANSION.flowCharge===100&&diveSlam.cooldown===0&&UPGRADE.counterCooldown===0),'Combat scenario '+(UPGRADE.testScenario==='combat-showcase'?'armed':'ready')],
+      ['Combat showcase sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='combat-showcase'||((EXPANSION.flowCharge===100||EXPANSION.flowTimer>0)&&diveSlam.cooldown===0&&UPGRADE.counterCooldown===0),'Combat scenario '+(UPGRADE.testScenario==='combat-showcase'?'armed':'ready')],
       ['Frame-time monitor',FRAME_TIMING.frames===0||Number.isFinite(FRAME_TIMING.averageMs),'Average '+FRAME_TIMING.averageMs.toFixed(1)+'ms · '+FRAME_TIMING.slowFrames+' frames over 20ms'],
       ['FLOW meter integrity',Number.isFinite(EXPANSION.flowCharge)&&EXPANSION.flowCharge>=0&&EXPANSION.flowCharge<=100&&Number.isFinite(EXPANSION.flowTimer),'Charge '+Math.round(EXPANSION.flowCharge)+'% · '+EXPANSION.flowTimer.toFixed(1)+'s active'],
       ['Dive Slam physics',Number.isFinite(diveSlam.cooldown)&&diveSlam.cooldown>=0&&Number.isFinite(diveSlam.impactX),'Active '+diveSlam.active+' · '+diveSlam.cooldown.toFixed(1)+'s cooldown · '+EXPANSION.diveSlamCount+' impacts'],
@@ -3390,8 +3390,6 @@
     }else EXPANSION.ghostAppearanceTimer=0;
     EXPANSION.phaseTimer=Math.max(0,EXPANSION.phaseTimer-dt);
     EXPANSION.phaseCooldown=Math.max(0,EXPANSION.phaseCooldown-dt);
-    EXPANSION.flowTimer=Math.max(0,EXPANSION.flowTimer-dt);
-    EXPANSION.parryTimer=Math.max(0,EXPANSION.parryTimer-dt);
     EXPANSION.timeFractureTimer=Math.max(0,EXPANSION.timeFractureTimer-dt);
     EXPANSION.timeFractureCooldown=Math.max(0,EXPANSION.timeFractureCooldown-dt);
     EXPANSION.gravityShiftTimer=Math.max(0,EXPANSION.gravityShiftTimer-dt);
