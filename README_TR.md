@@ -39,7 +39,7 @@ ZIP içindeki PNG'ler başlangıç örnekleridir; dilediğinde aynı adla kendi 
 - `shield.wav` — kalkan toplama
 - `hit.wav` — çarpma / oyun sonu
 
-Aynı dosya adlarını kullanman yeterli. Dosya yoksa arka plan müziği sessiz kalır; oyunun yerleşik üretilen ses efektleri çalışmayı sürdürür. Müzik, tarayıcıların otomatik oynatma kuralı nedeniyle START düğmesine bastıktan sonra başlar.
+Aynı dosya adlarını kullanman yeterli. Depodaki varsayılan kurulumda bu ses dosyaları bulunmadığı için `config.js` içindeki isteğe bağlı müzik ve özel efekt yolları boş bırakılmıştır. Böylece eksik dosya istekleri yapılmaz. Özel WAV/MP3 dosyası eklemediğinde zıplama, halka, kalkan ve diğer temel efektler oyunun yerleşik Web Audio sentezleyicisiyle çalınır. Müzik, tarayıcıların otomatik oynatma kuralı nedeniyle START düğmesine bastıktan sonra başlar. Ses motoru tarayıcı tarafından askıya alınırsa oyun bir sonraki kullanıcı girdisinde yeniden uyandırmayı dener. **SOUND LOST** korku olayı artık yalnızca arka plan müziğini keser; zıplama ve halka gibi oynanış geri bildirimleri devam eder.
 
 ## 4) Sandbox Editor ve config.js
 
