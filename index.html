@@ -188,6 +188,7 @@
   const RING_TEST_SPEEDS=Object.freeze([...new Set([Number(CONFIG.initialSpeed)||360,Math.min(650,BASE_MAX_SPEED),BASE_MAX_SPEED,OVERDRIVE_MAX_SPEED])]);
   let ringPatternIndex=0,lastRingFormation='none',ringTestTimer=0,ringTestTier=0;
   let glitchTestTimer=0,glitchTestTier=0;
+  let audioTestTimer=0,audioTestIndex=0,audioTestCue='READY';
   let combo = 0, bestCombo = 0, comboTimer = 0, rushTimer = 0, shieldTimer = 0;
   // Brief landing protection starts when Bloody Flight ends.
   let landingGrace=0;
@@ -381,7 +382,7 @@
   let ringCount = 0;
   function reset() {
     elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; FRAME_TIMING.averageMs=0;FRAME_TIMING.peakMs=0;FRAME_TIMING.slowFrames=0;FRAME_TIMING.frames=0; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
-    ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;glitchTestTimer=0;glitchTestTier=0;
+    ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;glitchTestTimer=0;glitchTestTier=0;audioTestTimer=0;audioTestIndex=0;audioTestCue='READY';
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
     worldCorruption=0;worldDetails=[];worldDetailClock=5;activeBiomeTier=0;biomeIntroTimer=0;resetRainWeather();
@@ -1219,6 +1220,11 @@
     if(UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'){
       glitchTestTimer-=dt;
       if(glitchTestTimer<=0){glitchTestTier=(glitchTestTier+1)%HIGH_SCORE_GLITCH_TIERS.length;glitchTestTimer=8;score=HIGH_SCORE_GLITCH_TIERS[glitchTestTier].score;activeBiomeTier=biomeTierForScore(score);}
+    }
+    if(UPGRADE.testMode&&UPGRADE.testScenario==='audio-showcase'){
+      const audioCues=['jump','ring','emerald','shield','shieldBreak','rush','smash','hit'];
+      audioTestTimer-=dt;
+      if(audioTestTimer<=0){audioTestCue=audioCues[audioTestIndex%audioCues.length];audioTestIndex++;sfx(audioTestCue);audioTestTimer=1.15;}
     }
     // Starts subtly after 500 points and reaches full intensity around 3,500 points.
     // Easing prevents sudden jumps when ring combos award a lot of score at once.
@@ -2634,6 +2640,17 @@
       ringPatternIndex=0;lastRingFormation='arc';ringTestTier=0;ringTestTimer=8;
       speed=RING_TEST_SPEEDS[0];ringClock=.18;ringBonusClock=2;rings=[];
       player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
+    }else if(id==='audio-showcase'){
+      score=0;activeBiomeTier=0;updateBiomeTransition(.016);
+      audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];
+      EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;
+      EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;
+      EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
+      player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;player.vy=0;
     }else if(id==='pixel-glitch-showcase'){
       score=HIGH_SCORE_GLITCH_TIERS[0].score;activeBiomeTier=biomeTierForScore(score);
       glitchTestTier=0;glitchTestTimer=8;
@@ -2880,7 +2897,7 @@
         weather:{rainActive:rainTimer>0,rainType:rainBlend>.01?rainKind:'none',bloodRainActive:rainTimer>0&&rainKind==='blood',rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
           scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
           bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
-      audio:{contextState:audio?audio.state:'not-created',resumeAttempts:AUDIO_DIAGNOSTICS.resumeAttempts,resumeSuccesses:AUDIO_DIAGNOSTICS.resumeSuccesses,resumeFailures:AUDIO_DIAGNOSTICS.resumeFailures,sfxEvents:AUDIO_DIAGNOSTICS.events,synthFallbacks:AUDIO_DIAGNOSTICS.synthFallbacks,customPlays:AUDIO_DIAGNOSTICS.customPlays,customPlayFailures:AUDIO_DIAGNOSTICS.customPlayFailures,musicPlayFailures:AUDIO_DIAGNOSTICS.musicPlayFailures,configuredCustomSounds:Object.keys(customSfx),failedCustomSounds:Object.keys(customSfx).filter(name=>customSfx[name].failed),lastError:AUDIO_DIAGNOSTICS.lastError},
+      audio:{contextState:audio?audio.state:'not-created',resumeAttempts:AUDIO_DIAGNOSTICS.resumeAttempts,resumeSuccesses:AUDIO_DIAGNOSTICS.resumeSuccesses,resumeFailures:AUDIO_DIAGNOSTICS.resumeFailures,sfxEvents:AUDIO_DIAGNOSTICS.events,synthFallbacks:AUDIO_DIAGNOSTICS.synthFallbacks,customPlays:AUDIO_DIAGNOSTICS.customPlays,customPlayFailures:AUDIO_DIAGNOSTICS.customPlayFailures,musicPlayFailures:AUDIO_DIAGNOSTICS.musicPlayFailures,configuredCustomSounds:Object.keys(customSfx),failedCustomSounds:Object.keys(customSfx).filter(name=>customSfx[name].failed),lastError:AUDIO_DIAGNOSTICS.lastError,sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='audio-showcase'?{lastCue:audioTestCue,cuesPlayed:audioTestIndex,secondsUntilNextCue:Number(Math.max(0,audioTestTimer).toFixed(2))}:null},
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
       highScorePixelGlitch:{currentPixelCount:highScoreGlitchPixelCount(),tiers:HIGH_SCORE_GLITCH_TIERS.map(tier=>({unlockScore:tier.score,pixels:tier.pixels})),nextTier:HIGH_SCORE_GLITCH_TIERS.find(tier=>score<tier.score)||null,opacity:'100% source-over',distribution:'screen-wide stratified grid',sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'?{tier:glitchTestTier+1,score:HIGH_SCORE_GLITCH_TIERS[glitchTestTier].score,pixels:highScoreGlitchPixelCount(),secondsUntilNextTier:Number(Math.max(0,glitchTestTimer).toFixed(2))}:null},
       ringSystem:{
@@ -2941,6 +2958,7 @@
     const glitchLayoutResults=highScoreGlitchLayoutChecks();
     const glitchLayoutsValid=glitchLayoutResults.every(result=>result.uniqueSlots===result.count&&result.allRowsUsed&&result.minPerRow>0);
     const glitchShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='pixel-glitch-showcase'||(HIGH_SCORE_GLITCH_TIERS[glitchTestTier]?.pixels===highScoreGlitchPixelCount(score)&&glitchTestTimer>=0);
+    const audioShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='audio-showcase'||(audioTestIndex>=0&&audioTestTimer>=0&&typeof audioTestCue==='string');
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
     const bonusCadenceValid=bonusRingSamples.every(sample=>sample.early*sample.speed>=9150&&sample.early*sample.speed<=9250&&sample.late*sample.speed>=6350&&sample.late*sample.speed<=6450&&sample.early>sample.late);
     const bonusTransitSamples=RING_TEST_SPEEDS.map(value=>({speed:value,reserve:bonusRingTransitTimeForSpeed(value),travel:bonusRingTransitDistance()}));
@@ -2961,6 +2979,7 @@
       ['Pixel glitch showcase sandbox',glitchShowcaseValid,UPGRADE.testScenario==='pixel-glitch-showcase'?'Tier '+(glitchTestTier+1)+' · '+highScoreGlitchPixelCount(score)+' pixels':'Ready for isolated 8-second tier preview'],
       ['Pixel glitch cached layouts',glitchLayoutsValid,glitchLayoutResults.map(result=>result.count+': '+result.uniqueSlots+' unique positions · '+result.minPerRow+'–'+result.maxPerRow+' per row').join(' · ')],
       ['Audio resume handling',!audio||['running','suspended','interrupted','closed'].includes(audio.state),(audio?audio.state:'not initialized')+' · '+AUDIO_DIAGNOSTICS.resumeFailures+' resume failures'],
+      ['Audio SFX showcase',audioShowcaseValid,UPGRADE.testScenario==='audio-showcase'?audioTestIndex+' cues · last '+audioTestCue:'Ready for isolated eight-cue audio preview'],
       ['Frame-time monitor',FRAME_TIMING.frames===0||Number.isFinite(FRAME_TIMING.averageMs),'Average '+FRAME_TIMING.averageMs.toFixed(1)+'ms · '+FRAME_TIMING.slowFrames+' frames over 20ms'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
@@ -3020,6 +3039,7 @@
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
         '<button type="button" data-sandbox="ring-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#2a1b12;color:#ffe6ad;border:1px solid #a9823d;border-radius:3px">RING SYSTEM 2.0 TEST</button>'+
         '<button type="button" data-sandbox="pixel-glitch-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#251b36;color:#e8d9ff;border:1px solid #926bc5;border-radius:3px">PIXEL GLITCH TEST</button>'+
+        '<button type="button" data-sandbox="audio-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#12302d;color:#d5fff3;border:1px solid #4caa96;border-radius:3px">AUDIO TEST</button>'+
         '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
         '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
@@ -3725,6 +3745,9 @@
       }else if(UPGRADE.testScenario==='pixel-glitch-showcase'){
         ctx.fillStyle='#e8d9ff';ctx.fillText('PIXEL GLITCH LAB // TIER '+(glitchTestTier+1)+' // '+highScoreGlitchPixelCount(score)+' OPAQUE PIXELS',18,82);
         ctx.fillStyle='#d8c8e8';ctx.fillText('NEXT DENSITY IN '+Math.max(0,glitchTestTimer).toFixed(1)+'s',18,97);
+      }else if(UPGRADE.testScenario==='audio-showcase'){
+        ctx.fillStyle='#baffeb';ctx.fillText('AUDIO LAB // '+audioTestCue.toUpperCase()+' // '+AUDIO_DIAGNOSTICS.events+' SFX EVENTS',18,82);
+        ctx.fillStyle='#d8c8e8';ctx.fillText('CONTEXT '+(audio?audio.state:'NOT INITIALIZED')+' // NEXT CUE '+Math.max(0,audioTestTimer).toFixed(1)+'s',18,97);
       }
     }
     if(UPGRADE.synergyToastTimer>0){
