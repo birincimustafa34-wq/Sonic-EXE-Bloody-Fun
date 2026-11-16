@@ -70,7 +70,7 @@ Sonic_EXE_Bloody_Flight_Sandbox/
 
 - SPACE / ↑ / W: zıpla (havada ikinci kez bas: double jump)
 - ↓ / S: yerde kay; havadayken en az 78 px yüksekteyken DIVE SLAM başlat
-- J (havada): 0,42 saniyelik PERFECT PARRY penceresi aç
+- J (havada): 0,42 saniyelik PERFECT PARRY penceresi aç; başarılı savurma için gelen mermiyi pencere içinde yakala
 - Z: FLOW göstergesi %100 olduğunda 4,5 saniyelik FLOW BURST etkinleştir
 - X / Shift: Shadow Dash
 - ← / A ve → / D: geri / ileri hareket
@@ -91,6 +91,9 @@ Halka toplamak, near-miss yapmak, uçuşta düşman yok etmek, Shadow Dash ile e
 Oyuncu uçuşta değilken havadaysa ve yerden en az 78 piksel uzaktaysa **↓** basışı hızlı bir dalış başlatır. Yere iniş, yakındaki spike/block/rock engellerine, Collapse hazard alanlarına ve ağır yer düşmanlarına hasar veren bir şok dalgası üretir. DIVE SLAM'ın 2,35 saniyelik bekleme süresi vardır.
 
 ### PERFECT PARRY ve RIPOSTE
-Havadayken **J**, 0,42 saniyelik bir PERFECT PARRY penceresi açar. Bu pencere içindeyken 118 piksel yakınlıktaki bir boss mermisine denk gelmek mermiyi yok eder, puan ve FLOW verir. Başarılı parry oyuncuyu hafifçe yukarı sektirir ve ileri doğru bir Echo Wave RIPOSTE gönderir; bu dalga özel düşmanları ve zayıflık penceresindeki boss çekirdeklerini vurabilir.
+Havadayken **J**, 0,42 saniyelik bir PERFECT PARRY penceresi açar ve 10 saniyelik bekleme süresini başlatır. J'ye basmak tek başına puan veya düşman imhası sağlamaz; gelen boss mermisini 118 piksel yakalama yarıçapına pencere içinde sokmalısın. Başarılı parry mermiyi yok eder, +240 puan ve +27 FLOW verir, oyuncuyu hafifçe yukarı sektirir ve ileri doğru bir Echo Wave RIPOSTE gönderir. Bu dalga özel düşmanları ve zayıflık penceresindeki boss çekirdeklerini vurabilir. Pencere boşa giderse deneme kaçırılmış sayılır ve kalan bekleme süresi 5,5 saniyeye iner.
 
-**COMBAT MECHANICS TEST**, bu üç mekaniği records-disabled bir eğitim senaryosunda denemek için TEST LAB'e eklenmiştir.
+### RIFT SENTINEL
+145.000 skordan itibaren Rift Sentinel ortaya çıkabilir. Önce cyan kalkanını kırmalısın; bunu güçlü bir çarpışma, Echo Wave veya DIVE SLAM ile yapabilirsin. Kalkan 1,75 saniye boyunca açık kalır ve bu sırada yapacağın ayrı bir ikinci isabet düşmanı yok eder. Tek bir kesintisiz Dash/Uçuş teması iki vuruş olarak sayılmaz. Düşmanın üzerinde **GUARDED / EXPOSED** durumu görünür. Onu yenmek **SENTINEL BROKEN** başarımını açar.
+
+**COMBAT MECHANICS TEST** ve yeni **RIFT SENTINEL TEST**, bu savaş mekaniklerini records-disabled eğitim alanında denemek için TEST LAB'e eklenmiştir.
