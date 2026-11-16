@@ -20,7 +20,7 @@ window.BLOODY_FLIGHT_CONFIG = {
   ringComboWindow: 3.35,
   groundHeight: 92,
   music: {
-    path: "assets/audio/background.mp3",
+    path: "",
     volume: 0.45,
     loop: true
   },
@@ -42,11 +42,11 @@ window.BLOODY_FLIGHT_CONFIG = {
     rock: "assets/images/rock.png"
   },
   sounds: {
-    jump: "assets/audio/jump.wav",
-    ring: "assets/audio/ring.wav",
-    emerald: "assets/audio/emerald.wav",
-    shield: "assets/audio/shield.wav",
-    hit: "assets/audio/hit.wav",
+    jump: "",
+    ring: "",
+    emerald: "",
+    shield: "",
+    hit: "",
     // Optional custom files. Empty paths use the built-in synthesized cues.
     biomeGlass: "",
     biomeCathedral: "",
