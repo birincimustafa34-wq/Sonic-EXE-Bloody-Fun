@@ -151,13 +151,13 @@ The isolated **AUDIO TEST** scenario runs a clean, obstacle-free preview and pla
 
 ## Combat Mechanics Pack — FLOW, DIVE SLAM, PERFECT PARRY
 
-The **COMBAT MECHANICS TEST** sandbox stages a short, protected training sequence without changing persistent profile data. The HUD guides the player through **SPACE → J → ↓ → Z**. An eight-second Last Stand safety window prevents the training scene from ending immediately while the controls are being explored. The test boss timer and automatic volleys are held; a single training projectile approaches the player for the parry exercise.
+The **COMBAT MECHANICS TEST** sandbox stages a short, protected training sequence without changing persistent profile data. The HUD guides the player through **SPACE → J → ↓ → Z**. A sandbox-only Last Stand safety window remains active throughout the training run, so the player can explore the controls without the scene ending from a missed input. The test boss timer and automatic volleys are held; a single training projectile approaches the player for the parry exercise.
 
 ### FLOW meter and FLOW BURST
 FLOW is capped at 100. It is charged by regular rings (+5), bonus rings (+10), near misses (+14), flight kills (+6), Shadow Dash obstacle breaks (+8), Dive Slam results (+12 plus +9 per hit), and successful Perfect Parries (+27). Press **Z** at 100 to activate a 4.5-second burst: score awards receive a 1.25× multiplier, horizontal movement receives a 1.28× multiplier, and one Shadow Dash charge is restored (up to the normal three-charge cap). FLOW does not recharge while the burst is active.
 
 ### DIVE SLAM
-While airborne, not in Bloody Flight, and at least 78 canvas pixels above the ground, press **↓** to begin a fast vertical dive. Landing creates a short shockwave. It can destroy nearby spikes, double spikes, blocks, rocks, active Collapse hazards, and grounded heavy/stomp enemies. Successful hits award score and FLOW. The move has a 2.35-second cooldown; an empty slam still produces a small landing reward and visual impact.
+While airborne, not in Bloody Flight, and at least 78 canvas pixels above the ground, press **↓** to begin a fast vertical dive. Landing creates a short shockwave. It can destroy nearby spikes, double spikes, blocks, rocks, active Collapse hazards, and grounded heavy/stomp enemies. Successful hits award score and FLOW. The move has a 2.35-second cooldown; an empty slam still produces a small landing reward and visual impact. The landing shockwave can also crush grounded heavy/stomp enemies.
 
 ### PERFECT PARRY and RIPOSTE
 While airborne, **J** opens a 0.42-second parry window (the existing Air Counter cooldown is retained). If an incoming boss projectile enters the 118-pixel parry radius during this window, it is destroyed for +240 score and +27 FLOW. The player rebounds upward slightly and sends a forward Echo Wave riposte. The wave uses the existing Echo Wave collision path, so it can hit special enemies and boss cores while their weakness window is open.
