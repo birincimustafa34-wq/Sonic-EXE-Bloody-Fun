@@ -254,7 +254,7 @@ A new elite enemy, **Rift Sentinel**, becomes eligible at 145,000 score. Its cya
 
 ### Late-game weather extension
 
-The new **ELECTRICAL STORM** schedule uses one randomized activation threshold in the **310,000–325,000** score band. Storm rain has its own wind, streak, cloud, and sky treatment. Each lightning strike displays a **1.02-second telegraph** before a **0.24-second active strike**; collision is limited to the shown vertical lane, allowing deliberate dodging or protection. The existing rain and blood-rain windows are preserved, and the Test Lab now checks that all 11 windows remain disjoint.
+The new **ELECTRICAL STORM** schedule uses one randomized activation threshold in the **310,000–325,000** score band. Storm rain has its own wind, streak, cloud, and sky treatment. Each lightning strike displays a **1.02-second telegraph** before a **0.24-second active strike**; collision is limited to the shown vertical lane, allowing deliberate dodging or protection. The existing rain and blood-rain windows are preserved. With the later Cinderfall addition, Test Lab validates all 12 scheduled weather windows as disjoint.
 
 ### Runtime allocation refinement
 
@@ -263,3 +263,28 @@ Particle lifetime updates now compact the existing particle array in place rathe
 ### Verification scope
 
 The updated inline game script passes a JavaScript parse check and source-level invariants cover the new enemy, boss, projectile style, storm schedule, telegraph timers, and isolated test controls. The Test Lab adds six checks for the Tempest enemy/boss, electrical-storm scheduling/telegraph state, and both isolated scenario launch states. These source checks are not a substitute for a full manual browser playthrough, especially for timing and collision feel.
+
+
+## Late-game expansion — Rift Reprise, Cinder Regent and Cinderfall
+
+### Defensive movement ability
+
+**RIFT REPRISE** is bound to **Y**. A bounded rolling history samples the player's vertical position and velocity every 75 ms, retains at most 24 entries, and can restore a sample from approximately 0.68 seconds earlier. The ability provides 0.58 seconds of protection and has a 23-second cooldown. It is deliberately a vertical movement recall, not a global time rewind. The timer is included in the shared protection paths for legacy obstacles, boss projectiles, expansion enemies, hazards, and the Shadow pursuit. The HUD, keyboard hint, mobile ability cycle, cooldown panel, and diagnostic report expose its state.
+
+### New late-game enemy
+
+**Rift Lancer** joins the catalog at **195,000 score**. A dedicated Canvas silhouette makes its dark violet armour and extended lance readable. It tracks the player's current vertical lane, displays a **0.72-second LANCE LOCK** warning, then commits to a short **0.38-second** fast lunge. It uses the existing enemy capacity and collision/reward pipeline and has its own protected Test Lab showcase.
+
+### New boss encounter
+
+**THE CINDER REGENT** is introduced at **330,000 score** as a **56-second / 22,000-reward** boss. It reuses the established three-core weakness-window framework while adding a separate three-stage attack family. Its ember volleys widen from four to seven and then eight lanes; the safe gap rotates, diagonal drift alternates between volleys, and projectile speed rises with each phase. Its Canvas model, animated orbiting embers, shard projectile renderer, entrance cue, Boss Gallery record, achievement, progression flag, and isolated boss test are integrated.
+
+### Cinderfall weather
+
+**CINDERFALL** can start once per run at a randomized threshold in the **355,000–370,000** score band and lasts **18–22 seconds**. It uses 104 lightweight wind-borne ash motes, a warm smoky sky wash, and a small in-world weather label. It is ambient only: no collision, damage, lightning, or gameplay penalty is added. The weather scheduler preserves the existing events and the Test Lab validates all **12** disjoint score windows.
+
+### Allocation guard and validation scope
+
+Burst particles now respect an **1,800 active-particle ceiling**, preventing pathological growth in unusually dense effect chains while leaving existing particles and the established update/render path intact. Test Lab checks the budget and reports active/maximum counts alongside Reprise history/cooldown and the Cinderfall schedule. The new **RIFT LANCER TEST**, **CINDER REGENT BOSS**, and **CINDERFALL WEATHER** scenarios run with records disabled.
+
+The inline script passes a JavaScript parse check and source-level invariants verify registration, timer bounds, protection wiring, disjoint weather windows, and isolated scenario setup. These checks do not prove real device frame rates or replace manual timing/collision playthroughs on desktop and touch devices.
