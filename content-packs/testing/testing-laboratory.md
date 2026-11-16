@@ -183,3 +183,22 @@ The diagnostic report now includes the storm score window, current warning/activ
 ## Particle update allocation
 
 Particle updates now use stable in-place compaction: expired particles are removed without constructing a new filtered array every frame. The same particle objects, motion integration, lifetime cutoff, render order, and visual density are retained. Check frame-time telemetry during particle-heavy moments to evaluate garbage-collection stability; no claim of a fixed FPS gain is made without device-specific profiling.
+
+
+## Rift Reprise, Rift Lancer and Cinder Regent
+
+**RIFT REPRISE** records vertical position and velocity every 75 ms, retains no more than 24 samples, and targets a point 0.68 seconds in the past. The Test Lab checks finite sample values, bounded history length, cooldown range, and includes the current history/cooldown in the report. Verify that the ability only recalls the player's vertical movement and that its 0.58-second protection is recognized by legacy obstacles, boss shots, enemies, hazards, and the Shadow pursuit. Its cooldown is 23 seconds and the input is **Y**.
+
+**RIFT LANCER TEST** stages the new 195K elite in isolation. The Lancer should track the player's vertical lane, display the **LANCE LOCK** warning for 0.72 seconds, and then lunge for 0.38 seconds. Its custom silhouette and attack state are included in live diagnostics. It shares the existing maximum enemy count, reward, and collision pipeline.
+
+**CINDER REGENT BOSS** starts the new 330K, 56-second encounter directly. Its three-core vulnerability system remains active. Verify the expanding 4/7/8-lane cinder volleys, alternating diagonal drift, shifting safe gap, dedicated ember-shard drawing, and defeat achievement. The encounter is staged with normal spawns suppressed and Test Lab records disabled.
+
+## Cinderfall weather
+
+The **CINDERFALL WEATHER** scenario starts a 20-second preview of the new randomized **355K–370K** weather event. It draws 104 small amber ash motes with a warm smoky sky treatment. Cinderfall is explicitly ambient-only: it creates no collision, damage, or score changes. The Test Lab checks its score-window registration, confirms the new window remains separated from the existing schedules, and verifies the isolated preview flag.
+
+## Particle burst budget
+
+Particle updates continue to compact the existing array in place. New burst emission is additionally bounded by **1,800 active particles**. The budget never deletes particles that are already alive; at an extreme saturation point it simply prevents further cosmetic burst allocations until active particles expire. Test Lab reports active count, maximum count, and whether the live collection remains inside the budget. Profile on real target hardware before attributing a specific FPS improvement.
+
+These are source-level integration checks and isolated-preview state checks. They are not a substitute for manually validating attack timing, difficulty, readability, and touch controls in a real browser session.
