@@ -2758,7 +2758,14 @@
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
       startExpansionBoss('THE TEMPEST ARCHON',52,18000,'tempest');
     }else if(id==='storm-showcase'){
-      score=310000;activeBiomeTier=biomeTierForScore(score);startRainEvent(19,'storm');
+      score=310000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
+      UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      if(stormSchedule[0])stormSchedule[0].done=true;
+      startRainEvent(19,'storm');
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
       audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
@@ -3134,6 +3141,8 @@
       ['Weather window separation',sortedWeatherBands.length===11&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===9&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
       ['Tempest Herald attack',EXPANSION_ENEMIES.some(d=>d.id==='tempestHerald'&&d.kind==='storm'&&d.unlock===170000),'170K aerial elite · telegraphed dive / gust attack'],
       ['Tempest Archon boss',UPGRADE_BOSSES.some(b=>b[0]==='THE TEMPEST ARCHON'&&b[1]===300000)&&TEST_BOSS_FLAGS.includes('boss300Done')&&(!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||EXPANSION.boss?.kind==='tempest'),'300K boss · diagonal lightning formations · 3 core weak-point windows'],
+      ['Electrical storm sandbox isolation',!UPGRADE.testMode||UPGRADE.testScenario!=='storm-showcase'||(rainTimer>0&&rainKind==='storm'&&UPGRADE.lastStandTimer>0&&spawnClock>=999&&EXPANSION.spawnClock>=999&&stormSchedule[0]?.done===true),'Storm preview active · hazards/spawns suppressed · records disabled'],
+      ['Tempest Archon sandbox staging',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(EXPANSION.boss?.kind==='tempest'&&UPGRADE.lastStandTimer>0&&EXPANSION.spawnClock>=999&&EXPANSION.hazardClock>=999),'Boss preview active · isolated spawns · protected test runner'],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
