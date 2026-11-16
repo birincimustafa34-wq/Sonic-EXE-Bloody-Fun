@@ -233,3 +233,10 @@ The combat layer now has three connected player-driven systems:
 - **PERFECT PARRY / RIPOSTE:** **J** while airborne opens a 0.42-second timing window. Intercepting a nearby boss projectile awards score and FLOW, rebounds the player, and sends an Echo Wave forward to attack enemies or exposed boss cores.
 
 Mobile controls include J and Z buttons. The **COMBAT MECHANICS TEST** sandbox offers a records-disabled training stage with a sandbox-long safety window, held boss volleys, staged ground targets, an approaching practice projectile, and on-screen counters for Flow bursts, parries, slams, and broken targets. Test Lab reports the three mechanics' counters and live cooldown/charge state. Source syntax and initial integration checks passed; interactive timing and balance still require hands-on desktop/mobile browser play.
+
+
+## Combat Mechanics Polish — PERFECT PARRY and RIFT SENTINEL
+
+The Perfect Parry input is now a timing commitment rather than an automatic counterattack. Pressing **J** while airborne opens a 0.42-second parry window and starts a 10-second cooldown. Only an incoming projectile caught inside the 118-pixel interception radius awards the +240 score / +27 FLOW reward and launches an Echo Wave riposte. A missed window is tracked separately and reduces the remaining cooldown to 5.5 seconds; it does not award score or destroy a nearby enemy. The HUD shows activation, success, and miss feedback, while diagnostics report attempts, successes, misses, and cooldown.
+
+A new elite enemy, **Rift Sentinel**, becomes eligible at 145,000 score. Its cyan guard must be broken before a distinct follow-up hit can defeat it. A powered collision, Echo Wave riposte, or Dive Slam can expose it for 1.75 seconds. The initial powered contact has a short 0.72-second contact lock so a single overlapping dash/flight cannot count as both hits. The exposed state is visibly distinct and a successful defeat unlocks the **SENTINEL BROKEN** achievement. Test Lab includes a protected, records-disabled **RIFT SENTINEL TEST** scenario, plus checks for its guard state and Perfect Parry accounting.
