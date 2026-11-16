@@ -168,15 +168,27 @@ Detailed rules live in `content-packs/abilities/ability-synergies.md`.
 
 ## Ring System 2.0 — speed-aware formations
 
-### First pass integrated
+### Integrated refinement pass
 
-Ring groups now use a speed-aware interval to keep their estimated world-space separation within a compact target band as the run accelerates. Instead of relying on a fixed 2.2–3.55 second timer, the group interval scales with current world speed. Each group still contains five rings and retains the original horizontal spacing, collision behavior, pickup sound, combo scoring, and high/low ring values.
+The first Ring System 2.0 pass already introduced five formations and speed-aware timing. This refinement tightens the spacing model, makes the risk/reward route more legible, and fixes a bonus-ring scheduling edge case at high speed.
 
-Five rotating formation shapes are available: **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave**. Bonus rings remain distinct and retain their original 60-point pickup reward; their early- and late-game timer cadence is also adjusted using current speed so they do not drift too far apart at high velocity.
+- **Speed model:** the configurable base engine cap is now aligned at 850 (the previous config value of 650 did not match the engine's actual hard-coded 850 cap). Overdrive retains its existing +38 speed, giving a default maximum of 888. Initial speed, mid-tier speed, base cap, and Overdrive cap are all represented in the ring showcase.
+- **Regular groups:** five rings remain 42 world pixels apart. Group start intervals target approximately **1,280 world pixels** between groups, with ±35 pixels of controlled variation. The interval is derived from current world speed and bounded to 1.45–7.2 seconds; the lower bound preserves a clear gap after the final ring at the fastest default speed, while the upper bound covers temporary slow effects.
+- **Formations:** **arc**, **stair-step**, **zigzag**, **risk-reward**, and **wave** remain in the rotation. Risk/reward now has two lower, safer outer rings and a three-ring elevated center line, making the 15-point versus 35-point choice more readable.
+- **Bonus rings:** the 50K unlock, 70K early/late cadence split, separate 60-point reward, and no-combo behavior are preserved. Subsequent bonus delays target about 9,200 world pixels before 70K and 6,400 after 70K, scaled by current speed. A due bonus now waits for all regular/bonus rings to clear and reserves its travel lane before the next regular group is scheduled. This removes the previous fixed ringClock > 1.1 gate that could leave too little spawn window after a group cleared at high speed.
+- **Unchanged pickup rules:** regular ring radius 12, bonus radius 14, pickup padding 25, five-ring groups, 42-pixel horizontal spacing, 15/35 regular rewards, 60-point bonus reward, x5 combo cap, configured combo window, ring sound, and existing collision path are retained.
 
-The new **RING SYSTEM 2.0 TEST** sandbox cycles through 360, 650, and 850 speed tiers every eight seconds. It uses the existing isolated sandbox save snapshot/restore behavior, suppresses milestone boss starts, and adds ring-specific data to the copyable Test Lab report. Test Lab checks the five formation IDs, expected world-space group spacing, bonus-ring cadence, and active showcase tier.
+### Test Lab and regression coverage
 
-Browser testing is still required to review formation readability, ring/hazard interactions, mobile collection feel, and real-run bonus frequency.
+The isolated **RING SYSTEM 2.0 TEST** sandbox starts at 72,000 score and cycles through four speed tiers (default 360, 650, 850, and 888) every eight seconds. It rotates all five formations and preserves remaining world-space ring/bonus timers when changing speed, avoiding artificial burst spawns at tier boundaries. The existing sandbox snapshot/restore path continues to disable persistent records and unlock writes.
+
+Source-level Test Lab checks now cover formation geometry, the risk/reward high/low split, pickup and scoring constants, nominal and randomized world-space group gaps, clearance beyond the final ring, early/late bonus world-distance cadence, bonus spawn gating, bonus transit reservation, and the active showcase tier. The diagnostic report exposes target gap, measured clearance, speed samples, bonus-distance samples, and sandbox tier.
+
+### Remaining verification
+
+JavaScript syntax and targeted source-level regression checks are required before each integration. Browser testing is still needed to judge formation readability against hazards, actual bonus frequency, combo feel, and performance at desktop and mobile sizes. Keyboard and touch controls were not changed by this pass.
+
+
 
 ## High-score pixel glitch tiers
 
