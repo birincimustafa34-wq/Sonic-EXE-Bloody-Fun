@@ -221,3 +221,5 @@ The **SOUND LOST** horror event remains a music-only interruption. Gameplay conf
 Rendering work was reduced without changing canvas resolution, sprite output, effect thresholds, or gameplay rules: full-canvas snapshots for glitch tearing were replaced with narrow strip copies, high-score glitch pixel positions/shapes are cached per density tier instead of recalculated with multiple trigonometric calls every frame, and background trees are drawn in a single pass rather than allocating two filtered arrays per frame.
 
 Test Lab now records audio resume/SFX fallback diagnostics and frame-time averages/peaks/slow-frame counts. These metrics are observational and do not automatically lower visual quality or alter gameplay. Source-level syntax and targeted checks should be accompanied by real browser play tests on desktop and mobile.
+
+The Test Lab includes a dedicated **AUDIO TEST** sandbox that plays eight gameplay cues in sequence and displays the AudioContext state and SFX event count, allowing both audible confirmation and diagnostic inspection without waiting for random gameplay events.
