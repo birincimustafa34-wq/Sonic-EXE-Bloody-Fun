@@ -2583,7 +2583,7 @@
     }
     if(boss){
       ctx.textAlign='center';ctx.fillStyle='#ff6a8c';ctx.font='bold 15px Consolas, monospace';
-      const bossName=({bloodhunter:'BLOODHUNTER',nullSovereign:'NULL SOVEREIGN',paradoxRegent:'PARADOX REGENT',eventHorizon:'EVENT HORIZON'})[boss.kind]||'BOSS';
+      const bossName=({bloodhunter:'BLOODHUNTER',nullSovereign:'NULL SOVEREIGN',paradoxRegent:'PARADOX REGENT',eventHorizon:'EVENT HORIZON',tempest:'TEMPEST ARCHON'})[boss.kind]||'BOSS';
       ctx.fillText(bossName+' — SURVIVE '+Math.ceil(boss.timer)+'s',W/2,31);
       ctx.fillStyle='#390915';ctx.fillRect(W/2-95,40,190,6);
       ctx.fillStyle='#df2859';ctx.fillRect(W/2-95,40,190*Math.max(0,boss.timer/(boss.duration||23)),6);
@@ -2617,7 +2617,8 @@
     {id:'riftLantern',name:'Rift Lantern',unlock:38000,color:'#ffd47a',w:62,h:78,points:410,kind:'orbit'},
     {id:'mirrorWraith',name:'Mirror Wraith',unlock:72000,color:'#91eaff',w:82,h:68,points:610,kind:'blink'},
     {id:'graveMantis',name:'Grave Mantis',unlock:108000,color:'#8ee5a2',w:104,h:88,points:780,kind:'dash'},
-    {id:'riftSentinel',name:'Rift Sentinel',unlock:145000,color:'#65e9e1',w:88,h:94,points:980,kind:'sentinel'}
+    {id:'riftSentinel',name:'Rift Sentinel',unlock:145000,color:'#65e9e1',w:88,h:94,points:980,kind:'sentinel'},
+    {id:'tempestHerald',name:'Tempest Herald',unlock:170000,color:'#72dfff',w:106,h:84,points:1120,kind:'storm'}
   ];
   const EXPANSION_HAZARDS = [
     {id:'laser',name:'Laser Grid',unlock:30000},
@@ -2681,22 +2682,22 @@
   const UPGRADE_BOSSES=[
     ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE ABSOLUTE',150000],
     ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
-    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000]
+    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000],['THE TEMPEST ARCHON',300000]
   ];
 
-  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done'];
+  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done','boss300Done'];
   function setupTestingScenario(id){
     if(!UPGRADE.testMode)return;
     for(const key of TEST_BOSS_FLAGS)EXPANSION[key]=true;
     UPGRADE.testScenario=id||'free';
     if(id==='enemy-showcase'){
       score=120000;
-      const ids=['riftLantern','mirrorWraith','graveMantis'];
+      const ids=['riftLantern','mirrorWraith','graveMantis','tempestHerald'];
       ids.forEach((enemyId,i)=>{
         const d=EXPANSION_ENEMIES.find(x=>x.id===enemyId);if(!d)return;
         const baseY=GROUND-190-i*26;
         EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
-          x:W+165+i*260,y:baseY,baseY,phase:i*.9,attack:1.2,bounty:false,passed:false,hit:false});
+          x:W+165+i*260,y:baseY,baseY,phase:i*.9,attack:1.2,attackClock:1.7,attackWarning:0,attackLunge:0,attackTargetY:baseY,bounty:false,passed:false,hit:false});
         expansionRememberEntity(d.name);
       });
     }else if(id==='boss-showcase'){
@@ -2748,6 +2749,16 @@
       const d=EXPANSION_ENEMIES.find(x=>x.id==='riftSentinel');
       if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
         x:W+180,y:GROUND-d.h,baseY:GROUND-d.h,phase:0,attack:1.2,bounty:false,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0});expansionRememberEntity(d.name);}
+    }else if(id==='tempest-boss-showcase'){
+      score=300000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;
+      player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      startExpansionBoss('THE TEMPEST ARCHON',52,18000,'tempest');
+    }else if(id==='storm-showcase'){
+      score=310000;activeBiomeTier=biomeTierForScore(score);startRainEvent(19,'storm');
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
       audioTestTimer=.25;audioTestIndex=0;audioTestCue='READY';
@@ -2958,7 +2969,7 @@
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
     EXPANSION.boss85Done=false;EXPANSION.boss110Done=false;EXPANSION.boss135Done=false;EXPANSION.boss165Done=false;
     EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;EXPANSION.boss185Done=false;
-    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.collapseAnnounced=false;
+    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.collapseAnnounced=false;
     resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
   }
@@ -3003,7 +3014,9 @@
       world:{biome:BIOME_INFO[activeBiomeTier]?.name||'Unknown',biomeTier:activeBiomeTier,groundHeight:GROUND,
         weather:{rainActive:rainTimer>0,rainType:rainBlend>.01?rainKind:'none',bloodRainActive:rainTimer>0&&rainKind==='blood',rainSecondsLeft:Number(rainTimer.toFixed(2)),rainBlend:Number(rainBlend.toFixed(2)),
           scoreWindows:rainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
-          bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done}))}},
+          bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
+        stormWindows:stormSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
+        lightning:{warningSeconds:Number(stormStrikeWarning.toFixed(2)),activeSeconds:Number(stormStrikeActive.toFixed(2)),strikes:stormStrikeCount,hits:stormStrikeHits}}},
       audio:{contextState:audio?audio.state:'not-created',resumeAttempts:AUDIO_DIAGNOSTICS.resumeAttempts,resumeSuccesses:AUDIO_DIAGNOSTICS.resumeSuccesses,resumeFailures:AUDIO_DIAGNOSTICS.resumeFailures,sfxEvents:AUDIO_DIAGNOSTICS.events,synthFallbacks:AUDIO_DIAGNOSTICS.synthFallbacks,customPlays:AUDIO_DIAGNOSTICS.customPlays,customPlayFailures:AUDIO_DIAGNOSTICS.customPlayFailures,musicPlayFailures:AUDIO_DIAGNOSTICS.musicPlayFailures,configuredCustomSounds:Object.keys(customSfx),failedCustomSounds:Object.keys(customSfx).filter(name=>customSfx[name].failed),lastError:AUDIO_DIAGNOSTICS.lastError,sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='audio-showcase'?{lastCue:audioTestCue,cuesPlayed:audioTestIndex,secondsUntilNextCue:Number(Math.max(0,audioTestTimer).toFixed(2))}:null},
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
       combatMechanics:{flow:{charge:EXPANSION.flowCharge,activeSeconds:Number(EXPANSION.flowTimer.toFixed(2)),activations:EXPANSION.flowActivations},diveSlam:{active:diveSlam.active,cooldown:Number(diveSlam.cooldown.toFixed(2)),impacts:EXPANSION.diveSlamCount,objectsBroken:EXPANSION.diveSlamBreaks},perfectParry:{windowSeconds:Number(EXPANSION.parryTimer.toFixed(2)),attempts:EXPANSION.parryAttempts,successfulParries:EXPANSION.parryCount,misses:EXPANSION.parryMisses,cooldown:Number(UPGRADE.counterCooldown.toFixed(2))},riftSentinel:{active:EXPANSION.enemies.filter(e=>e.id==='riftSentinel').length,exposed:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardBrokenTimer||0)>0).length,guardLocks:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardHitLock||0)>0).length,staggered:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardStaggerTimer||0)>0).length,attackSerial:EXPANSION.attackSerial}},
@@ -3050,8 +3063,8 @@
       ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Perfect Parry',UPGRADE.counterCooldown],
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
-    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
-    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false),clearance:value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance()}));
@@ -3070,6 +3083,7 @@
     const parryAccountingValid=[EXPANSION.parryAttempts,EXPANSION.parryCount,EXPANSION.parryMisses,EXPANSION.parryTimer].every(Number.isFinite)&&EXPANSION.parryAttempts===EXPANSION.parryCount+EXPANSION.parryMisses+(EXPANSION.parryTimer>0?1:0);
     const sentinelShowcaseValid=!UPGRADE.testMode||UPGRADE.testScenario!=='sentinel-showcase'||EXPANSION.enemies.some(e=>e.id==='riftSentinel'&&Number.isFinite(e.guardBrokenTimer)&&e.guardBrokenTimer>=0)||EXPANSION_STORE.codex.includes('Rift Sentinel');
     const sentinelGuardDataValid=Number.isInteger(EXPANSION.attackSerial)&&EXPANSION.attackSerial>=0&&EXPANSION.enemies.filter(e=>e.id==='riftSentinel').every(e=>[e.guardBrokenTimer,e.guardHitLock,e.guardStaggerTimer,e.guardBreakSerial].every(Number.isFinite)&&e.guardBrokenTimer>=0&&e.guardHitLock>=0&&e.guardStaggerTimer>=0&&e.guardBreakSerial<=EXPANSION.attackSerial);
+    const stormTimerSafe=()=>Number.isFinite(stormStrikeClock)&&stormStrikeClock>=0&&stormStrikeWarning>=0&&stormStrikeActive>=0;
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
     const bonusCadenceValid=bonusRingSamples.every(sample=>sample.early*sample.speed>=9150&&sample.early*sample.speed<=9250&&sample.late*sample.speed>=6350&&sample.late*sample.speed<=6450&&sample.early>sample.late);
     const bonusTransitSamples=RING_TEST_SPEEDS.map(value=>({speed:value,reserve:bonusRingTransitTimeForSpeed(value),travel:bonusRingTransitDistance()}));
@@ -3115,8 +3129,12 @@
       ['Biome progression',activeBiomeTier===biomeTierForScore(score)&&BIOME_INFO[activeBiomeTier]!==undefined,BIOME_INFO[activeBiomeTier].name+' · Tier '+activeBiomeTier],
       ['Rain schedule',rainSchedule.length===3&&rainSchedule.every((event,i)=>event.min===RAIN_SCORE_BANDS[i][0]&&event.max===RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='normal'?'RAINING · '+rainTimer.toFixed(1)+'s':rainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Blood rain schedule',bloodRainSchedule.length===7&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
-      ['Weather window separation',sortedWeatherBands.length===10&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===8&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
-      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
+      ['Electrical storm schedule',stormSchedule.length===1&&stormSchedule[0].min===STORM_SCORE_BANDS[0][0]&&stormSchedule[0].max===STORM_SCORE_BANDS[0][1]&&(rainKind!=='storm'||stormTimerSafe()),rainKind==='storm'?'ELECTRICAL STORM · '+rainTimer.toFixed(1)+'s':'310K–325K late-game event'],
+      ['Lightning telegraph safety',Number.isFinite(stormStrikeWarning)&&Number.isFinite(stormStrikeActive)&&stormStrikeWarning>=0&&stormStrikeWarning<=1.02&&stormStrikeActive>=0&&stormStrikeActive<=.24&&stormStrikeHits<=stormStrikeCount,'Warning '+stormStrikeWarning.toFixed(2)+'s · active '+stormStrikeActive.toFixed(2)+'s · '+stormStrikeHits+'/'+stormStrikeCount+' hits'],
+      ['Weather window separation',sortedWeatherBands.length===11&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===9&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
+      ['Tempest Herald attack',EXPANSION_ENEMIES.some(d=>d.id==='tempestHerald'&&d.kind==='storm'&&d.unlock===170000),'170K aerial elite · telegraphed dive / gust attack'],
+      ['Tempest Archon boss',UPGRADE_BOSSES.some(b=>b[0]==='THE TEMPEST ARCHON'&&b[1]===300000)&&TEST_BOSS_FLAGS.includes('boss300Done')&&(!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||EXPANSION.boss?.kind==='tempest'),'300K boss · diagonal lightning formations · 3 core weak-point windows'],
+      ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
@@ -3161,6 +3179,8 @@
         '<button type="button" data-sandbox="combat-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#183028;color:#bdffe6;border:1px solid #55a987;border-radius:3px">COMBAT MECHANICS TEST</button>'+ '<button type="button" data-sandbox="sentinel-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#123238;color:#bafcff;border:1px solid #4eabb0;border-radius:3px">RIFT SENTINEL TEST</button>'+
         '<button type="button" data-sandbox="weather-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">RAIN TEST</button>'+
         '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
+      '<button type="button" data-sandbox="storm-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#102b3d;color:#d7f5ff;border:1px solid #4e9cc1;border-radius:3px">ELECTRICAL STORM TEST</button>'+
+      '<button type="button" data-sandbox="tempest-boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#102b3d;color:#d7f5ff;border:1px solid #4e9cc1;border-radius:3px">TEMPEST ARCHON BOSS TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
         '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
         '<button type="button" data-sandbox="biome-eclipse" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ECLIPSE ABYSS</button>'+
@@ -3330,7 +3350,7 @@
     const bounty=expansionRandom()<.16;
     const e={id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
       x:W+70,y:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,baseY:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,phase:expansionRandom()*6,
-      attack:1+expansionRandom()*1.5,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0};
+      attack:1+expansionRandom()*1.5,attackClock:2.2+expansionRandom()*1.4,attackWarning:0,attackLunge:0,attackTargetY:y,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0};
     EXPANSION.enemies.push(e);expansionRememberEntity(d.name);
   }
   function spawnExpansionHazard(){
@@ -3359,7 +3379,7 @@
     bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
     bossIntroTimer=3.0;shake=.28;flash=.24;
     burst(W-165,120,'#d477ff',30);
-    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'?'bossArchitect':null;
+    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'?'bossArchitect':kind==='tempest'?'shield':null;
     sfx(bossCue||'smash');
   }
   function updateExpansionBoss(dt,playerBox){
@@ -3376,16 +3396,18 @@
       b.volley++;
       const center=Math.max(75,Math.min(GROUND-90,playerBox.y+playerBox.h*.5));
       const standardOffsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
-      const offsets=b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
-      const gapIndex=(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
+      const tempestOffsets=stage===1?[-105,-35,35,105]:stage===2?[-154,-77,0,77,154]:[-180,-120,-60,0,60,120,180];
+      const offsets=b.kind==='tempest'?tempestOffsets:b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
+      const gapIndex=b.kind==='tempest'?(b.volley*2+1)%offsets.length:(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
       offsets.forEach((off,i)=>{
         if(i===gapIndex)return;
         const y=Math.max(28,Math.min(GROUND-22,center+off));
-        const shotColor=b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
-        const shotSpeed=b.kind==='redJudge'?(stage===3?590:stage===2?510:430):b.kind==='paleArchitect'?(stage===3?560:stage===2?475:405):(stage===3?520:stage===2?440:365);
-        EXPANSION.shots.push({x:W-115,y:y,w:23,h:20,speed:shotSpeed,vy:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor});
+        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
+        const shotSpeed=b.kind==='tempest'?(stage===3?600:stage===2?520:455):b.kind==='redJudge'?(stage===3?590:stage===2?510:430):b.kind==='paleArchitect'?(stage===3?560:stage===2?475:405):(stage===3?520:stage===2?440:365);
+        const tempestDrift=b.kind==='tempest'?(stage===1?(i%2===0?72:-72):stage===2?(i%2===0?142:-142):(i-offsets.length/2)*58):0;
+        EXPANSION.shots.push({x:W-115,y:y,w:b.kind==='tempest'?27:23,h:b.kind==='tempest'?23:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:b.kind==='tempest'?'tempestArc':'standard'});
       });
-      b.attackClock=b.kind==='staticChoir'?(stage===3?1.02:stage===2?1.28:1.62):b.kind==='redJudge'?(stage===3?.98:stage===2?1.26:1.62):(stage===3?1.18:stage===2?1.55:2.0);
+      b.attackClock=b.kind==='tempest'?(stage===3?.82:stage===2?1.12:1.58):b.kind==='staticChoir'?(stage===3?1.02:stage===2?1.28:1.62):b.kind==='redJudge'?(stage===3?.98:stage===2?1.26:1.62):(stage===3?1.18:stage===2?1.55:2.0);
       burst(W-115,b.timer%2?70:130,b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':b.kind==='final'?'#f2edff':'#bd6bff',9);
     }
     if(b.kind==='last'||b.kind==='final'){
@@ -3517,7 +3539,8 @@
       {at:200000,key:'boss200Done',name:'THE LAST SIGNAL',duration:38,reward:7600,kind:'last'},
       {at:215000,key:'boss215Done',name:'THE RED JUDGE',duration:40,reward:8200,kind:'redJudge'},
       {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'},
-      {at:275000,key:'boss275Done',name:'THE PALE ARCHITECT',duration:48,reward:15000,kind:'paleArchitect'}
+      {at:275000,key:'boss275Done',name:'THE PALE ARCHITECT',duration:48,reward:15000,kind:'paleArchitect'},
+      {at:300000,key:'boss300Done',name:'THE TEMPEST ARCHON',duration:52,reward:18000,kind:'tempest'}
     ];
     for(const b of nextBosses){
       if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
@@ -3553,9 +3576,15 @@
       if(e.kind==='heavy')e.y=GROUND-e.h+Math.sin(e.phase)*3;
       if(e.kind==='sentinel')e.y=GROUND-e.h+Math.sin(e.phase*.65)*1.8;
       if(e.kind==='orbit'){
-        const orbitPhase=e.phase*1.15;
-        e.y=e.baseY+Math.sin(orbitPhase)*42;
+        const orbitPhase=e.phase*1.15;e.y=e.baseY+Math.sin(orbitPhase)*42;
         if(e.x<W+330)e.y+=(player.y+Math.cos(orbitPhase*1.7)*38-e.y)*Math.min(1,dt*extScale*.2);
+      }
+      if(e.kind==='storm'){
+        e.attackWarning=Math.max(0,(e.attackWarning||0)-dt);e.attackLunge=Math.max(0,(e.attackLunge||0)-dt);
+        if(e.attackWarning>0&&e.attackWarning<=dt){e.attackWarning=0;e.attackLunge=.56;burst(e.x+e.w/2,e.y+e.h/2,'#79dfff',16);}
+        if(e.attackWarning>0)e.y+=(e.baseY+Math.sin(e.phase*1.6)*24-e.y)*Math.min(1,dt*.9);
+        else if(e.attackLunge>0){e.y+=(e.attackTargetY-e.y)*Math.min(1,dt*5.8);e.x-=speed*dt*.62;}
+        else{e.y=e.baseY+Math.sin(e.phase*1.4)*28;e.attackClock-=dt;if(e.attackClock<=0&&e.x<W+400){e.attackTargetY=Math.max(34,Math.min(GROUND-e.h-8,player.y+player.h*.5-e.h*.48));e.attackWarning=.78;e.attackClock=3.25+expansionRandom()*.55;}}
       }
       const box={x:e.x+7,y:e.y+6,w:e.w-14,h:e.h-12};
       if(landingGrace>0){if(e.x<-160)EXPANSION.enemies.splice(i,1);continue;}
@@ -3744,6 +3773,17 @@
         if(exposed){ctx.strokeStyle='#ffcfad';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-5,y+47);ctx.lineTo(cx+5,y+57);ctx.lineTo(cx-3,y+68);ctx.stroke();}
         else{ctx.strokeStyle='#bafcff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,53,e.phase*.25,e.phase*.25+Math.PI*1.55);ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,43,-e.phase*.2,-e.phase*.2+Math.PI*1.25);ctx.stroke();}
         ctx.shadowBlur=0;ctx.textAlign='center';ctx.font='bold 9px Consolas,monospace';ctx.fillStyle=exposed?'#ffb99b':'#bafcff';ctx.fillText(exposed?'EXPOSED '+(e.guardBrokenTimer||0).toFixed(1)+'s':'GUARDED',cx,y-4);ctx.restore();
+      }else if(e.id==='tempestHerald'){
+        const wing=Math.sin(e.phase*3.4)*17,charge=e.attackWarning>0?1:.35+.2*Math.sin(e.phase*5);ctx.save();ctx.lineJoin='round';ctx.lineCap='round';ctx.globalCompositeOperation='lighter';ctx.shadowColor='#72dfff';ctx.shadowBlur=18*charge;
+        ctx.strokeStyle='rgba(114,223,255,.6)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x+e.w/2,y+e.h/2,e.w*.58,e.h*.43,Math.sin(e.phase)*.08,0,Math.PI*2);ctx.stroke();ctx.globalCompositeOperation='source-over';ctx.fillStyle='#071524';ctx.strokeStyle='#287caa';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x+43,y+39);ctx.lineTo(x+18,y+5-wing);ctx.lineTo(x+22,y+33);ctx.lineTo(x+3,y+18-wing*.45);ctx.lineTo(x+18,y+66);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x+62,y+37);ctx.lineTo(x+88,y+3+wing);ctx.lineTo(x+83,y+33);ctx.lineTo(x+103,y+16+wing*.45);ctx.lineTo(x+88,y+66);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.fillStyle='#102c40';ctx.beginPath();ctx.moveTo(x+37,y+25);ctx.lineTo(x+76,y+23);ctx.lineTo(x+91,y+43);ctx.lineTo(x+72,y+65);ctx.lineTo(x+40,y+60);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.strokeStyle='#72dfff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x+54,y+27);ctx.lineTo(x+48,y+13);ctx.lineTo(x+56,y+6);ctx.moveTo(x+72,y+27);ctx.lineTo(x+79,y+12);ctx.lineTo(x+73,y+5);ctx.stroke();
+        ctx.fillStyle='#e8fbff';ctx.shadowColor='#72dfff';ctx.shadowBlur=10;ctx.fillRect(x+53,y+37,7,4);ctx.fillRect(x+71,y+37,7,4);ctx.fillStyle='#45caff';ctx.fillRect(x+56,y+38,3,2);ctx.fillRect(x+74,y+38,3,2);
+        ctx.strokeStyle='#54c9f6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+49,y+58);ctx.lineTo(x+38,y+76);ctx.lineTo(x+28,y+79);ctx.moveTo(x+78,y+58);ctx.lineTo(x+88,y+74);ctx.lineTo(x+98,y+77);ctx.stroke();
+        if(e.attackWarning>0){ctx.globalAlpha=.75+.2*Math.sin(e.phase*20);ctx.setLineDash([5,5]);ctx.strokeStyle='#dffaff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+e.w/2,y+e.h/2);ctx.lineTo(player.x+player.w/2,e.attackTargetY+e.h/2);ctx.stroke();ctx.setLineDash([]);ctx.font='bold 9px Consolas,monospace';ctx.fillStyle='#dffaff';ctx.fillText('GUST CHARGE',x+8,y-7);}
+        else if(e.attackLunge>0){ctx.strokeStyle='#b8f4ff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+20,y+13);ctx.lineTo(x+2,y+39);ctx.lineTo(x+17,y+64);ctx.moveTo(x+86,y+12);ctx.lineTo(x+104,y+39);ctx.lineTo(x+88,y+64);ctx.stroke();}ctx.restore();
       }else if(e.id==='batSwarm'){for(let k=0;k<7;k++)drawUpgradeBat(x+13+k*11,y+24+Math.sin(e.phase*2+k)*9,.48,c,e.phase+k,.9);}
       else if(e.id==='shadowBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.15,'#09040f',e.phase,.96);ctx.fillStyle='#a56cff';ctx.fillRect(x+26,y+19,5,3);ctx.fillRect(x+39,y+19,5,3);}
       else if(e.id==='alphaBat'){drawUpgradeBat(x+e.w/2,y+e.h/2,1.8,'#190511',e.phase,1);ctx.fillStyle='#ff315d';ctx.fillRect(x+40,y+24,7,4);ctx.fillRect(x+58,y+24,7,4);}
@@ -3859,7 +3899,7 @@
     }
     if(EXPANSION.boss){
       const b=EXPANSION.boss;ctx.save();ctx.globalCompositeOperation='lighter';
-      const c=b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#d477ff';
+      const c=b.kind==='tempest'?'#79ddff':b.kind==='final'?'#f4f0ff':b.kind==='last'?'#55eaff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#d477ff';
       ctx.shadowColor=c;ctx.shadowBlur=24;ctx.strokeStyle=c;ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(b.x,b.y,55+Math.sin(b.phase)*5,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle='#090611';ctx.beginPath();ctx.moveTo(b.x,b.y-50);ctx.lineTo(b.x+47,b.y-15);ctx.lineTo(b.x+39,b.y+39);ctx.lineTo(b.x,b.y+54);ctx.lineTo(b.x-39,b.y+39);ctx.lineTo(b.x-47,b.y-15);ctx.closePath();ctx.fill();ctx.stroke();
@@ -3878,13 +3918,20 @@
         ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.phase*.22);ctx.strokeStyle='#f0edf7';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-74);ctx.lineTo(67,0);ctx.lineTo(0,74);ctx.lineTo(-67,0);ctx.closePath();ctx.stroke();
         ctx.rotate(-b.phase*.48);ctx.strokeStyle='#b8b2ca';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-55);ctx.lineTo(48,38);ctx.lineTo(-48,38);ctx.closePath();ctx.stroke();ctx.fillStyle='#08070d';ctx.fillRect(-25,-19,50,38);ctx.strokeStyle='#e7e3f2';ctx.strokeRect(-25,-19,50,38);
         ctx.fillStyle='#ffecb8';ctx.fillRect(-13,-5,8,7);ctx.fillRect(5,-5,8,7);ctx.restore();
+      }else if(b.kind==='tempest'){
+        ctx.save();ctx.translate(b.x,b.y);const wing=Math.sin(b.phase*2.2)*12;ctx.strokeStyle='#79ddff';ctx.lineWidth=5;ctx.shadowColor='#79ddff';ctx.shadowBlur=20;
+        ctx.beginPath();ctx.moveTo(-28,-2);ctx.lineTo(-88,-40-wing);ctx.lineTo(-68,3);ctx.lineTo(-104,35+wing*.4);ctx.lineTo(-42,29);ctx.moveTo(28,-2);ctx.lineTo(88,-40+wing);ctx.lineTo(68,3);ctx.lineTo(104,35-wing*.4);ctx.lineTo(42,29);ctx.stroke();
+        ctx.strokeStyle='#d8f7ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,72,50,b.phase*.18,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#061522';ctx.strokeStyle='#79ddff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-53);ctx.lineTo(44,-20);ctx.lineTo(36,34);ctx.lineTo(0,51);ctx.lineTo(-36,34);ctx.lineTo(-44,-20);ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.strokeStyle='#b7efff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-22,-34);ctx.lineTo(-39,-63);ctx.lineTo(-10,-49);ctx.moveTo(22,-34);ctx.lineTo(39,-63);ctx.lineTo(10,-49);ctx.stroke();ctx.fillStyle='#e8fbff';ctx.shadowBlur=12;ctx.fillRect(-19,-9,12,6);ctx.fillRect(7,-9,12,6);
+        for(let k=0;k<4;k++){const a=b.phase*1.5+k*Math.PI/2;ctx.strokeStyle=k%2?'#d477ff':'#79ddff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(Math.cos(a)*55,Math.sin(a)*38);ctx.lineTo(Math.cos(a)*72,Math.sin(a)*50);ctx.stroke();}ctx.restore();
       }
       for(let k=0;k<3;k++){const a=b.phase*.5+k*Math.PI*2/3;const cx=b.x+Math.cos(a)*31,cy=b.y+Math.sin(a)*31;ctx.fillStyle=k<b.cores?'#ffe17a':'#4b3b55';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();}
       ctx.globalAlpha=.45+.4*Math.sin(b.phase*4);ctx.fillStyle=c;ctx.fillRect(b.x-23,b.y-4,46,7);
       if(b.weaknessTimer>0){ctx.globalAlpha=.9;ctx.strokeStyle='#fff2a3';ctx.lineWidth=4;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(b.x,b.y,68,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
       ctx.globalAlpha=1;ctx.restore();
     }
-    for(const sh of EXPANSION.shots){ctx.save();ctx.fillStyle=sh.color;ctx.shadowColor=sh.color;ctx.shadowBlur=13;pixelRect(sh.x,sh.y,sh.w,sh.h,sh.color);ctx.restore();}
+    for(const sh of EXPANSION.shots){ctx.save();ctx.fillStyle=sh.color;ctx.shadowColor=sh.color;ctx.shadowBlur=sh.kind==='tempestArc'?18:13;
+      if(sh.kind==='tempestArc'){ctx.strokeStyle='#e6faff';ctx.lineWidth=3;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(sh.x,sh.y+sh.h*.72);ctx.lineTo(sh.x+sh.w*.32,sh.y+sh.h*.28);ctx.lineTo(sh.x+sh.w*.48,sh.y+sh.h*.68);ctx.lineTo(sh.x+sh.w,sh.y+sh.h*.12);ctx.stroke();pixelRect(sh.x+sh.w*.42,sh.y+sh.h*.38,5,5,sh.color);}else pixelRect(sh.x,sh.y,sh.w,sh.h,sh.color);ctx.restore();}
     for(const w of EXPANSION.echoWaves){ctx.save();ctx.globalAlpha=Math.max(0,w.life);ctx.strokeStyle='#d477ff';ctx.lineWidth=4;ctx.shadowColor='#d477ff';ctx.shadowBlur=16;ctx.beginPath();ctx.arc(w.x,w.y,18+(1.1-w.life)*35,0,Math.PI*2);ctx.stroke();ctx.restore();}
   }
   function drawExpansionOverlay(){
