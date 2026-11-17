@@ -154,6 +154,8 @@ Not: Kaynak kodunun `main` dalında bulunması, Pages sitesinin ayrıca etkinle�
 
 ## 12) Savaş okunabilirliği ve kare döngüsü iyileştirmeleri
 
+Magnet Core da pickup koleksiyonlarını ayrı ayrı dolaşır; her kare `concat()` ile geçici birleşik dizi oluşturmaz.
+
 Kasım 2026 güncellemesinde **THE CINDER REGENT** saldırılarına 0,72 saniyelik ön uyarı eklendi. Oyun, mermi dizisinin boş bıraktığı koridoru ve mermilerin ortak dikey hareketini hesaba katarak oyuncuya tahmini güvenli hattı gösterir. Cinder mermilerinin dikey konumu artık her kare bir önceki konuma salınım eklemek yerine sabit başlangıç yüksekliği, yaş ve sınırlı salınımdan hesaplanır; böylece zamanla biriken rastgele kayma önlenir.
 
 **Rift Lancer** artık 0,82 saniyelik daha okunabilir bir `LANCE LOCK` uyarısı verir. Hücum süresi 0,44 saniyeye ayarlandı ve ek yatay itiş azaltıldı. Hücumu dikey yönde kıl payı ıskalayan oyuncu, aynı hücum başına yalnızca bir kez **145 puan + 10 FLOW** değerinde `RIFT EVADE` ödülü kazanabilir.
