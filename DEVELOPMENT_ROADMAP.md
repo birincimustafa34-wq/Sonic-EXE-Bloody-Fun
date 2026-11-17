@@ -288,3 +288,11 @@ The updated inline game script passes a JavaScript parse check and source-level 
 Burst particles now respect an **1,800 active-particle ceiling**, preventing pathological growth in unusually dense effect chains while leaving existing particles and the established update/render path intact. Test Lab checks the budget and reports active/maximum counts alongside Reprise history/cooldown and the Cinderfall schedule. The new **RIFT LANCER TEST**, **CINDER REGENT BOSS**, and **CINDERFALL WEATHER** scenarios run with records disabled.
 
 The inline script passes a JavaScript parse check and source-level invariants verify registration, timer bounds, protection wiring, disjoint weather windows, and isolated scenario setup. These checks do not prove real device frame rates or replace manual timing/collision playthroughs on desktop and touch devices.
+
+### Combat readability and allocation-efficiency pass — November 2026
+
+- **Cinder Regent:** added a 0.72-second pre-volley warning and a projected safe-rift corridor. The forecast follows the volley’s shared vertical drift and reaches the projectile/player collision edge rather than stopping at the player’s far side.
+- **Projectile stability:** expansion shots now derive vertical position from a fixed spawn baseline, elapsed simulated age, velocity, and bounded oscillation. This removes cumulative per-frame sine displacement while retaining the existing projectile artwork and movement feel.
+- **Rift Lancer:** increased the `LANCE LOCK` warning to 0.82 seconds, set the committed lunge to 0.44 seconds, and reduced the additional lunge impulse. A narrowly avoided lunge awards 145 score and 10 FLOW once per attack.
+- **Frame-loop allocations:** pickup, ember, trail, and world-detail collections use in-place compaction instead of allocating replacement arrays each frame. No particle cap or visual-quality reduction was introduced by this pass.
+- **Validation:** Test Lab now checks projectile finiteness/anchoring, safe-lane bounds, and Lancer timing. The inline script passed a syntax parse and source-level assertions. Manual desktop/mobile browser playtests and device profiling remain required before claiming measured FPS gains.
