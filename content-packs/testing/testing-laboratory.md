@@ -202,3 +202,15 @@ The **CINDERFALL WEATHER** scenario starts a 20-second preview of the new random
 Particle updates continue to compact the existing array in place. New burst emission is additionally bounded by **1,800 active particles**. The budget never deletes particles that are already alive; at an extreme saturation point it simply prevents further cosmetic burst allocations until active particles expire. Test Lab reports active count, maximum count, and whether the live collection remains inside the budget. Profile on real target hardware before attributing a specific FPS improvement.
 
 These are source-level integration checks and isolated-preview state checks. They are not a substitute for manually validating attack timing, difficulty, readability, and touch controls in a real browser session.
+
+## Cinder Regent trajectory and safe-lane checks
+
+The Cinder Regent now pauses before each cinder volley for a **0.72-second telegraph**. The warning displays a projected safe corridor from the firing side toward the projectile/player collision edge. Its prediction accounts for the volley’s shared vertical drift and bounded oscillation. The report exposes the active warning, projected lane Y, live cinder-arc count, and trajectory validity.
+
+The projectile-stability check confirms that each live cinder arc has finite position, baseline, age, vertical velocity, and phase data. The warning check validates the gap index and keeps the safe-lane target within the playable vertical bounds.
+
+## Rift Lancer evasion and timing checks
+
+`LANCE LOCK` now lasts **0.82 seconds** before the **0.44-second** lunge. The extra lunge impulse is reduced so the base enemy travel speed does not stack with an excessively strong second burst. A player who narrowly clears the Lancer vertically while its hitbox crosses the player receives **145 score and 10 FLOW**, at most once per lunge. Test Lab checks finite warning/lunge timers and the per-attack reward guard.
+
+These additions are source-level and live-state invariants. They do not replace manual boss/entity playthroughs, mobile control checks, or frame-time profiling on target hardware.
