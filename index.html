@@ -3482,7 +3482,7 @@
           const shotSpeed=stage===3?625:stage===2?535:455;
           const cinderDrift=(nextVolley%2===0?1:-1)*(stage===1?18:stage===2?25:32);
           const safeLaneStartY=Math.max(30,Math.min(GROUND-30,center+offsets[gapIndex]));
-          const travelTime=Math.max(0,(W-115-(player.x+player.w))/shotSpeed);
+          const travelTime=Math.max(0,(W-115-(player.x-25))/shotSpeed);
           const safeLaneY=Math.max(30,Math.min(GROUND-30,safeLaneStartY+cinderDrift*travelTime+Math.sin(travelTime*6)*5));
           b.warningPlan={volley:nextVolley,stage,center,offsets,gapIndex,shotSpeed,cinderDrift,safeLaneStartY,safeLaneY};
           b.warning=.72;
@@ -4149,7 +4149,7 @@
       ctx.textAlign='center';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';
       ctx.fillText('CORES '+activeBoss.cores+'/3  '+(activeBoss.weaknessTimer>0?'WEAKNESS WINDOW — PRESS C':'WEAKNESS IN '+Math.max(0,activeBoss.weaknessClock).toFixed(1)+'s'),W/2,58);
       if(activeBoss.kind==='cinderRegent'&&activeBoss.warning>0&&activeBoss.warningPlan){
-        const plan=activeBoss.warningPlan,x0=W-115,x1=player.x+player.w+12;
+        const plan=activeBoss.warningPlan,x0=W-115,x1=Math.max(60,player.x-25);
         ctx.save();ctx.globalCompositeOperation='lighter';
         ctx.fillStyle='rgba(255,166,104,.10)';ctx.beginPath();
         ctx.moveTo(x0,plan.safeLaneStartY-27);ctx.lineTo(x1,plan.safeLaneY-27);ctx.lineTo(x1,plan.safeLaneY+27);ctx.lineTo(x0,plan.safeLaneStartY+27);ctx.closePath();ctx.fill();
