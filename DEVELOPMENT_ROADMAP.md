@@ -291,6 +291,8 @@ The inline script passes a JavaScript parse check and source-level invariants ve
 
 ### Combat readability and allocation-efficiency pass — November 2026
 
+Magnet Core iterates the four live pickup collections independently, avoiding a per-frame `concat()` intermediate array.
+
 - **Cinder Regent:** added a 0.72-second pre-volley warning and a projected safe-rift corridor. The forecast follows the volley’s shared vertical drift and reaches the projectile/player collision edge rather than stopping at the player’s far side.
 - **Projectile stability:** expansion shots now derive vertical position from a fixed spawn baseline, elapsed simulated age, velocity, and bounded oscillation. This removes cumulative per-frame sine displacement while retaining the existing projectile artwork and movement feel.
 - **Rift Lancer:** increased the `LANCE LOCK` warning to 0.82 seconds, set the committed lunge to 0.44 seconds, and reduced the additional lunge impulse. A narrowly avoided lunge awards 145 score and 10 FLOW once per attack.
