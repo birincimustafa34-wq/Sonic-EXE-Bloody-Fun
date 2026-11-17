@@ -205,6 +205,8 @@ These are source-level integration checks and isolated-preview state checks. The
 
 ## Cinder Regent trajectory and safe-lane checks
 
+Magnet Core also processes each pickup collection in place rather than building a temporary `concat()` array on every frame.
+
 The Cinder Regent now pauses before each cinder volley for a **0.72-second telegraph**. The warning displays a projected safe corridor from the firing side toward the projectile/player collision edge. Its prediction accounts for the volley’s shared vertical drift and bounded oscillation. The report exposes the active warning, projected lane Y, live cinder-arc count, and trajectory validity.
 
 The projectile-stability check confirms that each live cinder arc has finite position, baseline, age, vertical velocity, and phase data. The warning check validates the gap index and keeps the safe-lane target within the playable vertical bounds.
