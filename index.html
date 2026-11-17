@@ -3422,7 +3422,7 @@
     const bounty=expansionRandom()<.16;
     const e={id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,
       x:W+70,y:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,baseY:(d.kind==='heavy'||d.kind==='sentinel')?GROUND-d.h:y,phase:expansionRandom()*6,
-      attack:1+expansionRandom()*1.5,attackClock:2.2+expansionRandom()*1.4,attackWarning:0,attackLunge:0,attackTargetY:y,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0};
+      attack:1+expansionRandom()*1.5,attackClock:2.2+expansionRandom()*1.4,attackWarning:0,attackLunge:0,attackTargetY:y,lungeNearMissAwarded:false,bounty:bounty,passed:false,hit:false,guardBrokenTimer:0,guardHitLock:0,guardStaggerTimer:0,guardBreakSerial:0};
     EXPANSION.enemies.push(e);expansionRememberEntity(d.name);
   }
   function spawnExpansionHazard(){
@@ -3500,8 +3500,8 @@
       offsets.forEach((off,i)=>{
         if(i===gapIndex)return;
         const y=Math.max(28,Math.min(GROUND-22,center+off));
-        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
-        const shotSpeed=b.kind==='tempest'?(volleyStage===3?600:volleyStage===2?520:455):b.kind==='redJudge'?(volleyStage===3?590:volleyStage===2?510:430):b.kind==='paleArchitect'?(volleyStage===3?560:volleyStage===2?475:405):(volleyStage===3?520:volleyStage===2?440:365);
+        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='cinderRegent'?'#ffb16f':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
+        const shotSpeed=b.kind==='cinderRegent'?volleyPlan.shotSpeed:b.kind==='tempest'?(volleyStage===3?600:volleyStage===2?520:455):b.kind==='redJudge'?(volleyStage===3?590:volleyStage===2?510:430):b.kind==='paleArchitect'?(volleyStage===3?560:volleyStage===2?475:405):(volleyStage===3?520:volleyStage===2?440:365);
         const tempestDrift=b.kind==='tempest'?(volleyStage===1?(i%2===0?72:-72):volleyStage===2?(i%2===0?142:-142):(i-offsets.length/2)*58):0;
         const cinderDrift=b.kind==='cinderRegent'?volleyPlan.cinderDrift:0;
         EXPANSION.shots.push({x:W-115,y:y,baseY:y,age:0,w:b.kind==='tempest'?27:b.kind==='cinderRegent'?26:23,h:b.kind==='tempest'?23:b.kind==='cinderRegent'?22:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='cinderRegent'?cinderDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:b.kind==='tempest'?'tempestArc':b.kind==='cinderRegent'?'cinderArc':'standard'});
