@@ -1267,6 +1267,13 @@
       ctx.restore();
     }
   }
+  function attractMagnetCollection(items,targetX,targetY,strength){
+    for(let i=0;i<items.length;i++){
+      const item=items[i],itemX=item.x+(item.r||item.w/2),itemY=item.y+(item.h||0)/2;
+      const dx=targetX-itemX,dy=targetY-itemY;
+      if(Math.hypot(dx,dy)<250){item.x+=dx*strength;item.y+=dy*strength;}
+    }
+  }
   function update(dt) {
     elapsed+=dt; awardScore(dt*(10+speed*.012)*DISTANCE_SCORE_MULTIPLIER);updateBiomeTransition(dt);updateRainWeather(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
@@ -1452,10 +1459,11 @@
     if(horizontalAxis)player.x=Math.max(74,Math.min(370,player.x+horizontalAxis*(285+Math.min(85,score/1800))*(EXPANSION.flowTimer>0?1.28:1)*dt));
     if(elapsed>0.1 && Math.floor(elapsed*12)%2===0){trail.push({x:player.x-3,y:player.y+8,h:player.h,life:.25,flight:player.flight>0});}
     if(EXPANSION.magnetTimer>0){
-      for(const item of rings.concat(emeralds,shields,scoreSigils)){
-        const tx=player.x+player.w/2,ty=player.y+player.h/2,ix=item.x+(item.r||item.w/2),iy=item.y+(item.h||0)/2;
-        const dx=tx-ix,dy=ty-iy;if(Math.hypot(dx,dy)<250){item.x+=dx*Math.min(1,dt*3.2);item.y+=dy*Math.min(1,dt*3.2);}
-      }
+      const tx=player.x+player.w/2,ty=player.y+player.h/2,strength=Math.min(1,dt*3.2);
+      attractMagnetCollection(rings,tx,ty,strength);
+      attractMagnetCollection(emeralds,tx,ty,strength);
+      attractMagnetCollection(shields,tx,ty,strength);
+      attractMagnetCollection(scoreSigils,tx,ty,strength);
     }
     let keptTrail=0;
     for(let i=0;i<trail.length;i++){const t=trail[i];t.x-=speed*.75*dt;t.life-=dt;if(t.life>0)trail[keptTrail++]=t;}
