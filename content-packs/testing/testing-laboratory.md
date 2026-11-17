@@ -213,6 +213,6 @@ The projectile-stability check confirms that each live cinder arc has finite pos
 
 ## Rift Lancer evasion and timing checks
 
-`LANCE LOCK` now lasts **0.82 seconds** before the **0.44-second** lunge. The extra lunge impulse is reduced so the base enemy travel speed does not stack with an excessively strong second burst. A player who narrowly clears the Lancer vertically while its hitbox crosses the player receives **145 score and 10 FLOW**, at most once per lunge. Test Lab checks finite warning/lunge timers and the per-attack reward guard.
+`LANCE LOCK` now lasts **0.82 seconds** before the **0.44-second** lunge. The extra lunge impulse is reduced so the base enemy travel speed does not stack with an excessively strong second burst. A player who narrowly clears the Lancer vertically while its hitbox crosses the player receives **145 score and 10 FLOW**, at most once per lunge. The on-screen combat toast reads `RIFT EVADE`. Test Lab checks finite warning/lunge timers and the per-attack reward guard.
 
 These additions are source-level and live-state invariants. They do not replace manual boss/entity playthroughs, mobile control checks, or frame-time profiling on target hardware.
