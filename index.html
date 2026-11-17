@@ -3473,8 +3473,17 @@
     b.stage=stage;
     let volleyPlan=null;
     if(b.kind==='cinderRegent'&&b.warningPlan){
+      const plan=b.warningPlan;
+      const travelTime=Math.max(0,(W-115-(player.x-25))/plan.shotSpeed);
+      const startOffset=plan.offsets[plan.gapIndex];
+      const endOffset=startOffset+plan.cinderDrift*travelTime+Math.sin(travelTime*6)*5;
+      const minCenter=Math.max(30-startOffset,30-endOffset);
+      const maxCenter=Math.min(GROUND-30-startOffset,GROUND-30-endOffset);
+      plan.center=Math.max(minCenter,Math.min(maxCenter,plan.center));
+      plan.safeLaneStartY=plan.center+startOffset;
+      plan.safeLaneY=plan.center+endOffset;
       b.warning=Math.max(0,b.warning-dt*slowFactor);
-      if(b.warning===0){volleyPlan=b.warningPlan;b.warningPlan=null;}
+      if(b.warning===0){volleyPlan=plan;b.warningPlan=null;}
     }else{
       b.attackClock-=dt*slowFactor;
       if(b.attackClock<=0){
@@ -3489,10 +3498,12 @@
           const gapIndex=safeGapIndices[(nextVolley-1)%safeGapIndices.length];
           const shotSpeed=stage===3?625:stage===2?535:455;
           const cinderDrift=(nextVolley%2===0?1:-1)*(stage===1?18:stage===2?25:32);
-          const safeLaneStartY=Math.max(30,Math.min(GROUND-30,center+offsets[gapIndex]));
           const travelTime=Math.max(0,(W-115-(player.x-25))/shotSpeed);
-          const safeLaneY=Math.max(30,Math.min(GROUND-30,safeLaneStartY+cinderDrift*travelTime+Math.sin(travelTime*6)*5));
-          b.warningPlan={volley:nextVolley,stage,center,offsets,gapIndex,shotSpeed,cinderDrift,safeLaneStartY,safeLaneY};
+          const startOffset=offsets[gapIndex],endOffset=startOffset+cinderDrift*travelTime+Math.sin(travelTime*6)*5;
+          const minCenter=Math.max(30-startOffset,30-endOffset),maxCenter=Math.min(GROUND-30-startOffset,GROUND-30-endOffset);
+          const laneCenter=Math.max(minCenter,Math.min(maxCenter,center));
+          const safeLaneStartY=laneCenter+startOffset,safeLaneY=laneCenter+endOffset;
+          b.warningPlan={volley:nextVolley,stage,center:laneCenter,offsets,gapIndex,shotSpeed,cinderDrift,safeLaneStartY,safeLaneY};
           b.warning=.72;
           b.attackClock=.72;
         }else{
