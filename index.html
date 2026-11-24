@@ -205,7 +205,8 @@
   const BLOOD_RAIN_SCORE_BANDS=[[110000,125000],[140000,155000],[170000,185000],[200000,215000],[230000,245000],[260000,275000],[285000,300000]];
   const STORM_SCORE_BANDS=[[310000,325000]];
   const CINDERFALL_SCORE_BANDS=[[355000,370000]];
-  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
+  const VOID_AURORA_SCORE_BANDS=[[390000,410000]];
+  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],voidAuroraSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let stormStrikeClock=0,stormStrikeX=0,stormStrikeWarning=0,stormStrikeActive=0,stormFlashTimer=0,stormStrikeCount=0,stormStrikeHits=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -487,7 +488,7 @@
     }
   }
   window.addEventListener('keydown',e=>{
-    if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyX','ShiftLeft','ShiftRight','KeyK','KeyJ','KeyH','KeyT','KeyL','KeyZ'].includes(e.code)) e.preventDefault();
+    if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyX','ShiftLeft','ShiftRight','KeyQ','KeyE','KeyC','KeyV','KeyB','KeyR','KeyG','KeyF','KeyY','KeyK','KeyJ','KeyH','KeyT','KeyL','KeyZ'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if ((e.code==='KeyP'||e.code==='Escape') && (state==='running'||state==='paused')) {
       if (state==='running') { state='paused'; stopMusic(); setOverlay('paused'); }
@@ -961,11 +962,13 @@
     bloodRainSchedule=BLOOD_RAIN_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:13+Math.random()*7,done:false}));
     stormSchedule=STORM_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:17+Math.random()*3,done:false}));
     cinderfallSchedule=CINDERFALL_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:18+Math.random()*4,done:false}));
+    voidAuroraSchedule=VOID_AURORA_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:20+Math.random()*5,done:false}));
   }
   function startRainEvent(duration,kind='normal'){
-    rainTimer=duration||12;rainWind=kind==='storm'?112+Math.random()*48:kind==='cinder'?54+Math.random()*38:52+Math.random()*42;rainKind=kind;
-    const blood=kind==='blood',storm=kind==='storm',cinder=kind==='cinder';if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
-    rainDrops=Array.from({length:storm?142:blood?150:cinder?104:128},()=>{
+    rainTimer=duration||12;rainWind=kind==='aurora'?0:kind==='storm'?112+Math.random()*48:kind==='cinder'?54+Math.random()*38:52+Math.random()*42;rainKind=kind;
+    const blood=kind==='blood',storm=kind==='storm',cinder=kind==='cinder',aurora=kind==='aurora';
+    if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
+    rainDrops=aurora?[]:Array.from({length:storm?142:blood?150:cinder?104:128},()=>{
       const drop=makeRainDrop(true);
       if(blood){drop.length=13+Math.random()*10;drop.speed=420+Math.random()*220;drop.alpha=.27+Math.random()*.25;drop.width=.9+Math.random()*.7;}
       else if(storm){drop.length=16+Math.random()*13;drop.speed=520+Math.random()*230;drop.alpha=.2+Math.random()*.25;drop.width=1+Math.random()*.8;}
@@ -975,10 +978,11 @@
   }
   function updateRainWeather(dt){
     if(rainTimer<=0){
-      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done),nextCinder=cinderfallSchedule.find(event=>!event.done);
+      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done),nextCinder=cinderfallSchedule.find(event=>!event.done),nextAurora=voidAuroraSchedule.find(event=>!event.done);
       if(nextStorm&&score>=nextStorm.threshold){nextStorm.done=true;startRainEvent(nextStorm.duration,'storm');}
       else if(nextBlood&&score>=nextBlood.threshold){nextBlood.done=true;startRainEvent(nextBlood.duration,'blood');}
       else if(nextCinder&&score>=nextCinder.threshold){nextCinder.done=true;startRainEvent(nextCinder.duration,'cinder');}
+      else if(nextAurora&&score>=nextAurora.threshold){nextAurora.done=true;startRainEvent(nextAurora.duration,'aurora');}
       else if(nextRain&&score>=nextRain.threshold){nextRain.done=true;startRainEvent(nextRain.duration,'normal');}
     }else rainTimer=Math.max(0,rainTimer-dt);
     const target=rainTimer>0?1:0;
@@ -1009,11 +1013,13 @@
   }
   function drawRainWeather(){
     if(rainBlend<=.008)return;
-    const blood=rainKind==='blood',storm=rainKind==='storm',cinder=rainKind==='cinder';
+    const blood=rainKind==='blood',storm=rainKind==='storm',cinder=rainKind==='cinder',aurora=rainKind==='aurora';
     ctx.save();
     ctx.globalAlpha=rainBlend;
     const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
-    if(blood){
+    if(aurora){
+      skyWash.addColorStop(0,'rgba(17,31,65,.25)');skyWash.addColorStop(.48,'rgba(22,27,65,.17)');skyWash.addColorStop(1,'rgba(9,16,39,.12)');
+    }else if(blood){
       skyWash.addColorStop(0,'rgba(125,16,34,.105)');skyWash.addColorStop(.55,'rgba(102,9,28,.065)');skyWash.addColorStop(1,'rgba(75,5,22,.11)');
     }else if(storm){skyWash.addColorStop(0,'rgba(20,49,72,.19)');skyWash.addColorStop(.55,'rgba(13,34,59,.12)');skyWash.addColorStop(1,'rgba(8,23,42,.2)');
     }else if(cinder){skyWash.addColorStop(0,'rgba(72,52,41,.19)');skyWash.addColorStop(.55,'rgba(48,34,30,.12)');skyWash.addColorStop(1,'rgba(31,20,19,.18)');
@@ -1028,7 +1034,7 @@
       {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
       {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
     ];
-    ctx.fillStyle=blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':cinder?'rgba(45,32,29,.24)':'rgba(115,139,160,.075)';
+    ctx.fillStyle=aurora?'rgba(10,14,38,.12)':blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':cinder?'rgba(45,32,29,.24)':'rgba(115,139,160,.075)';
     for(const cloud of cloudGroups){
       const {x,y,w,h}=cloud;
       ctx.beginPath();
@@ -1036,6 +1042,41 @@
       ctx.ellipse(x+w*.48,y+h*.34,w*.27,h*.49,0,0,Math.PI*2);
       ctx.ellipse(x+w*.72,y+h*.56,w*.28,h*.35,0,0,Math.PI*2);
       ctx.fill();
+    }
+    if(aurora){
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
+      const palette=[
+        ['rgba(54,255,197,0)','rgba(54,255,197,.34)','rgba(54,255,197,0)'],
+        ['rgba(62,205,255,0)','rgba(62,205,255,.30)','rgba(62,205,255,0)'],
+        ['rgba(166,119,255,0)','rgba(166,119,255,.27)','rgba(166,119,255,0)'],
+        ['rgba(86,255,218,0)','rgba(86,255,218,.23)','rgba(86,255,218,0)']
+      ];
+      for(let band=0;band<4;band++){
+        const phase=elapsed*(.22+band*.035)+band*1.47;
+        const baseY=66+band*31+Math.sin(phase)*13;
+        const colours=palette[band],gradient=ctx.createLinearGradient(0,baseY-22,W,baseY+28);
+        gradient.addColorStop(0,colours[0]);gradient.addColorStop(.24,colours[1]);gradient.addColorStop(.72,colours[1]);gradient.addColorStop(1,colours[2]);
+        ctx.globalAlpha=rainBlend*(.74-band*.08);ctx.strokeStyle=gradient;ctx.lineWidth=27-band*4;
+        ctx.shadowColor=colours[1];ctx.shadowBlur=24-band*3;
+        ctx.beginPath();ctx.moveTo(-35,baseY+Math.sin(phase*1.7)*15);
+        ctx.bezierCurveTo(W*.22,baseY-34+Math.sin(phase+1)*23,W*.42,baseY+28+Math.cos(phase*.8)*18,W*.62,baseY-9+Math.sin(phase*1.15)*24);
+        ctx.bezierCurveTo(W*.78,baseY-43+Math.cos(phase*1.3)*17,W*.91,baseY+18+Math.sin(phase)*17,W+35,baseY-7+Math.cos(phase*1.8)*20);
+        ctx.stroke();
+        ctx.globalAlpha=rainBlend*(.28-band*.035);ctx.strokeStyle='rgba(220,255,249,.72)';ctx.lineWidth=2.2;ctx.shadowBlur=9;
+        ctx.beginPath();ctx.moveTo(-35,baseY+Math.sin(phase*1.7)*15);
+        ctx.bezierCurveTo(W*.22,baseY-34+Math.sin(phase+1)*23,W*.42,baseY+28+Math.cos(phase*.8)*18,W*.62,baseY-9+Math.sin(phase*1.15)*24);
+        ctx.bezierCurveTo(W*.78,baseY-43+Math.cos(phase*1.3)*17,W*.91,baseY+18+Math.sin(phase)*17,W+35,baseY-7+Math.cos(phase*1.8)*20);
+        ctx.stroke();
+      }
+      ctx.shadowBlur=0;
+      for(let star=0;star<24;star++){
+        const x=(star*137+elapsed*(4+star%5)*2.1)%W,y=18+(star*47)%205;
+        ctx.globalAlpha=rainBlend*(.12+.16*(.5+.5*Math.sin(elapsed*1.8+star*2.1)));
+        ctx.fillStyle=star%3===0?'#b8a8ff':'#baf8f0';ctx.fillRect(x,y,star%4===0?2:1,star%4===0?2:1);
+      }
+      ctx.restore();
+      ctx.globalAlpha=rainBlend*.88;ctx.textAlign='center';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#c7f8f0';
+      ctx.shadowColor='#70e8dc';ctx.shadowBlur=12;ctx.fillText('VOID AURORA // THE SKY REMEMBERS',W/2,25);ctx.shadowBlur=0;
     }
     ctx.lineCap='round';
     for(const drop of rainDrops){
@@ -2769,9 +2810,9 @@
       boss.timer=999;boss.duration=999;boss.warning=999;boss.attackClock=999;
       bossProjectiles=[{x:player.x+200,y:player.y-42,baseY:player.y-42,w:25,h:18,phase:0,speed:320,kind:'parry-training',colour:'#ffe17a'}];
     }else if(id==='lancer-showcase'){
-      score=195000;activeBiomeTier=biomeTierForScore(score);boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;shieldTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;const d=EXPANSION_ENEMIES.find(x=>x.id==='riftLancer');if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,x:W+190,y:GROUND-205,baseY:GROUND-205,phase:0,attackClock:.85,attackWarning:0,attackLunge:0,attackTargetY:GROUND-205,lungeNearMissAwarded:false,bounty:false,passed:false});expansionRememberEntity(d.name);}
+      score=195000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;shieldTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;const d=EXPANSION_ENEMIES.find(x=>x.id==='riftLancer');if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,x:W+190,y:GROUND-205,baseY:GROUND-205,phase:0,attackClock:.85,attackWarning:0,attackLunge:0,attackTargetY:GROUND-205,lungeNearMissAwarded:false,bounty:false,passed:false});expansionRememberEntity(d.name);}
     }else if(id==='cinder-boss-showcase'){
-      score=330000;activeBiomeTier=biomeTierForScore(score);boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;startExpansionBoss('THE CINDER REGENT',56,22000,'cinderRegent');
+      score=330000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;startExpansionBoss('THE CINDER REGENT',56,22000,'cinderRegent');
     }else if(id==='sentinel-showcase'){
       score=150000;activeBiomeTier=biomeTierForScore(score);
       bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
@@ -2795,7 +2836,16 @@
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
       startExpansionBoss('THE TEMPEST ARCHON',52,18000,'tempest');
     }else if(id==='cinderfall-showcase'){
-      score=355000;activeBiomeTier=biomeTierForScore(score);boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;if(cinderfallSchedule[0])cinderfallSchedule[0].done=true;startRainEvent(20,'cinder');
+      score=355000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;if(cinderfallSchedule[0])cinderfallSchedule[0].done=true;startRainEvent(20,'cinder');
+    }else if(id==='void-aurora-showcase'){
+      score=390000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
+      UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      if(voidAuroraSchedule[0])voidAuroraSchedule[0].done=true;
+      startRainEvent(22,'aurora');
     }else if(id==='storm-showcase'){
       score=310000;activeBiomeTier=biomeTierForScore(score);
       bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
@@ -3063,6 +3113,7 @@
           bloodRainWindows:bloodRainSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
         stormWindows:stormSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
         cinderfallWindows:cinderfallSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
+        voidAuroraWindows:voidAuroraSchedule.map(event=>({range:[event.min,event.max],triggerAt:Math.round(event.threshold),completed:event.done})),
         lightning:{warningSeconds:Number(stormStrikeWarning.toFixed(2)),activeSeconds:Number(stormStrikeActive.toFixed(2)),strikes:stormStrikeCount,hits:stormStrikeHits}}},
       audio:{contextState:audio?audio.state:'not-created',resumeAttempts:AUDIO_DIAGNOSTICS.resumeAttempts,resumeSuccesses:AUDIO_DIAGNOSTICS.resumeSuccesses,resumeFailures:AUDIO_DIAGNOSTICS.resumeFailures,sfxEvents:AUDIO_DIAGNOSTICS.events,synthFallbacks:AUDIO_DIAGNOSTICS.synthFallbacks,customPlays:AUDIO_DIAGNOSTICS.customPlays,customPlayFailures:AUDIO_DIAGNOSTICS.customPlayFailures,musicPlayFailures:AUDIO_DIAGNOSTICS.musicPlayFailures,configuredCustomSounds:Object.keys(customSfx),failedCustomSounds:Object.keys(customSfx).filter(name=>customSfx[name].failed),lastError:AUDIO_DIAGNOSTICS.lastError,sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='audio-showcase'?{lastCue:audioTestCue,cuesPlayed:audioTestIndex,secondsUntilNextCue:Number(Math.max(0,audioTestTimer).toFixed(2))}:null},
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
@@ -3113,8 +3164,8 @@
       ['K · Chaos Explosion',UPGRADE.explosionCooldown],['J · Perfect Parry',UPGRADE.counterCooldown],
       ['H · Decoy Clone',UPGRADE.decoyCooldown],['T · Chain Lightning',UPGRADE.lightningCooldown]
     ];
-    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
-    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const sortedWeatherBands=RAIN_SCORE_BANDS.concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS,VOID_AURORA_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
+    const lateWeatherBands=[RAIN_SCORE_BANDS[2]].concat(BLOOD_RAIN_SCORE_BANDS,STORM_SCORE_BANDS,CINDERFALL_SCORE_BANDS,VOID_AURORA_SCORE_BANDS).slice().sort((a,b)=>a[0]-b[0]);
     const lateWeatherGaps=lateWeatherBands.slice(1).map((band,i)=>band[0]-lateWeatherBands[i][1]);
     const minimumLateWeatherGap=lateWeatherGaps.length?Math.min(...lateWeatherGaps):0;
     const ringSpacingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,delay:ringGroupIntervalForSpeed(value,false),worldGap:value*ringGroupIntervalForSpeed(value,false),clearance:value*ringGroupIntervalForSpeed(value,false)-ringGroupClearDistance()}));
@@ -3186,9 +3237,11 @@
       ['Blood rain schedule',bloodRainSchedule.length===7&&bloodRainSchedule.every((event,i)=>event.min===BLOOD_RAIN_SCORE_BANDS[i][0]&&event.max===BLOOD_RAIN_SCORE_BANDS[i][1]),(rainTimer>0&&rainKind==='blood'?'BLOOD RAIN · '+rainTimer.toFixed(1)+'s':bloodRainSchedule.filter(event=>!event.done).length+' score windows pending')],
       ['Electrical storm schedule',stormSchedule.length===1&&stormSchedule[0].min===STORM_SCORE_BANDS[0][0]&&stormSchedule[0].max===STORM_SCORE_BANDS[0][1]&&(rainKind!=='storm'||stormTimerSafe()),rainKind==='storm'?'ELECTRICAL STORM · '+rainTimer.toFixed(1)+'s':'310K–325K late-game event'],
       ['Cinderfall schedule',cinderfallSchedule.length===1&&cinderfallSchedule[0].min===CINDERFALL_SCORE_BANDS[0][0]&&cinderfallSchedule[0].max===CINDERFALL_SCORE_BANDS[0][1],rainKind==='cinder'?'CINDERFALL · '+rainTimer.toFixed(1)+'s':'355K–370K late-game event'],
+      ['Void Aurora schedule',voidAuroraSchedule.length===1&&voidAuroraSchedule[0].min===VOID_AURORA_SCORE_BANDS[0][0]&&voidAuroraSchedule[0].max===VOID_AURORA_SCORE_BANDS[0][1],rainKind==='aurora'?'VOID AURORA · '+rainTimer.toFixed(1)+'s':'390K–410K late-game event'],
+      ['Void Aurora sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='void-aurora-showcase'||(rainTimer>0&&rainKind==='aurora'&&voidAuroraSchedule[0]?.done===true&&UPGRADE.lastStandTimer>0&&spawnClock>=999&&EXPANSION.spawnClock>=999),'Non-damaging ribbon preview · isolated late-game scene'],
       ['Cinderfall sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='cinderfall-showcase'||(cinderfallSchedule[0]?.done===true&&UPGRADE.lastStandTimer>0),'Non-damaging ash preview · spawn-safe isolated scene'],
       ['Lightning telegraph safety',Number.isFinite(stormStrikeWarning)&&Number.isFinite(stormStrikeActive)&&stormStrikeWarning>=0&&stormStrikeWarning<=1.02&&stormStrikeActive>=0&&stormStrikeActive<=.24&&stormStrikeHits<=stormStrikeCount,'Warning '+stormStrikeWarning.toFixed(2)+'s · active '+stormStrikeActive.toFixed(2)+'s · '+stormStrikeHits+'/'+stormStrikeCount+' hits'],
-      ['Weather window separation',sortedWeatherBands.length===12&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===10&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
+      ['Weather window separation',sortedWeatherBands.length===13&&sortedWeatherBands.every((band,i)=>i===0||sortedWeatherBands[i-1][1]<band[0])&&lateWeatherBands.length===11&&lateWeatherGaps.every(gap=>gap>=10000),'No overlap · late-game gap '+minimumLateWeatherGap.toLocaleString('en-US')+' points · through '+lateWeatherBands[lateWeatherBands.length-1][1].toLocaleString('en-US')],
       ['Tempest Herald attack',EXPANSION_ENEMIES.some(d=>d.id==='tempestHerald'&&d.kind==='storm'&&d.unlock===170000),'170K aerial elite · telegraphed dive / gust attack'],
       ['Rift Lancer attack',EXPANSION_ENEMIES.some(d=>d.id==='riftLancer'&&d.kind==='lancer'&&d.unlock===195000),'195K elite · lane lock · high-speed lunge'],
       ['Rift Lancer sandbox',!UPGRADE.testMode||UPGRADE.testScenario!=='lancer-showcase'||EXPANSION_STORE.codex.includes('Rift Lancer'),'Isolated showcase · codex-only test registration'],
@@ -3252,6 +3305,7 @@
         '<button type="button" data-sandbox="blood-rain-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#35101b;color:#ffdce2;border:1px solid #b53d52;border-radius:3px">BLOOD RAIN TEST</button>'+
       '<button type="button" data-sandbox="storm-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#102b3d;color:#d7f5ff;border:1px solid #4e9cc1;border-radius:3px">ELECTRICAL STORM TEST</button>'+
       '<button type="button" data-sandbox="cinderfall-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#3a251a;color:#ffe4c5;border:1px solid #b78054;border-radius:3px">CINDERFALL WEATHER</button>'+
+      '<button type="button" data-sandbox="void-aurora-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#102c3b;color:#d4fff3;border:1px solid #5aafad;border-radius:3px">VOID AURORA TEST</button>'+
       '<button type="button" data-sandbox="tempest-boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#102b3d;color:#d7f5ff;border:1px solid #4e9cc1;border-radius:3px">TEMPEST ARCHON BOSS TEST</button>'+
         '<button type="button" data-sandbox="biome-glass" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">GLASS WASTES</button>'+
         '<button type="button" data-sandbox="biome-cathedral" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">STATIC CATHEDRAL</button>'+
@@ -3341,12 +3395,21 @@
     EXPANSION.menuPanel=panel;EXPANSION.menuButtons={mode,codex,achievements,archive,skin,lab};
     const mobileControls=document.getElementById('mobileControls');
     if(mobileControls&&!mobileControls.querySelector('[data-expansion-power]')){
-      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyY','RIFT REPRISE'],['KeyK','CHAOS EXPLOSION'],['KeyJ','PERFECT PARRY'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
-      const powerButton=document.createElement('button');powerButton.className='touch';powerButton.dataset.expansionPower='true';let powerIndex=0;
-      powerButton.style.fontSize='9px';powerButton.style.padding='5px 2px';
-      powerButton.textContent='POWER: '+powers[powerIndex][1];
-      powerButton.addEventListener('click',()=>{const k=powers[powerIndex][0];handlePlayerAbility(k);powerIndex=(powerIndex+1)%powers.length;powerButton.textContent='POWER: '+powers[powerIndex][1];});
-      mobileControls.appendChild(powerButton);
+      const powers=[['KeyQ','PHASE SHIFT'],['KeyE','TIME FRACTURE'],['KeyC','ECHO DASH'],['KeyV','MAGNET CORE'],['KeyB','CHAOS REBOUND'],['KeyR','OVERDRIVE'],['KeyG','GLITCH SHIELD'],['KeyF','VOID STEP'],['KeyK','CHAOS EXPLOSION'],['KeyH','DECOY CLONE'],['KeyT','CHAIN LIGHTNING'],['KeyL','LAST STAND']];
+      let powerIndex=0;
+      const selector=document.createElement('button');selector.type='button';selector.className='touch';selector.dataset.expansionPower='true';
+      const cast=document.createElement('button');cast.type='button';cast.className='touch';cast.dataset.expansionCast='true';
+      const reprise=document.createElement('button');reprise.type='button';reprise.className='touch';reprise.dataset.expansionReprise='true';
+      for(const button of [selector,cast,reprise]){button.style.fontSize='9px';button.style.padding='5px 2px';}
+      const refreshPowerLabels=()=>{selector.textContent='SELECT: '+powers[powerIndex][1];cast.textContent='CAST: '+powers[powerIndex][1];};
+      selector.setAttribute('aria-label','Select special ability');
+      cast.setAttribute('aria-label','Activate selected special ability');
+      reprise.textContent='RIFT REPRISE Y ◈';reprise.setAttribute('aria-label','Activate Rift Reprise');
+      selector.addEventListener('click',()=>{powerIndex=(powerIndex+1)%powers.length;refreshPowerLabels();});
+      cast.addEventListener('click',()=>handlePlayerAbility(powers[powerIndex][0]));
+      reprise.addEventListener('click',()=>handlePlayerAbility('KeyY'));
+      refreshPowerLabels();
+      mobileControls.append(selector,cast,reprise);
     }
     overlay.insertBefore(wrap,startBtn);
     overlay.insertBefore(panel,startBtn);
