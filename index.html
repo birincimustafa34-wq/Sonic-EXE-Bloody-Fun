@@ -1075,8 +1075,6 @@
         ctx.fillStyle=star%3===0?'#b8a8ff':'#baf8f0';ctx.fillRect(x,y,star%4===0?2:1,star%4===0?2:1);
       }
       ctx.restore();
-      ctx.globalAlpha=rainBlend*.88;ctx.textAlign='center';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#c7f8f0';
-      ctx.shadowColor='#70e8dc';ctx.shadowBlur=12;ctx.fillText('VOID AURORA // THE SKY REMEMBERS',W/2,25);ctx.shadowBlur=0;
     }
     ctx.lineCap='round';
     for(const drop of rainDrops){
@@ -4160,6 +4158,12 @@
   function drawExpansionOverlay(){
     drawUltimateOverlay();
     ctx.save();
+    if(rainKind==='aurora'&&rainTimer>0){
+      ctx.save();ctx.globalAlpha=Math.max(.78,rainBlend);ctx.textAlign='center';ctx.font='bold 13px Consolas,monospace';
+      ctx.fillStyle='#d8fff6';ctx.shadowColor='#55e5d3';ctx.shadowBlur=16;
+      ctx.fillText('VOID AURORA // THE SKY REMEMBERS  '+rainTimer.toFixed(1)+'s',W/2,34);
+      ctx.restore();
+    }
     if(score>=125000&&state==='running'){
       ctx.globalAlpha=.045+.035*Math.sin(elapsed*5);ctx.fillStyle='#6412a4';ctx.fillRect(0,0,W,H);
       if(score>=225000&&Math.floor(elapsed*14)%5===0){ctx.globalAlpha=.12;ctx.fillStyle='#c85cff';ctx.fillRect(0,(Math.floor(elapsed*37)%H),W,3);}
