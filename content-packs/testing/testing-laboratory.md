@@ -229,3 +229,10 @@ The mobile special-power controls now have separate **SELECT** and **CAST** acti
 ## Weather and late-game sandbox isolation
 
 The weather previews mark already-passed score windows as completed so an older rain/storm event cannot start immediately after the chosen preview. The high-score Lancer, Cinder Regent, Cinderfall, and Void Aurora scenarios also suppress the legacy boss milestones before the first simulation tick. Ambient event clocks and bonus pickup clocks are held during the isolated weather previews.
+
+
+## Tempest Archon boss test — damage-enabled practice
+
+The **TEMPEST ARCHON BOSS TEST** is a lethal combat practice scenario, not a protected showcase. It explicitly clears Last Stand, player invulnerability, shields, landing grace, Phase Shift, Echo Dash, Rift Reprise, Glitch Shield, Void Step, rebound charges, and Shadow Dash before starting the boss. A direct hit from an electric volley must trigger the normal hit/game-over path. The shared boss initializer now seeds its upper-right render coordinates before the first frame, avoiding a one-frame undefined-position draw. The HUD states that lightning contact is lethal during this test.
+
+The live Test Lab checks that the Tempest scenario has no automatic protection, that the boss render coordinates are finite and in the arena, and that the boss/spawn isolation remains active. This separates a genuine collision test from a visual-only preview.
