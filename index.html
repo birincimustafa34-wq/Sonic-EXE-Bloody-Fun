@@ -206,6 +206,12 @@
   const STORM_SCORE_BANDS=[[310000,325000]];
   const CINDERFALL_SCORE_BANDS=[[355000,370000]];
   const VOID_AURORA_SCORE_BANDS=[[390000,410000]];
+  const VOID_AURORA_PALETTE=Object.freeze([
+    Object.freeze(['rgba(54,255,197,0)','rgba(54,255,197,.34)','rgba(54,255,197,0)']),
+    Object.freeze(['rgba(62,205,255,0)','rgba(62,205,255,.30)','rgba(62,205,255,0)']),
+    Object.freeze(['rgba(166,119,255,0)','rgba(166,119,255,.27)','rgba(166,119,255,0)']),
+    Object.freeze(['rgba(86,255,218,0)','rgba(86,255,218,.23)','rgba(86,255,218,0)'])
+  ]);
   let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],voidAuroraSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let stormStrikeClock=0,stormStrikeX=0,stormStrikeWarning=0,stormStrikeActive=0,stormFlashTimer=0,stormStrikeCount=0,stormStrikeHits=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
@@ -1045,16 +1051,10 @@
     }
     if(aurora){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
-      const palette=[
-        ['rgba(54,255,197,0)','rgba(54,255,197,.34)','rgba(54,255,197,0)'],
-        ['rgba(62,205,255,0)','rgba(62,205,255,.30)','rgba(62,205,255,0)'],
-        ['rgba(166,119,255,0)','rgba(166,119,255,.27)','rgba(166,119,255,0)'],
-        ['rgba(86,255,218,0)','rgba(86,255,218,.23)','rgba(86,255,218,0)']
-      ];
       for(let band=0;band<4;band++){
         const phase=elapsed*(.22+band*.035)+band*1.47;
         const baseY=66+band*31+Math.sin(phase)*13;
-        const colours=palette[band],gradient=ctx.createLinearGradient(0,baseY-22,W,baseY+28);
+        const colours=VOID_AURORA_PALETTE[band],gradient=ctx.createLinearGradient(0,baseY-22,W,baseY+28);
         gradient.addColorStop(0,colours[0]);gradient.addColorStop(.24,colours[1]);gradient.addColorStop(.72,colours[1]);gradient.addColorStop(1,colours[2]);
         ctx.globalAlpha=rainBlend*(.74-band*.08);ctx.strokeStyle=gradient;ctx.lineWidth=27-band*4;
         ctx.shadowColor=colours[1];ctx.shadowBlur=24-band*3;
