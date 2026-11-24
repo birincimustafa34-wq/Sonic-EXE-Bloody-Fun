@@ -2783,9 +2783,9 @@
       UPGRADE.decoyCooldown=0;UPGRADE.lightningCooldown=0;
       player.x=132;player.y=GROUND-player.h;player.flight=0;player.jumps=0;
     }else if(id==='weather-showcase'){
-      score=2000;startRainEvent(14,'normal');
+      score=2000;if(rainSchedule[0])rainSchedule[0].done=true;startRainEvent(14,'normal');
     }else if(id==='blood-rain-showcase'){
-      score=100000;activeBiomeTier=0;updateBiomeTransition(.016);startRainEvent(16,'blood');
+      score=100000;activeBiomeTier=0;updateBiomeTransition(.016);rainSchedule.forEach(event=>event.done=true);startRainEvent(16,'blood');
     }else if(id==='ring-showcase'){
       score=72000;activeBiomeTier=biomeTierForScore(score);
       bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
@@ -2836,7 +2836,7 @@
       player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
       startExpansionBoss('THE TEMPEST ARCHON',52,18000,'tempest');
     }else if(id==='cinderfall-showcase'){
-      score=355000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;if(cinderfallSchedule[0])cinderfallSchedule[0].done=true;startRainEvent(20,'cinder');
+      score=355000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;rainSchedule.forEach(event=>event.done=true);bloodRainSchedule.forEach(event=>event.done=true);stormSchedule.forEach(event=>event.done=true);if(cinderfallSchedule[0])cinderfallSchedule[0].done=true;UPGRADE.eventClock=999;UPGRADE.starClock=999;UPGRADE.bloodMoonClock=999;UPGRADE.choiceClock=999;UPGRADE.choiceActive=false;EXPANSION.gravityShiftClock=999;EXPANSION.collapseAnnounced=true;EXPANSION.nightmareAnnounced=true;ringBonusClock=999;scoreSigilClock=999;startRainEvent(20,'cinder');
     }else if(id==='void-aurora-showcase'){
       score=390000;activeBiomeTier=biomeTierForScore(score);
       bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
@@ -2844,6 +2844,8 @@
       obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];
       spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
       UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      rainSchedule.forEach(event=>event.done=true);bloodRainSchedule.forEach(event=>event.done=true);stormSchedule.forEach(event=>event.done=true);cinderfallSchedule.forEach(event=>event.done=true);
+      UPGRADE.eventClock=999;UPGRADE.starClock=999;UPGRADE.bloodMoonClock=999;UPGRADE.choiceClock=999;UPGRADE.choiceActive=false;EXPANSION.gravityShiftClock=999;EXPANSION.collapseAnnounced=true;EXPANSION.nightmareAnnounced=true;ringBonusClock=999;scoreSigilClock=999;
       if(voidAuroraSchedule[0])voidAuroraSchedule[0].done=true;
       startRainEvent(22,'aurora');
     }else if(id==='storm-showcase'){
@@ -2853,7 +2855,9 @@
       obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];
       spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
       UPGRADE.lastStandTimer=999;player.invuln=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      rainSchedule.forEach(event=>event.done=true);bloodRainSchedule.forEach(event=>event.done=true);
       if(stormSchedule[0])stormSchedule[0].done=true;
+      UPGRADE.eventClock=999;UPGRADE.starClock=999;UPGRADE.bloodMoonClock=999;UPGRADE.choiceClock=999;UPGRADE.choiceActive=false;EXPANSION.gravityShiftClock=999;EXPANSION.collapseAnnounced=true;EXPANSION.nightmareAnnounced=true;ringBonusClock=999;scoreSigilClock=999;
       startRainEvent(19,'storm');
     }else if(id==='audio-showcase'){
       score=0;activeBiomeTier=0;updateBiomeTransition(.016);
