@@ -3163,7 +3163,9 @@
         pickups:EXPANSION.pickups.map(p=>p.kind),
         projectiles:EXPANSION.shots.length
       },
-      boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,weaknessTime:Number(boss.weaknessTimer.toFixed(2)),warningSeconds:Number((boss.warning||0).toFixed(2)),safeLaneY:boss.warningPlan?Math.round(boss.warningPlan.safeLaneY):null}:null,
+      boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,volley:boss.volley,
+        weaknessTime:Number(boss.weaknessTimer.toFixed(2)),warningSeconds:Number((boss.warning||0).toFixed(2)),safeLaneY:boss.warningPlan?Math.round(boss.warningPlan.safeLaneY):null,
+        lightningShots:EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length,contacts:boss.contacts||0,protectedContacts:boss.protectedContacts||0,lastContact:boss.lastContact||'NONE'}:null,
       cinderCombat:{activeProjectiles:EXPANSION.shots.filter(sh=>sh.kind==='cinderArc').length,trajectoriesValid:EXPANSION.shots.every(sh=>sh.kind!=='cinderArc'||[sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase].every(Number.isFinite)&&sh.age>=0),warningActive:!!(boss?.kind==='cinderRegent'&&boss.warning>0),safeLaneY:boss?.warningPlan?Math.round(boss.warningPlan.safeLaneY):null},
       abilities:{phase:EXPANSION.phaseCooldown,timeFracture:EXPANSION.timeFractureCooldown,echoDash:EXPANSION.echoDashCooldown,
         magnet:EXPANSION.magnetCooldown,rebound:EXPANSION.reboundCooldown,overdrive:EXPANSION.overdriveCooldown,
@@ -3207,6 +3209,11 @@
     const sentinelGuardDataValid=Number.isInteger(EXPANSION.attackSerial)&&EXPANSION.attackSerial>=0&&EXPANSION.enemies.filter(e=>e.id==='riftSentinel').every(e=>[e.guardBrokenTimer,e.guardHitLock,e.guardStaggerTimer,e.guardBreakSerial].every(Number.isFinite)&&e.guardBrokenTimer>=0&&e.guardHitLock>=0&&e.guardStaggerTimer>=0&&e.guardBreakSerial<=EXPANSION.attackSerial);
     const stormTimerSafe=()=>Number.isFinite(stormStrikeClock)&&stormStrikeClock>=0&&stormStrikeWarning>=0&&stormStrikeActive>=0;
     const cinderProjectileDataValid=EXPANSION.shots.every(sh=>sh.kind!=='cinderArc'||[sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase].every(Number.isFinite)&&sh.age>=0);
+    const tempestProjectileDataValid=EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').every(sh=>
+      [sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase,sh.speed,sh.w,sh.h].every(Number.isFinite)&&sh.age>=0&&sh.speed>0&&sh.w>0&&sh.h>0);
+    const tempestTelemetryValid=!EXPANSION.boss||EXPANSION.boss.kind!=='tempest'||
+      [EXPANSION.boss.contacts,EXPANSION.boss.protectedContacts,EXPANSION.boss.lastContactTimer].every(Number.isFinite)&&
+      EXPANSION.boss.contacts>=0&&EXPANSION.boss.protectedContacts>=0&&EXPANSION.boss.protectedContacts<=EXPANSION.boss.contacts;
     const cinderWarningValid=!boss||boss.kind!=='cinderRegent'||(Number.isFinite(boss.warning)&&boss.warning>=0&&(!boss.warningPlan||(Array.isArray(boss.warningPlan.offsets)&&Number.isInteger(boss.warningPlan.gapIndex)&&boss.warningPlan.gapIndex>=0&&boss.warningPlan.gapIndex<boss.warningPlan.offsets.length&&Number.isFinite(boss.warningPlan.safeLaneY)&&boss.warningPlan.safeLaneY>=30&&boss.warningPlan.safeLaneY<=GROUND-30)));
     const lancerDataValid=EXPANSION.enemies.filter(e=>e.id==='riftLancer').every(e=>Number.isFinite(e.attackWarning)&&e.attackWarning>=0&&e.attackWarning<=.82&&Number.isFinite(e.attackLunge)&&e.attackLunge>=0&&e.attackLunge<=.44&&typeof e.lungeNearMissAwarded==='boolean');
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
@@ -3277,6 +3284,8 @@
       ['Electrical storm sandbox isolation',!UPGRADE.testMode||UPGRADE.testScenario!=='storm-showcase'||(rainTimer>0&&rainKind==='storm'&&UPGRADE.lastStandTimer>0&&spawnClock>=999&&EXPANSION.spawnClock>=999&&stormSchedule[0]?.done===true),'Storm preview active · hazards/spawns suppressed · records disabled'],
       ['Tempest Archon sandbox staging',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(EXPANSION.boss?.kind==='tempest'&&UPGRADE.lastStandTimer===0&&player.invuln===0&&shieldTimer===0&&EXPANSION.spawnClock>=999&&EXPANSION.hazardClock>=999&&UPGRADE.eventClock>=999&&UPGRADE.starClock>=999&&UPGRADE.bloodMoonClock>=999&&UPGRADE.choiceClock>=999&&EXPANSION.gravityShiftClock>=999),'52s boss practice · ambient events isolated · damage enabled'],
       ['Tempest Archon render position',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(Number.isFinite(EXPANSION.boss?.x)&&Number.isFinite(EXPANSION.boss?.y)&&EXPANSION.boss.x>W*.65&&EXPANSION.boss.y>=0&&EXPANSION.boss.y<GROUND),'Visible boss anchor · upper-right arena'],
+      ['Tempest lightning collision geometry',typeof sweptProjectileHit==='function'&&tempestProjectileDataValid,'Swept hit detection · '+EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length+' live bolts validated'],
+      ['Tempest contact telemetry',tempestTelemetryValid,EXPANSION.boss?.kind==='tempest'?(EXPANSION.boss.contacts||0)+' contacts · '+(EXPANSION.boss.protectedContacts||0)+' protected':'Counters ready for boss test'],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm','lancer'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
