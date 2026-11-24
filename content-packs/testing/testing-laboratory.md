@@ -189,7 +189,7 @@ Particle updates now use stable in-place compaction: expired particles are remov
 
 **RIFT REPRISE** records vertical position and velocity every 75 ms, retains no more than 24 samples, and targets a point 0.68 seconds in the past. The Test Lab checks finite sample values, bounded history length, cooldown range, and includes the current history/cooldown in the report. Verify that the ability only recalls the player's vertical movement and that its 0.58-second protection is recognized by legacy obstacles, boss shots, enemies, hazards, and the Shadow pursuit. Its cooldown is 23 seconds and the input is **Y**.
 
-**RIFT LANCER TEST** stages the new 195K elite in isolation. The Lancer should track the player's vertical lane, display the **LANCE LOCK** warning for 0.72 seconds, and then lunge for 0.38 seconds. Its custom silhouette and attack state are included in live diagnostics. It shares the existing maximum enemy count, reward, and collision pipeline.
+**RIFT LANCER TEST** stages the new 195K elite in isolation. The Lancer should track the player's vertical lane, display the **LANCE LOCK** warning for 0.82 seconds, and then lunge for 0.44 seconds. A narrowly avoided strike can award 145 score and 10 FLOW once per attack. Its custom silhouette and attack state are included in live diagnostics. It shares the existing maximum enemy count, reward, and collision pipeline.
 
 **CINDER REGENT BOSS** starts the new 330K, 56-second encounter directly. Its three-core vulnerability system remains active. Verify the expanding 4/7/8-lane cinder volleys, alternating diagonal drift, shifting safe gap, dedicated ember-shard drawing, and defeat achievement. The encounter is staged with normal spawns suppressed and Test Lab records disabled.
 
@@ -216,3 +216,16 @@ The projectile-stability check confirms that each live cinder arc has finite pos
 `LANCE LOCK` now lasts **0.82 seconds** before the **0.44-second** lunge. The extra lunge impulse is reduced so the base enemy travel speed does not stack with an excessively strong second burst. A player who narrowly clears the Lancer vertically while its hitbox crosses the player receives **145 score and 10 FLOW**, at most once per lunge. The on-screen combat toast reads `RIFT EVADE`. Test Lab checks finite warning/lunge timers and the per-attack reward guard.
 
 These additions are source-level and live-state invariants. They do not replace manual boss/entity playthroughs, mobile control checks, or frame-time profiling on target hardware.
+
+
+## Void Aurora weather
+
+The **VOID AURORA TEST** starts a protected 22-second preview of the new **390K–410K** score-band event. Four drifting translucent ribbons in mint, teal, cyan, and violet sweep across the upper sky, with a small deterministic star shimmer. The event creates no rain drops, gameplay particles, collisions, damage, score changes, or player movement effects. The Test Lab validates the schedule registration and isolated preview state, while the diagnostic report includes the randomized trigger window and completion flag.
+
+## Mobile ability selection and activation
+
+The mobile special-power controls now have separate **SELECT** and **CAST** actions. Tapping SELECT only changes the selected ability; it does not activate anything. CAST uses the selected ability. A separate **RIFT REPRISE Y** shortcut bypasses the selector. This removes the previous behavior where a single tap both activated a power and immediately advanced to the next one.
+
+## Weather and late-game sandbox isolation
+
+The weather previews mark already-passed score windows as completed so an older rain/storm event cannot start immediately after the chosen preview. The high-score Lancer, Cinder Regent, Cinderfall, and Void Aurora scenarios also suppress the legacy boss milestones before the first simulation tick. Ambient event clocks and bonus pickup clocks are held during the isolated weather previews.
