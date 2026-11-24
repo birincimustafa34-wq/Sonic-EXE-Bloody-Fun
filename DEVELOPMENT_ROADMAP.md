@@ -311,3 +311,8 @@ The mobile special-power interface now separates **SELECT** from **CAST**, so ch
 ### Test-sandbox isolation correction
 
 Late-game Lancer and Cinder Regent test presets now suppress legacy boss milestones before the first simulation tick. Weather previews mark earlier score-window schedules as completed and hold unrelated star, blood-moon, gravity, bonus-ring, score-sigil, and narrative-event clocks, preventing unrelated late-game content from contaminating a focused visual preview.
+
+
+### Tempest Archon test reliability fix — November 2026
+
+The Tempest boss practice scenario previously set **999 seconds of Last Stand**, which made the boss's electric projectiles harmless through the shared `expansionHit` protection path. The test now clears every automatic/temporary defensive state (Last Stand, invulnerability, shield, landing grace, and expansion abilities) so direct lightning contact exercises the normal lethal collision path. The shared boss initializer also seeds `x/y` before the first render frame. Test Lab assertions verify damage-enabled staging and finite in-arena boss coordinates; the HUD explicitly labels the practice as lethal.
