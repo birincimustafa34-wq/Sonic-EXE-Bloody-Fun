@@ -527,6 +527,22 @@
     return a.x+pad < b.x+b.w-pad && a.x+a.w-pad > b.x+pad &&
            a.y+pad < b.y+b.h-pad && a.y+a.h-pad > b.y+pad;
   }
+  // Continuous collision check for fast projectiles. Tests the whole movement
+  // segment against the target's expanded bounds, preventing frame-rate tunnelling.
+  function sweptProjectileHit(target,projectile,fromX,fromY,padding=0){
+    const left=target.x-projectile.w-padding,right=target.x+target.w+padding;
+    const top=target.y-projectile.h-padding,bottom=target.y+target.h+padding;
+    let tMin=0,tMax=1;
+    const clip=(start,delta,min,max)=>{
+      if(Math.abs(delta)<1e-8)return start>=min&&start<=max;
+      let a=(min-start)/delta,b=(max-start)/delta;
+      if(a>b){const swap=a;a=b;b=swap;}
+      tMin=Math.max(tMin,a);tMax=Math.min(tMax,b);
+      return tMin<=tMax;
+    };
+    return clip(fromX,projectile.x-fromX,left,right)&&
+      clip(fromY,projectile.y-fromY,top,bottom);
+  }
   function spawnBatFlock() {
     // Bats remain tiny, but now arrive as a loose flock instead of a lone flyer.
     const count=Math.random()<.3?2:3;
@@ -3147,7 +3163,9 @@
         pickups:EXPANSION.pickups.map(p=>p.kind),
         projectiles:EXPANSION.shots.length
       },
-      boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,weaknessTime:Number(boss.weaknessTimer.toFixed(2)),warningSeconds:Number((boss.warning||0).toFixed(2)),safeLaneY:boss.warningPlan?Math.round(boss.warningPlan.safeLaneY):null}:null,
+      boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,volley:boss.volley,
+        weaknessTime:Number(boss.weaknessTimer.toFixed(2)),warningSeconds:Number((boss.warning||0).toFixed(2)),safeLaneY:boss.warningPlan?Math.round(boss.warningPlan.safeLaneY):null,
+        lightningShots:EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length,contacts:boss.contacts||0,protectedContacts:boss.protectedContacts||0,lastContact:boss.lastContact||'NONE'}:null,
       cinderCombat:{activeProjectiles:EXPANSION.shots.filter(sh=>sh.kind==='cinderArc').length,trajectoriesValid:EXPANSION.shots.every(sh=>sh.kind!=='cinderArc'||[sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase].every(Number.isFinite)&&sh.age>=0),warningActive:!!(boss?.kind==='cinderRegent'&&boss.warning>0),safeLaneY:boss?.warningPlan?Math.round(boss.warningPlan.safeLaneY):null},
       abilities:{phase:EXPANSION.phaseCooldown,timeFracture:EXPANSION.timeFractureCooldown,echoDash:EXPANSION.echoDashCooldown,
         magnet:EXPANSION.magnetCooldown,rebound:EXPANSION.reboundCooldown,overdrive:EXPANSION.overdriveCooldown,
@@ -3191,6 +3209,11 @@
     const sentinelGuardDataValid=Number.isInteger(EXPANSION.attackSerial)&&EXPANSION.attackSerial>=0&&EXPANSION.enemies.filter(e=>e.id==='riftSentinel').every(e=>[e.guardBrokenTimer,e.guardHitLock,e.guardStaggerTimer,e.guardBreakSerial].every(Number.isFinite)&&e.guardBrokenTimer>=0&&e.guardHitLock>=0&&e.guardStaggerTimer>=0&&e.guardBreakSerial<=EXPANSION.attackSerial);
     const stormTimerSafe=()=>Number.isFinite(stormStrikeClock)&&stormStrikeClock>=0&&stormStrikeWarning>=0&&stormStrikeActive>=0;
     const cinderProjectileDataValid=EXPANSION.shots.every(sh=>sh.kind!=='cinderArc'||[sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase].every(Number.isFinite)&&sh.age>=0);
+    const tempestProjectileDataValid=EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').every(sh=>
+      [sh.x,sh.y,sh.baseY,sh.age,sh.vy,sh.phase,sh.speed,sh.w,sh.h].every(Number.isFinite)&&sh.age>=0&&sh.speed>0&&sh.w>0&&sh.h>0);
+    const tempestTelemetryValid=!EXPANSION.boss||EXPANSION.boss.kind!=='tempest'||
+      [EXPANSION.boss.contacts,EXPANSION.boss.protectedContacts,EXPANSION.boss.lastContactTimer].every(Number.isFinite)&&
+      EXPANSION.boss.contacts>=0&&EXPANSION.boss.protectedContacts>=0&&EXPANSION.boss.protectedContacts<=EXPANSION.boss.contacts;
     const cinderWarningValid=!boss||boss.kind!=='cinderRegent'||(Number.isFinite(boss.warning)&&boss.warning>=0&&(!boss.warningPlan||(Array.isArray(boss.warningPlan.offsets)&&Number.isInteger(boss.warningPlan.gapIndex)&&boss.warningPlan.gapIndex>=0&&boss.warningPlan.gapIndex<boss.warningPlan.offsets.length&&Number.isFinite(boss.warningPlan.safeLaneY)&&boss.warningPlan.safeLaneY>=30&&boss.warningPlan.safeLaneY<=GROUND-30)));
     const lancerDataValid=EXPANSION.enemies.filter(e=>e.id==='riftLancer').every(e=>Number.isFinite(e.attackWarning)&&e.attackWarning>=0&&e.attackWarning<=.82&&Number.isFinite(e.attackLunge)&&e.attackLunge>=0&&e.attackLunge<=.44&&typeof e.lungeNearMissAwarded==='boolean');
     const bonusRingSamples=RING_TEST_SPEEDS.map(value=>({speed:value,early:bonusRingDelayForSpeed(60000,value,false),late:bonusRingDelayForSpeed(80000,value,false)}));
@@ -3261,6 +3284,8 @@
       ['Electrical storm sandbox isolation',!UPGRADE.testMode||UPGRADE.testScenario!=='storm-showcase'||(rainTimer>0&&rainKind==='storm'&&UPGRADE.lastStandTimer>0&&spawnClock>=999&&EXPANSION.spawnClock>=999&&stormSchedule[0]?.done===true),'Storm preview active · hazards/spawns suppressed · records disabled'],
       ['Tempest Archon sandbox staging',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(EXPANSION.boss?.kind==='tempest'&&UPGRADE.lastStandTimer===0&&player.invuln===0&&shieldTimer===0&&EXPANSION.spawnClock>=999&&EXPANSION.hazardClock>=999&&UPGRADE.eventClock>=999&&UPGRADE.starClock>=999&&UPGRADE.bloodMoonClock>=999&&UPGRADE.choiceClock>=999&&EXPANSION.gravityShiftClock>=999),'52s boss practice · ambient events isolated · damage enabled'],
       ['Tempest Archon render position',!UPGRADE.testMode||UPGRADE.testScenario!=='tempest-boss-showcase'||(Number.isFinite(EXPANSION.boss?.x)&&Number.isFinite(EXPANSION.boss?.y)&&EXPANSION.boss.x>W*.65&&EXPANSION.boss.y>=0&&EXPANSION.boss.y<GROUND),'Visible boss anchor · upper-right arena'],
+      ['Tempest lightning collision geometry',typeof sweptProjectileHit==='function'&&tempestProjectileDataValid,'Swept hit detection · '+EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length+' live bolts validated'],
+      ['Tempest contact telemetry',tempestTelemetryValid,EXPANSION.boss?.kind==='tempest'?(EXPANSION.boss.contacts||0)+' contacts · '+(EXPANSION.boss.protectedContacts||0)+' protected':'Counters ready for boss test'],
       ['Enemy catalog IDs',new Set(EXPANSION_ENEMIES.map(d=>d.id)).size===EXPANSION_ENEMIES.length&&EXPANSION_ENEMIES.every(d=>['hover','dash','pull','swarm','mimic','serpent','blink','heavy','orbit','sentinel','storm','lancer'].includes(d.kind)),EXPANSION_ENEMIES.length+' unique definitions · all movement types supported'],
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
@@ -3523,7 +3548,8 @@
   function startExpansionBoss(name,duration,reward,kind){
     if(EXPANSION.boss||state!=='running')return;
     EXPANSION.boss={name:name,timer:duration,duration:duration,reward:reward,kind:kind||'standard',
-      x:W-190,y:65,phase:0,attackClock:1.3,warning:0,warningPlan:null,weaknessTimer:0,weaknessClock:3.8,cores:3,volley:0,summonClock:5.5};
+      x:W-190,y:65,phase:0,attackClock:1.3,warning:0,warningPlan:null,weaknessTimer:0,weaknessClock:3.8,cores:3,volley:0,summonClock:5.5,
+      contacts:0,protectedContacts:0,lastContact:'NONE',lastContactTimer:0};
     EXPANSION.shots=[];
     bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
     bossIntroTimer=3.0;shake=.28;flash=.24;
@@ -3534,6 +3560,7 @@
   function updateExpansionBoss(dt,playerBox){
     const b=EXPANSION.boss;if(!b)return;
     const slowFactor=EXPANSION.timeFractureTimer>0?.58:1;
+    b.lastContactTimer=Math.max(0,(b.lastContactTimer||0)-dt);
     b.timer-=dt;b.phase+=dt*(b.kind==='final'?2.3:1.65)*slowFactor;
     b.weaknessClock-=dt;
     if(b.weaknessClock<=0&&b.weaknessTimer<=0){b.weaknessTimer=2.15;b.weaknessClock=7.2;}
@@ -3603,21 +3630,48 @@
     }
     for(let i=EXPANSION.shots.length-1;i>=0;i--){
       const sh=EXPANSION.shots[i];
+      const previousX=sh.x,previousY=sh.y;
       if(!Number.isFinite(sh.baseY)){sh.baseY=sh.y;sh.age=0;}
       sh.age=(sh.age||0)+dt*slowFactor;
       sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;
       sh.y=sh.baseY+(sh.vy||0)*sh.age+Math.sin(sh.phase)*(sh.kind==='cinderArc'?5:12);
-      const box={x:sh.x,y:sh.y,w:sh.w,h:sh.h};
+      const isTempestArc=sh.kind==='tempestArc';
+      // Tempest's bright, thin lightning needs a forgiving contact envelope.
+      // The swept check also catches a bolt that crosses the player between frames.
+      const box=isTempestArc?{x:sh.x-6,y:sh.y-6,w:sh.w+12,h:sh.h+12}:{x:sh.x,y:sh.y,w:sh.w,h:sh.h};
+      const projectileContact=rectHit(playerBox,box,isTempestArc?0:3)||
+        (isTempestArc&&sweptProjectileHit(playerBox,box,previousX-6,previousY-6,6));
       if(EXPANSION.parryTimer>0&&Math.hypot(sh.x+sh.w/2-(player.x+player.w/2),sh.y+sh.h/2-(player.y+player.h/2))<118){
         EXPANSION.shots.splice(i,1);perfectParrySuccess(sh.x+sh.w/2,sh.y+sh.h/2,sh.color||'#ffe17a');continue;
       }
-      if(rectHit(playerBox,box,3)){
-        if(EXPANSION.phaseTimer>0||EXPANSION.echoDashTimer>0||EXPANSION.repriseTimer>0||EXPANSION.glitchShieldTimer>0||EXPANSION.voidStepTimer>0||EXPANSION.reboundCharges>0||player.flight>0||dashTimer>0){
+      if(projectileContact){
+        if(isTempestArc){b.contacts=(b.contacts||0)+1;b.lastContact='CONTACT';b.lastContactTimer=1.4;}
+        const protectedReason=EXPANSION.phaseTimer>0?'PHASE':
+          EXPANSION.echoDashTimer>0?'ECHO DASH':EXPANSION.repriseTimer>0?'RIFT REPRISE':
+          EXPANSION.glitchShieldTimer>0?'GLITCH SHIELD':EXPANSION.voidStepTimer>0?'VOID STEP':
+          EXPANSION.reboundCharges>0?'CHAOS REBOUND':player.flight>0?'FLIGHT':
+          dashTimer>0?'SHADOW DASH':null;
+        if(protectedReason){
           if(EXPANSION.reboundCharges>0)EXPANSION.reboundCharges=0;
+          if(isTempestArc){b.protectedContacts=(b.protectedContacts||0)+1;b.lastContact=protectedReason;b.lastContactTimer=1.4;}
           awardScore(60);burst(sh.x,sh.y,sh.color,12);EXPANSION.shots.splice(i,1);continue;
         }
-        if(shieldTimer>0){shieldTimer=0;burst(sh.x,sh.y,'#ff526c',15);EXPANSION.shots.splice(i,1);continue;}
-        expansionHit(sh.x,sh.y,sh.color);EXPANSION.shots.splice(i,1);continue;
+        if(shieldTimer>0){
+          shieldTimer=0;
+          if(isTempestArc){b.protectedContacts=(b.protectedContacts||0)+1;b.lastContact='SHIELD';b.lastContactTimer=1.4;}
+          burst(sh.x,sh.y,'#ff526c',15);EXPANSION.shots.splice(i,1);continue;
+        }
+        if(landingGrace>0){
+          if(isTempestArc){b.protectedContacts=(b.protectedContacts||0)+1;b.lastContact='LANDING GRACE';b.lastContactTimer=1.4;}
+          burst(sh.x,sh.y,'#d477ff',10);EXPANSION.shots.splice(i,1);continue;
+        }
+        expansionHit(sh.x,sh.y,sh.color);
+        if(isTempestArc&&state==='running'){
+          b.protectedContacts=(b.protectedContacts||0)+1;
+          b.lastContact=UPGRADE.lastStandTimer>0?'LAST STAND':EXPANSION.hitCooldown>0?'HIT COOLDOWN':'PROTECTED';
+          b.lastContactTimer=1.4;
+        }
+        EXPANSION.shots.splice(i,1);continue;
       }
       if(sh.x<-40)EXPANSION.shots.splice(i,1);
     }
@@ -4245,6 +4299,15 @@
       if(UPGRADE.testScenario==='tempest-boss-showcase'){
         ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#bdeeff';ctx.textAlign='center';
         ctx.fillText('TEMPEST ARCHON // DAMAGE ENABLED — LIGHTNING CONTACT IS LETHAL',W/2,78);
+        ctx.font='bold 9px Consolas,monospace';ctx.fillStyle='#d7f4ff';
+        const defense=landingGrace>0?'LANDING GRACE':shieldTimer>0?'SHIELD':player.flight>0?'FLIGHT':
+          dashTimer>0?'SHADOW DASH':EXPANSION.phaseTimer>0?'PHASE':
+          EXPANSION.echoDashTimer>0?'ECHO DASH':EXPANSION.repriseTimer>0?'RIFT REPRISE':
+          EXPANSION.glitchShieldTimer>0?'GLITCH SHIELD':EXPANSION.voidStepTimer>0?'VOID STEP':
+          EXPANSION.reboundCharges>0?'CHAOS REBOUND':UPGRADE.lastStandTimer>0?'LAST STAND':'NONE — CONTACT IS LETHAL';
+        ctx.fillText('STAGE '+(activeBoss.stage||1)+' // VOLLEY '+activeBoss.volley+' // LIGHTNING '+EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length+' // CONTACTS '+(activeBoss.contacts||0),W/2,94);
+        ctx.fillText('BLOCKED '+(activeBoss.protectedContacts||0)+' // DEFENCE '+defense+
+          (activeBoss.lastContactTimer>0?' // LAST: '+activeBoss.lastContact:''),W/2,108);
       }
       if(activeBoss.kind==='cinderRegent'&&activeBoss.warning>0&&activeBoss.warningPlan){
         const plan=activeBoss.warningPlan,x0=W-115,x1=Math.max(60,player.x-25);
