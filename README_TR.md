@@ -124,7 +124,7 @@ Parçacık güncellemesi, her karede yeni bir filtrelenmiş dizi üretmek yerine
 **Y** ile oyuncunun yaklaşık **0,68 saniye önceki dikey konumuna ve hızına** geri dönersin. Bu, tüm dünyayı geri saran bir zaman durdurma değildir; yalnızca karakterin dikey hareketini düzeltir. Etkinleştiğinde **0,58 saniyelik** kısa bir koruma penceresi açar ve tekrar kullanılmadan önce **23 saniye** bekleme süresi gerekir. Oyun, son 1,15 saniyeyi 0,075 saniyelik aralıklarla örnekler ve en fazla 24 konum kaydı tutar. Yetenek, eski ve yeni tehlike/çarpışma koruma yollarına bağlanmıştır; HUD'da etkinlik ve bekleme süresi görünür.
 
 ### RIFT LANCER
-**195.000** skordan itibaren havuzda yer alabilen yeni elit düşmandır. Mor zırhlı gövdesi ve uzun mızrağı kendisine özel Canvas çizimleriyle oluşturulur. Hücumdan önce oyuncunun yüksekliğine **0,72 saniyelik LANCE LOCK** telegraph'ı yerleştirir; ardından yaklaşık **0,38 saniyelik** hızlı bir dalış/hücum gerçekleştirir. Uyarı çizgisini gördüğünde dikey şerit değiştirmek saldırıdan kaçınmanın temel yoludur.
+**195.000** skordan itibaren havuzda yer alabilen yeni elit düşmandır. Mor zırhlı gövdesi ve uzun mızrağı kendisine özel Canvas çizimleriyle oluşturulur. Hücumdan önce oyuncunun yüksekliğine **0,82 saniyelik LANCE LOCK** uyarısı verir; ardından **0,44 saniyelik** kararlı bir hücum gerçekleştirir. Hücum çizgisini dikey olarak kıl payı ıskalamak, saldırı başına bir kez **145 puan + 10 FLOW** değerinde `RIFT EVADE` kazandırır. Uyarı çizgisini gördüğünde dikey şerit değiştirmek saldırıdan kaçınmanın temel yoludur.
 
 ### THE CINDER REGENT
 **330.000** skorda başlayan, **56 saniyelik** ve yenildiğinde **22.000 puan** veren yeni boss karşılaşmasıdır. Mevcut üç çekirdekli zayıflık penceresi sistemini kullanır. Kendine özgü saldırısı, aşamalar ilerledikçe genişleyen ve hızlanan çapraz kül parçacığı salvolarıdır; her salvo farklı güvenli boşluk bırakır. Boss'un taç benzeri silueti, merkezindeki parlak kor ve yörüngedeki köz parçaları Canvas üzerinde ayrı ayrı canlandırılır.
@@ -163,3 +163,15 @@ Kasım 2026 güncellemesinde **THE CINDER REGENT** saldırılarına 0,72 saniyel
 Koleksiyon ve geçici görsel efekt döngülerinde ring, emerald, shield, score sigil, ember, world-detail ve trail dizileri yerinde sıkıştırılır. Bu yöntem her kare yeni filtrelenmiş dizi üretimini azaltır; aktif parçacıkların veya görsel kalite seviyesinin düşürülmesini gerektirmez. Test Lab artık Cinder mermi verisini, güvenli hat telemetrisini ve Rift Lancer hücum zamanlamasını ayrıca denetler.
 
 Doğrulama: güncel inline JavaScript kaynak kodu parse kontrolünden geçti ve ilgili kaynak/test invariants kontrolleri doğrulandı. Gerçek tarayıcıda masaüstü ve dokunmatik oynanış testi ayrıca yapılmalıdır; bu kaynak kontrolleri tek başına FPS veya oynanış kusursuzluğu garantisi değildir.
+
+
+## 13) VOID AURORA ve mobil güç kontrolleri
+
+### VOID AURORA
+**390.000–410.000** skor bandında her koşuda bir kez rastgele eşikte başlayan **20–25 saniyelik** bir atmosfer olayıdır. Gökyüzünde dört katmanlı, turkuaz, cyan ve mor tonlarında yumuşak aurora şeritleri ile ince yıldız parıltıları oluşturur. Şeritler sabit sayıda Canvas eğrisiyle çizilir; her kare yeni parçacık grubu oluşturmaz. Olay tamamen kozmetiktir: hasar, çarpışma veya hareket değişikliği üretmez. Test Lab'de **VOID AURORA TEST** ile doğrudan önizlenebilir.
+
+### Mobil güç kullanımı
+Mobil güç arayüzünde yetenek seçimi ile yeteneği etkinleştirme birbirinden ayrıldı: **SELECT** düğmesi sıradaki özel yeteneği seçer; **CAST** seçili yeteneği kullanır. **RIFT REPRISE Y** için ayrıca doğrudan bir kısayol bulunur. Böylece tek dokunuşun hem yetenek kullanıp hem sıradaki güce geçmesi engellenir.
+
+### Test Lab izolasyonu
+Yüksek skorlu Lancer, Cinder Regent, Cinderfall ve Void Aurora önizlemeleri, normal koşunun eski boss karşılaşmalarını başlatan sayaçlarını bastırır. Hava olaylarının önizlemeleri de önceki skor pencerelerini tamamlanmış işaretleyerek yeni test sırasında eski yağışların sıraya girmesini önler.
