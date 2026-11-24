@@ -273,7 +273,7 @@ The updated inline game script passes a JavaScript parse check and source-level 
 
 ### New late-game enemy
 
-**Rift Lancer** joins the catalog at **195,000 score**. A dedicated Canvas silhouette makes its dark violet armour and extended lance readable. It tracks the player's current vertical lane, displays a **0.72-second LANCE LOCK** warning, then commits to a short **0.38-second** fast lunge. It uses the existing enemy capacity and collision/reward pipeline and has its own protected Test Lab showcase.
+**Rift Lancer** joins the catalog at **195,000 score**. A dedicated Canvas silhouette makes its dark violet armour and extended lance readable. It tracks the player's current vertical lane, displays a **0.82-second LANCE LOCK** warning, then commits to a **0.44-second** lunge. A narrowly avoided strike can award 145 score and 10 FLOW once per attack. It uses the existing enemy capacity and collision/reward pipeline and has its own protected Test Lab showcase.
 
 ### New boss encounter
 
@@ -281,7 +281,7 @@ The updated inline game script passes a JavaScript parse check and source-level 
 
 ### Cinderfall weather
 
-**CINDERFALL** can start once per run at a randomized threshold in the **355,000–370,000** score band and lasts **18–22 seconds**. It uses 104 lightweight wind-borne ash motes, a warm smoky sky wash, and a small in-world weather label. It is ambient only: no collision, damage, lightning, or gameplay penalty is added. The weather scheduler preserves the existing events and the Test Lab validates all **12** disjoint score windows.
+**CINDERFALL** can start once per run at a randomized threshold in the **355,000–370,000** score band and lasts **18–22 seconds**. It uses 104 lightweight wind-borne ash motes, a warm smoky sky wash, and a small in-world weather label. It is ambient only: no collision, damage, lightning, or gameplay penalty is added. The weather scheduler preserves the existing events and the Test Lab validates all **13** disjoint score windows.
 
 ### Allocation guard and validation scope
 
@@ -298,3 +298,16 @@ Magnet Core iterates the four live pickup collections independently, avoiding a 
 - **Rift Lancer:** increased the `LANCE LOCK` warning to 0.82 seconds, set the committed lunge to 0.44 seconds, and reduced the additional lunge impulse. A narrowly avoided lunge awards 145 score and 10 FLOW once per attack.
 - **Frame-loop allocations:** pickup, ember, trail, and world-detail collections use in-place compaction instead of allocating replacement arrays each frame. No particle cap or visual-quality reduction was introduced by this pass.
 - **Validation:** Test Lab now checks projectile finiteness/anchoring, safe-lane bounds, and Lancer timing. The inline script passed a syntax parse and source-level assertions. Manual desktop/mobile browser playtests and device profiling remain required before claiming measured FPS gains.
+
+
+### Void Aurora weather — November 2026
+
+**VOID AURORA** is a one-time ambient event at a randomized threshold in the **390,000–410,000** score band, lasting **20–25 seconds**. Four smooth Canvas ribbon layers in teal, cyan, mint, and violet drift across the upper sky, with a restrained deterministic star shimmer. The renderer uses a fixed number of curves and does not emit a new particle collection every frame. The event has no collision, damage, score, or movement effect. A protected **VOID AURORA TEST** preview is included in Test Lab.
+
+### Mobile ability control refinement
+
+The mobile special-power interface now separates **SELECT** from **CAST**, so choosing the next ability no longer activates the previously selected ability as a side effect. A dedicated **RIFT REPRISE Y** touch shortcut is also available. This preserves the existing keyboard bindings and ability cooldown logic.
+
+### Test-sandbox isolation correction
+
+Late-game Lancer and Cinder Regent test presets now suppress legacy boss milestones before the first simulation tick. Weather previews mark earlier score-window schedules as completed and hold unrelated star, blood-moon, gravity, bonus-ring, score-sigil, and narrative-event clocks, preventing unrelated late-game content from contaminating a focused visual preview.
