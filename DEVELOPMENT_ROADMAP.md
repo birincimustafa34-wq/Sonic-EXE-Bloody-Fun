@@ -316,3 +316,20 @@ Late-game Lancer and Cinder Regent test presets now suppress legacy boss milesto
 ### Tempest Archon test reliability fix — November 2026
 
 The Tempest boss practice scenario previously set **999 seconds of Last Stand**, which made the boss's electric projectiles harmless through the shared `expansionHit` protection path. The test now clears every automatic/temporary defensive state (Last Stand, invulnerability, shield, landing grace, and expansion abilities) so direct lightning contact exercises the normal lethal collision path. The shared boss initializer also seeds `x/y` before the first render frame. Test Lab assertions verify damage-enabled staging and finite in-arena boss coordinates; the HUD explicitly labels the practice as lethal.
+
+
+## Rift Contracts — optional milestone objectives
+
+The new **RIFT CONTRACTS** system adds short, optional side objectives without interrupting the endless-runner flow. Contracts become eligible at **40,000**, **120,000**, **220,000**, and **340,000** score, and are held while a boss encounter is active.
+
+Five contract types reuse existing run systems:
+
+- **BLOOD RING HARVEST:** collect 8 rings in 34 seconds — 1,400 score.
+- **EDGE OF COLLAPSE:** trigger 3 near misses in 34 seconds — 1,650 score.
+- **HUNTER PROTOCOL:** defeat 2 special entities in 40 seconds — 1,850 score.
+- **GROUND BREAKER:** break 1 target with Dive Slam in 42 seconds — 1,750 score.
+- **ENTER THE FLOW:** activate FLOW BURST once in 48 seconds — 2,100 score.
+
+A cleared contract also grants **14 FLOW**. The next contract waits through a **12-second** completion cooldown; an expired contract has no score or gameplay penalty and uses a **10-second** retry delay. The HUD displays the objective, progress, and remaining time. The Archive records lifetime contract completions, and **RIFT CONTRACTOR** unlocks after five lifetime clears or three clears in one run.
+
+Test Lab now includes an isolated **RIFT CONTRACT TEST** scenario. Its records-disabled ring-harvest preview is exposed to the diagnostic report and live contract-state checks. Source integration is complete; browser playtesting is still needed to assess objective pacing, HUD readability, and contract frequency during long runs.
