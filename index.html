@@ -2746,7 +2746,9 @@
     boss85Done:false,boss110Done:false,boss135Done:false,boss165Done:false,
     boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,boss300Done:false,boss330Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
-    menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0
+    menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0,
+    contract:null,contractMilestoneIndex:0,contractCooldown:0,lastContractId:'',
+    contractsCompleted:0,contractToast:'',contractToastTimer:0
   };
 
   const UPGRADE={
@@ -2767,6 +2769,15 @@
     {id:'score',label:'REACH 60,000 SCORE',target:60000},
     {id:'near',label:'MAKE 12 NEAR MISSES',target:12}
   ];
+  // Optional time-limited side objectives that reuse existing gameplay systems.
+  const RIFT_CONTRACT_MILESTONES=Object.freeze([40000,120000,220000,340000]);
+  const RIFT_CONTRACT_DEFS=Object.freeze([
+    Object.freeze({id:'ring-sweep',title:'BLOOD RING HARVEST',objective:'Collect 8 rings',metric:'rings',target:8,duration:34,reward:1400,color:'#ff718b'}),
+    Object.freeze({id:'close-call',title:'EDGE OF COLLAPSE',objective:'Trigger 3 near misses',metric:'nearMisses',target:3,duration:34,reward:1650,color:'#d477ff'}),
+    Object.freeze({id:'elite-hunt',title:'HUNTER PROTOCOL',objective:'Defeat 2 special entities',metric:'kills',target:2,duration:40,reward:1850,color:'#ff985d'}),
+    Object.freeze({id:'ground-breaker',title:'GROUND BREAKER',objective:'Break 1 target with Dive Slam',metric:'slamBreaks',target:1,duration:42,reward:1750,color:'#ffb477'}),
+    Object.freeze({id:'flow-state',title:'ENTER THE FLOW',objective:'Activate FLOW BURST once',metric:'flow',target:1,duration:48,reward:2100,color:'#79f3c1'})
+  ]);
   const UPGRADE_BOSSES=[
     ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE ABSOLUTE',150000],
     ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
@@ -2823,6 +2834,14 @@
       startBossEncounter();
       boss.timer=999;boss.duration=999;boss.warning=999;boss.attackClock=999;
       bossProjectiles=[{x:player.x+200,y:player.y-42,baseY:player.y-42,w:25,h:18,phase:0,speed:320,kind:'parry-training',colour:'#ffe17a'}];
+    }else if(id==='contract-showcase'){
+      score=42000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];
+      EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];
+      EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;
+      spawnClock=999;ringClock=.2;emeraldClock=999;shieldClock=999;rings=[];
+      startRiftContract('ring-sweep');
     }else if(id==='lancer-showcase'){
       score=195000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;shieldTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;const d=EXPANSION_ENEMIES.find(x=>x.id==='riftLancer');if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,x:W+190,y:GROUND-205,baseY:GROUND-205,phase:0,attackClock:.85,attackWarning:0,attackLunge:0,attackTargetY:GROUND-205,lungeNearMissAwarded:false,bounty:false,passed:false});expansionRememberEntity(d.name);}
     }else if(id==='cinder-boss-showcase'){
@@ -3036,6 +3055,17 @@
     if(UPGRADE.bloodMoonTimer>0){ctx.textAlign='center';ctx.fillStyle='#ff7188';ctx.font='bold 12px Consolas,monospace';ctx.fillText('BLOOD MOON // DANGER + REWARD '+UPGRADE.bloodMoonTimer.toFixed(1)+'s',W/2,36);}
     const daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
     if(daily){ctx.textAlign='left';ctx.fillStyle=UPGRADE.dailyDone?'#ffe17a':'#b9d7e8';ctx.font='bold 10px Consolas,monospace';ctx.fillText('DAILY: '+daily.label+' '+Math.min(UPGRADE.dailyTarget,upgradeDailyProgress())+'/'+UPGRADE.dailyTarget+(UPGRADE.dailyDone?' ✓':''),22,222);}
+    if(EXPANSION.contract){
+      const c=EXPANSION.contract,p=Math.min(c.target,riftContractProgress(c));
+      ctx.save();ctx.textAlign='left';ctx.font='bold 10px Consolas,monospace';
+      ctx.fillStyle=c.color;ctx.fillText('RIFT CONTRACT // '+c.title,22,242);
+      ctx.fillStyle='#e8dce9';ctx.fillText(c.objective.toUpperCase()+'  '+p+'/'+c.target+'  ·  '+c.remaining.toFixed(1)+'s',22,256);
+      ctx.fillStyle='#261725';ctx.fillRect(22,263,174,4);ctx.fillStyle=c.color;ctx.fillRect(22,263,174*(p/c.target),4);
+      ctx.restore();
+    }else if(EXPANSION.contractToastTimer>0){
+      ctx.save();ctx.textAlign='left';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#e6c9ff';
+      ctx.fillText(EXPANSION.contractToast,22,242);ctx.restore();
+    }
     if(UPGRADE.lastStandTimer>0){ctx.textAlign='right';ctx.fillStyle='#ffe17a';ctx.font='bold 12px Consolas,monospace';ctx.fillText('LAST STAND '+UPGRADE.lastStandTimer.toFixed(1)+'s',W-20,176);}
     ctx.restore();
   }
@@ -3064,6 +3094,70 @@
     saveExpansionStore();
     sfx('rush');
   }
+  function riftContractMetric(metric){
+    if(metric==='rings')return Math.max(0,ringCount);
+    if(metric==='nearMisses')return Math.max(0,EXPANSION.nearMisses);
+    if(metric==='kills')return Math.max(0,EXPANSION.enemyKills);
+    if(metric==='slamBreaks')return Math.max(0,EXPANSION.diveSlamBreaks);
+    if(metric==='flow')return Math.max(0,EXPANSION.flowActivations);
+    return 0;
+  }
+  function riftContractProgress(contract=EXPANSION.contract){
+    if(!contract)return 0;
+    return Math.max(0,riftContractMetric(contract.metric)-contract.startMetric);
+  }
+  function startRiftContract(forcedId=null){
+    const definition=forcedId
+      ?RIFT_CONTRACT_DEFS.find(item=>item.id===forcedId)
+      :(()=>{
+        const choices=RIFT_CONTRACT_DEFS.filter(item=>item.id!==EXPANSION.lastContractId);
+        return choices[Math.floor(expansionRandom()*choices.length)]||RIFT_CONTRACT_DEFS[0];
+      })();
+    if(!definition)return false;
+    EXPANSION.contract={
+      id:definition.id,title:definition.title,objective:definition.objective,
+      metric:definition.metric,target:definition.target,duration:definition.duration,
+      remaining:definition.duration,reward:definition.reward,color:definition.color,
+      startMetric:riftContractMetric(definition.metric),progress:0
+    };
+    EXPANSION.lastContractId=definition.id;
+    EXPANSION.contractToast='NEW CONTRACT // '+definition.title;
+    EXPANSION.contractToastTimer=2.8;
+    sfx('emerald');
+    return true;
+  }
+  function updateRiftContracts(dt){
+    EXPANSION.contractToastTimer=Math.max(0,EXPANSION.contractToastTimer-dt);
+    EXPANSION.contractCooldown=Math.max(0,EXPANSION.contractCooldown-dt);
+    const contract=EXPANSION.contract;
+    if(contract){
+      contract.remaining=Math.max(0,contract.remaining-dt);
+      contract.progress=Math.min(contract.target,riftContractProgress(contract));
+      if(contract.progress>=contract.target){
+        EXPANSION.contract=null;EXPANSION.contractCooldown=12;EXPANSION.contractsCompleted++;
+        awardScore(contract.reward);chargeFlow(14);
+        EXPANSION.contractToast='CONTRACT CLEARED // +'+contract.reward;
+        EXPANSION.contractToastTimer=3.2;
+        burst(player.x+player.w/2,player.y+player.h/2,contract.color,24);sfx('rush');
+        if(!UPGRADE.testMode){
+          if(!EXPANSION_STORE.stats)EXPANSION_STORE.stats={};
+          EXPANSION_STORE.stats.totalContracts=(EXPANSION_STORE.stats.totalContracts||0)+1;
+          if(EXPANSION_STORE.stats.totalContracts>=5)expansionAchievement('contract-runner','RIFT CONTRACTOR');
+          saveExpansionStore();refreshExpansionMenu();
+        }
+        if(EXPANSION.contractsCompleted>=3&&!UPGRADE.testMode)expansionAchievement('contract-runner','RIFT CONTRACTOR');
+      }else if(contract.remaining<=0){
+        EXPANSION.contract=null;EXPANSION.contractCooldown=10;
+        EXPANSION.contractToast='CONTRACT EXPIRED // NO PENALTY';
+        EXPANSION.contractToastTimer=2.5;
+      }
+    }
+    if(!EXPANSION.contract&&!UPGRADE.testMode&&EXPANSION.contractCooldown<=0&&
+       EXPANSION.contractMilestoneIndex<RIFT_CONTRACT_MILESTONES.length&&
+       score>=RIFT_CONTRACT_MILESTONES[EXPANSION.contractMilestoneIndex]&&!boss&&!EXPANSION.boss){
+      if(startRiftContract())EXPANSION.contractMilestoneIndex++;
+    }
+  }
   function resetExpansion(){
     EXPANSION.dailySeed=expansionSeedForToday();EXPANSION.rng=EXPANSION.dailySeed||1;
     EXPANSION.elapsed=0;EXPANSION.hudCorruptTimer=0;EXPANSION.hudCorruptClock=31;EXPANSION.repriseTimer=0;EXPANSION.repriseCooldown=0;EXPANSION.positionHistory=[];EXPANSION.historyClock=0;
@@ -3089,6 +3183,8 @@
     EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.boss330Done=false;EXPANSION.collapseAnnounced=false;
     resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
+    EXPANSION.contract=null;EXPANSION.contractMilestoneIndex=0;EXPANSION.contractCooldown=0;
+    EXPANSION.lastContractId='';EXPANSION.contractsCompleted=0;EXPANSION.contractToast='';EXPANSION.contractToastTimer=0;
   }
   function finishExpansionRun(){
     if(UPGRADE.testMode){
@@ -3140,6 +3236,7 @@
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
       particleBudget:{active:particles.length,maximum:MAX_PARTICLES,withinLimit:particles.length<=MAX_PARTICLES},
       riftReprise:{activeSeconds:Number(EXPANSION.repriseTimer.toFixed(2)),cooldownSeconds:Number(EXPANSION.repriseCooldown.toFixed(2)),historySamples:EXPANSION.positionHistory.length},
+      riftContracts:{active:EXPANSION.contract?{id:EXPANSION.contract.id,title:EXPANSION.contract.title,progress:EXPANSION.contract.progress,target:EXPANSION.contract.target,secondsLeft:Number(EXPANSION.contract.remaining.toFixed(2))}:null,completedThisRun:EXPANSION.contractsCompleted,nextMilestone:RIFT_CONTRACT_MILESTONES[EXPANSION.contractMilestoneIndex]||null,cooldownSeconds:Number(EXPANSION.contractCooldown.toFixed(2))},
       combatMechanics:{flow:{charge:EXPANSION.flowCharge,activeSeconds:Number(EXPANSION.flowTimer.toFixed(2)),activations:EXPANSION.flowActivations},diveSlam:{active:diveSlam.active,cooldown:Number(diveSlam.cooldown.toFixed(2)),impacts:EXPANSION.diveSlamCount,objectsBroken:EXPANSION.diveSlamBreaks},perfectParry:{windowSeconds:Number(EXPANSION.parryTimer.toFixed(2)),attempts:EXPANSION.parryAttempts,successfulParries:EXPANSION.parryCount,misses:EXPANSION.parryMisses,cooldown:Number(UPGRADE.counterCooldown.toFixed(2))},riftSentinel:{active:EXPANSION.enemies.filter(e=>e.id==='riftSentinel').length,exposed:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardBrokenTimer||0)>0).length,guardLocks:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardHitLock||0)>0).length,staggered:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardStaggerTimer||0)>0).length,attackSerial:EXPANSION.attackSerial}},
       highScorePixelGlitch:{currentPixelCount:highScoreGlitchPixelCount(),tiers:HIGH_SCORE_GLITCH_TIERS.map(tier=>({unlockScore:tier.score,pixels:tier.pixels})),nextTier:HIGH_SCORE_GLITCH_TIERS.find(tier=>score<tier.score)||null,opacity:'100% source-over',distribution:'screen-wide stratified grid',sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'?{tier:glitchTestTier+1,score:HIGH_SCORE_GLITCH_TIERS[glitchTestTier].score,pixels:highScoreGlitchPixelCount(),secondsUntilNextTier:Number(Math.max(0,glitchTestTimer).toFixed(2))}:null},
       ringSystem:{
@@ -3228,6 +3325,15 @@
     const riskRewardYs=Array.from({length:RING_GROUP_SIZE},(_,i)=>GROUND-74+ringFormationOffset('risk-reward',i));
     const riskRewardSplitValid=riskRewardYs.filter(y=>y<GROUND-155).length===3&&riskRewardYs.filter(y=>y>=GROUND-155).length===2;
     const ringRewardRulesValid=RING_GROUP_SIZE===5&&RING_GROUP_SPACING===42&&REGULAR_RING_RADIUS===12&&BONUS_RING_RADIUS===14&&RING_PICKUP_PADDING===25&&RING_LOW_SCORE===15&&RING_HIGH_SCORE===35&&RING_BONUS_SCORE===60&&RING_COMBO_CAP===5&&Number(CONFIG.ringComboWindow)>0;
+    const contractStateValid=Number.isInteger(EXPANSION.contractsCompleted)&&EXPANSION.contractsCompleted>=0&&
+      Number.isInteger(EXPANSION.contractMilestoneIndex)&&EXPANSION.contractMilestoneIndex>=0&&
+      Number.isFinite(EXPANSION.contractCooldown)&&EXPANSION.contractCooldown>=0&&
+      (!EXPANSION.contract||(RIFT_CONTRACT_DEFS.some(d=>d.id===EXPANSION.contract.id)&&
+        Number.isFinite(EXPANSION.contract.remaining)&&EXPANSION.contract.remaining>=0&&
+        Number.isFinite(EXPANSION.contract.progress)&&EXPANSION.contract.progress>=0&&
+        EXPANSION.contract.progress<=EXPANSION.contract.target));
+    const contractScenarioValid=!UPGRADE.testMode||UPGRADE.testScenario!=='contract-showcase'||
+      (EXPANSION.contract?.id==='ring-sweep'&&EXPANSION.contract.target===8&&EXPANSION.contract.remaining>0);
     const checks=[
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
@@ -3246,6 +3352,8 @@
       ['Sentinel follow-up gating',sentinelGuardDataValid,'Attack serial '+EXPANSION.attackSerial+' · one new ability activation required after guard break'],
       ['Rift Reprise history',Array.isArray(EXPANSION.positionHistory)&&EXPANSION.positionHistory.length<=24&&EXPANSION.positionHistory.every(p=>[p.time,p.y,p.vy].every(Number.isFinite)),EXPANSION.positionHistory.length+' bounded samples · 0.68s rewind target'],
       ['Rift Reprise cooldown',Number.isFinite(EXPANSION.repriseCooldown)&&EXPANSION.repriseCooldown>=0&&EXPANSION.repriseCooldown<=23,'Cooldown '+EXPANSION.repriseCooldown.toFixed(1)+'s · 0.58s protection'],
+      ['Rift Contract state',contractStateValid,EXPANSION.contract?EXPANSION.contract.title+' · '+EXPANSION.contract.progress+'/'+EXPANSION.contract.target+' · '+EXPANSION.contract.remaining.toFixed(1)+'s':EXPANSION.contractsCompleted+' completed this run'],
+      ['Rift Contract sandbox',contractScenarioValid,UPGRADE.testScenario==='contract-showcase'?'Ring Harvest objective loaded':'Ready for isolated contract preview'],
       ['Frame-time monitor',FRAME_TIMING.frames===0||Number.isFinite(FRAME_TIMING.averageMs),'Average '+FRAME_TIMING.averageMs.toFixed(1)+'ms · '+FRAME_TIMING.slowFrames+' frames over 20ms'],
       ['Ring formation catalog',RING_FORMATION_NAMES.length===5&&new Set(RING_FORMATION_NAMES).size===5&&RING_FORMATION_NAMES.every(name=>['arc','stair-step','zigzag','risk-reward','wave'].includes(name)),RING_FORMATION_NAMES.length+' unique five-ring patterns'],
       ['Ring formation geometry',ringFormationGeometryValid,'All five formations stay inside safe vertical play area'],
@@ -3324,6 +3432,7 @@
         '<button type="button" data-sandbox="free" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">FREE TEST RUN</button>'+
         '<button type="button" data-sandbox="enemy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">ENEMY SHOWCASE</button>'+
         '<button type="button" data-sandbox="boss-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">BOSS TEST</button>'+
+        '<button type="button" data-sandbox="contract-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#2b1c37;color:#eadbff;border:1px solid #9b72bb;border-radius:3px">RIFT CONTRACT TEST</button>'+
         '<button type="button" data-sandbox="synergy-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">SYNERGY TEST</button>'+
         '<button type="button" data-sandbox="hazard-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#24142b;color:#f3e5ff;border:1px solid #86569b;border-radius:3px">HAZARD TEST</button>'+
         '<button type="button" data-sandbox="ring-showcase" style="font:700 10px Consolas,monospace;padding:7px 8px;background:#2a1b12;color:#ffe6ad;border:1px solid #a9823d;border-radius:3px">RING SYSTEM 2.0 TEST</button>'+
@@ -3362,11 +3471,11 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN'],['cinder-regent','CINDER REGENT']],all=labels.concat(extra);
+      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN'],['cinder-regent','CINDER REGENT'],['contract-runner','RIFT CONTRACTOR']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
-      html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+' · Ability synergies: '+(stats.totalSynergies||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+'</div>';
+      html='<b>ARCHIVE // BOSS GALLERY</b><div>Special kills: '+(stats.totalKills||0)+' · Rings: '+(stats.totalRings||0)+' · Golden bats: '+(stats.totalBats||0)+' · Ability synergies: '+(stats.totalSynergies||0)+' · Rift contracts: '+(stats.totalContracts||0)+'</div><b>BOSS GALLERY</b>'+bosses+'<hr style="border-color:#49202d"><b>PERSONAL RECORDS</b><div>Best score: '+(EXPANSION_STORE.best||0)+' · Best combo: '+(stats.bestCombo||bestCombo||0)+' · Longest run: '+(stats.longestRun||0)+'s</div><b>DAILY CHALLENGE</b><div>'+(daily?daily.label:'No daily challenge')+' — '+(UPGRADE.dailyDone?'COMPLETE':'IN PROGRESS')+'</div><b>COLLECTIONS</b><div>Emerald fragments: '+UPGRADE.emeraldFragments+'/3 · Secret relics: '+UPGRADE.secretRelics+' · Golden bats: '+UPGRADE.goldenBats+' · Stars: '+UPGRADE.runStars+'</div><b>SECRET ENDINGS</b><div>'+(endings.length?endings.join(' · '):'Undiscovered')+'</div><b>SKINS</b><div>DEFAULT'+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+'</div>';
     }
     if(kind==='ARCHIVE')html=html.replace("<b>SKINS</b><div>DEFAULT"+(EXPANSION_STORE.best>=50000?' · BLOODSTAINED':'')+(EXPANSION_STORE.best>=100000?' · VOID':'')+((EXPANSION_STORE.endings||[]).includes('emerald-witness')?' · EMERALD':'')+"</div>","<b>SKINS</b><div>"+['DEFAULT','BLOODSTAINED','VOID','EMERALD','PHANTOM','OBSIDIAN','UNWRITTEN'].filter(skinUnlocked).join(' · ')+"</div>");
     if(kind==='TEST LAB')html=buildTestingLabHtml();
@@ -3998,6 +4107,7 @@
     }
     updateExpansionBoss(dt,playerBox);
     updateUltimateSystems(dt);
+    updateRiftContracts(dt);
   }
   function drawExpansionWorld(){
     // Ghost Runner: a shadowy duplicate that flickers in briefly from 20K to 30K only.
