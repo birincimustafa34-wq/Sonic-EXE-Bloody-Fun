@@ -28,7 +28,8 @@ window.BLOODY_FLIGHT_CONFIG = {
   biomeMusic: {
     glassWastes: "",
     staticCathedral: "",
-    eclipseAbyss: ""
+    eclipseAbyss: "",
+    fractureCrown: ""
   },
   images: {
     background: "assets/images/background.png",
@@ -51,7 +52,9 @@ window.BLOODY_FLIGHT_CONFIG = {
     biomeGlass: "",
     biomeCathedral: "",
     biomeEclipse: "",
+    biomeFracture: "",
     bossChoir: "",
+    bossMirror: "",
     bossJudge: "",
     bossArchitect: ""
   },
