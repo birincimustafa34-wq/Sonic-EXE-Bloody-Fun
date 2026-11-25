@@ -206,13 +206,15 @@
   const STORM_SCORE_BANDS=[[310000,325000]];
   const CINDERFALL_SCORE_BANDS=[[355000,370000]];
   const VOID_AURORA_SCORE_BANDS=[[390000,410000]];
+  const FRACTURE_BLOOM_SCORE_BANDS=[[435000,455000]];
+  const FRACTURE_BLOOM_PALETTE=Object.freeze(['#a9e9ff','#c6a7ff','#ff8ab9','#e9f4ff']);
   const VOID_AURORA_PALETTE=Object.freeze([
     Object.freeze(['rgba(54,255,197,0)','rgba(54,255,197,.34)','rgba(54,255,197,0)']),
     Object.freeze(['rgba(62,205,255,0)','rgba(62,205,255,.30)','rgba(62,205,255,0)']),
     Object.freeze(['rgba(166,119,255,0)','rgba(166,119,255,.27)','rgba(166,119,255,0)']),
     Object.freeze(['rgba(86,255,218,0)','rgba(86,255,218,.23)','rgba(86,255,218,0)'])
   ]);
-  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],voidAuroraSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
+  let rainSchedule=[],bloodRainSchedule=[],stormSchedule=[],cinderfallSchedule=[],voidAuroraSchedule=[],fractureBloomSchedule=[],rainDrops=[],rainTimer=0,rainBlend=0,rainWind=0,rainKind='normal';
   let stormStrikeClock=0,stormStrikeX=0,stormStrikeWarning=0,stormStrikeActive=0,stormFlashTimer=0,stormStrikeCount=0,stormStrikeHits=0;
   let boss=null,bossProjectiles=[],bossIntroduced=false,secondBossIntroduced=false,thirdBossIntroduced=false,fourthBossIntroduced=false,bossClearTimer=0,bossIntroTimer=0;
   let bossIntroMessage='SOMETHING IS HUNTING YOU',bossClearMessage='THE HUNTER RETREATED  +1200';
@@ -958,16 +960,17 @@
     {name:'THE BLOOD FOREST',color:'#ff6b86'},
     {name:'THE GLASS WASTES',color:'#8cecff'},
     {name:'THE STATIC CATHEDRAL',color:'#c7a4ff'},
-    {name:'THE ECLIPSE ABYSS',color:'#ff456b'}
+    {name:'THE ECLIPSE ABYSS',color:'#ff456b'},
+    {name:'THE FRACTURE CROWN',color:'#a9e9ff'}
   ];
-  function biomeTierForScore(value){return value>=225000?3:value>=140000?2:value>=70000?1:0;}
+  function biomeTierForScore(value){return value>=420000?4:value>=225000?3:value>=140000?2:value>=70000?1:0;}
   function updateBiomeTransition(dt){
     const next=biomeTierForScore(score);
     if(next!==activeBiomeTier){
       activeBiomeTier=next;biomeIntroTimer=3.8;
-      const cue=next===1?'biomeGlass':next===2?'biomeCathedral':next===3?'biomeEclipse':null;
+      const cue=next===1?'biomeGlass':next===2?'biomeCathedral':next===3?'biomeEclipse':next===4?'biomeFracture':null;
       if(cue)sfx(cue);
-      const key=next===1?'glassWastes':next===2?'staticCathedral':next===3?'eclipseAbyss':'forest';
+      const key=next===1?'glassWastes':next===2?'staticCathedral':next===3?'eclipseAbyss':next===4?'fractureCrown':'forest';
       switchMusicTrack(CONFIG.biomeMusic[key]||CONFIG.music.path||'');
     }else biomeIntroTimer=Math.max(0,biomeIntroTimer-dt);
   }
@@ -985,12 +988,13 @@
     stormSchedule=STORM_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:17+Math.random()*3,done:false}));
     cinderfallSchedule=CINDERFALL_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:18+Math.random()*4,done:false}));
     voidAuroraSchedule=VOID_AURORA_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:20+Math.random()*5,done:false}));
+    fractureBloomSchedule=FRACTURE_BLOOM_SCORE_BANDS.map(([min,max])=>({min,max,threshold:min+Math.random()*(max-min),duration:21+Math.random()*5,done:false}));
   }
   function startRainEvent(duration,kind='normal'){
-    rainTimer=duration||12;rainWind=kind==='aurora'?0:kind==='storm'?112+Math.random()*48:kind==='cinder'?54+Math.random()*38:52+Math.random()*42;rainKind=kind;
-    const blood=kind==='blood',storm=kind==='storm',cinder=kind==='cinder',aurora=kind==='aurora';
+    rainTimer=duration||12;rainWind=kind==='aurora'||kind==='bloom'?0:kind==='storm'?112+Math.random()*48:kind==='cinder'?54+Math.random()*38:52+Math.random()*42;rainKind=kind;
+    const blood=kind==='blood',storm=kind==='storm',cinder=kind==='cinder',aurora=kind==='aurora',bloom=kind==='bloom';
     if(storm){stormStrikeClock=2.1;stormStrikeWarning=0;stormStrikeActive=0;}
-    rainDrops=aurora?[]:Array.from({length:storm?142:blood?150:cinder?104:128},()=>{
+    rainDrops=aurora||bloom?[]:Array.from({length:storm?142:blood?150:cinder?104:128},()=>{
       const drop=makeRainDrop(true);
       if(blood){drop.length=13+Math.random()*10;drop.speed=420+Math.random()*220;drop.alpha=.27+Math.random()*.25;drop.width=.9+Math.random()*.7;}
       else if(storm){drop.length=16+Math.random()*13;drop.speed=520+Math.random()*230;drop.alpha=.2+Math.random()*.25;drop.width=1+Math.random()*.8;}
@@ -1000,11 +1004,12 @@
   }
   function updateRainWeather(dt){
     if(rainTimer<=0){
-      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done),nextCinder=cinderfallSchedule.find(event=>!event.done),nextAurora=voidAuroraSchedule.find(event=>!event.done);
+      const nextStorm=stormSchedule.find(event=>!event.done),nextBlood=bloodRainSchedule.find(event=>!event.done),nextRain=rainSchedule.find(event=>!event.done),nextCinder=cinderfallSchedule.find(event=>!event.done),nextAurora=voidAuroraSchedule.find(event=>!event.done),nextBloom=fractureBloomSchedule.find(event=>!event.done);
       if(nextStorm&&score>=nextStorm.threshold){nextStorm.done=true;startRainEvent(nextStorm.duration,'storm');}
       else if(nextBlood&&score>=nextBlood.threshold){nextBlood.done=true;startRainEvent(nextBlood.duration,'blood');}
       else if(nextCinder&&score>=nextCinder.threshold){nextCinder.done=true;startRainEvent(nextCinder.duration,'cinder');}
       else if(nextAurora&&score>=nextAurora.threshold){nextAurora.done=true;startRainEvent(nextAurora.duration,'aurora');}
+      else if(nextBloom&&score>=nextBloom.threshold){nextBloom.done=true;startRainEvent(nextBloom.duration,'bloom');}
       else if(nextRain&&score>=nextRain.threshold){nextRain.done=true;startRainEvent(nextRain.duration,'normal');}
     }else rainTimer=Math.max(0,rainTimer-dt);
     const target=rainTimer>0?1:0;
@@ -1035,12 +1040,14 @@
   }
   function drawRainWeather(){
     if(rainBlend<=.008)return;
-    const blood=rainKind==='blood',storm=rainKind==='storm',cinder=rainKind==='cinder',aurora=rainKind==='aurora';
+    const blood=rainKind==='blood',storm=rainKind==='storm',cinder=rainKind==='cinder',aurora=rainKind==='aurora',bloom=rainKind==='bloom';
     ctx.save();
     ctx.globalAlpha=rainBlend;
     const skyWash=ctx.createLinearGradient(0,0,0,GROUND);
     if(aurora){
       skyWash.addColorStop(0,'rgba(17,31,65,.25)');skyWash.addColorStop(.48,'rgba(22,27,65,.17)');skyWash.addColorStop(1,'rgba(9,16,39,.12)');
+    }else if(bloom){
+      skyWash.addColorStop(0,'rgba(22,28,61,.28)');skyWash.addColorStop(.52,'rgba(30,18,66,.18)');skyWash.addColorStop(1,'rgba(13,10,34,.24)');
     }else if(blood){
       skyWash.addColorStop(0,'rgba(125,16,34,.105)');skyWash.addColorStop(.55,'rgba(102,9,28,.065)');skyWash.addColorStop(1,'rgba(75,5,22,.11)');
     }else if(storm){skyWash.addColorStop(0,'rgba(20,49,72,.19)');skyWash.addColorStop(.55,'rgba(13,34,59,.12)');skyWash.addColorStop(1,'rgba(8,23,42,.2)');
@@ -1056,7 +1063,7 @@
       {x:(elapsed*3.2+410)%(W+300)-150,y:68,w:285,h:34},
       {x:(elapsed*4.1+760)%(W+260)-130,y:31,w:190,h:29}
     ];
-    ctx.fillStyle=aurora?'rgba(10,14,38,.12)':blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':cinder?'rgba(45,32,29,.24)':'rgba(115,139,160,.075)';
+    ctx.fillStyle=aurora?'rgba(10,14,38,.12)':bloom?'rgba(16,16,42,.24)':blood?'rgba(54,12,27,.16)':storm?'rgba(13,25,43,.24)':cinder?'rgba(45,32,29,.24)':'rgba(115,139,160,.075)';
     for(const cloud of cloudGroups){
       const {x,y,w,h}=cloud;
       ctx.beginPath();
@@ -1064,6 +1071,29 @@
       ctx.ellipse(x+w*.48,y+h*.34,w*.27,h*.49,0,0,Math.PI*2);
       ctx.ellipse(x+w*.72,y+h*.56,w*.28,h*.35,0,0,Math.PI*2);
       ctx.fill();
+    }
+    if(bloom){
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
+      for(let band=0;band<5;band++){
+        const phase=elapsed*(.31+band*.035)+band*1.19,baseY=54+band*34+Math.sin(phase)*11;
+        ctx.globalAlpha=rainBlend*(.28-band*.035);ctx.strokeStyle=FRACTURE_BLOOM_PALETTE[band%FRACTURE_BLOOM_PALETTE.length];
+        ctx.lineWidth=11-band*1.25;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=17-band*2;
+        ctx.beginPath();ctx.moveTo(-25,baseY);
+        ctx.bezierCurveTo(W*.22,baseY-23+Math.sin(phase+1)*18,W*.46,baseY+25+Math.cos(phase)*16,W*.68,baseY-8+Math.sin(phase*1.2)*18);
+        ctx.bezierCurveTo(W*.84,baseY-32+Math.cos(phase*.8)*15,W*.94,baseY+16+Math.sin(phase)*14,W+25,baseY-4);
+        ctx.stroke();
+      }
+      ctx.shadowBlur=11;
+      for(let shard=0;shard<18;shard++){
+        const phase=elapsed*(.32+(shard%4)*.07)+shard*2.17;
+        const x=(shard*83+elapsed*(13+(shard%5)*3))%W;
+        const y=34+(shard*47)%Math.max(90,GROUND-95)+Math.sin(phase)*13;
+        const size=2+(shard%3);
+        ctx.save();ctx.translate(x,y);ctx.rotate(phase*.42);ctx.globalAlpha=rainBlend*(.26+.18*Math.sin(phase*1.7));
+        ctx.fillStyle=FRACTURE_BLOOM_PALETTE[shard%FRACTURE_BLOOM_PALETTE.length];
+        ctx.beginPath();ctx.moveTo(0,-size*2.5);ctx.lineTo(size,0);ctx.lineTo(0,size*2.5);ctx.lineTo(-size,0);ctx.closePath();ctx.fill();ctx.restore();
+      }
+      ctx.restore();
     }
     if(aurora){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
@@ -1111,6 +1141,7 @@
       ctx.stroke();
     }
     if(cinder){ctx.globalAlpha=.72;ctx.textAlign='center';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#f2bd83';ctx.fillText('CINDERFALL // WIND-BORNE ASH',W/2,25);}
+    if(bloom){ctx.globalAlpha=.82;ctx.textAlign='center';ctx.font='bold 10px Consolas,monospace';ctx.fillStyle='#d8dcff';ctx.shadowColor='#a98bff';ctx.shadowBlur=12;ctx.fillText('FRACTURE BLOOM // REFRACTED LIGHT',W/2,25);ctx.shadowBlur=0;}
     if(storm&&stormStrikeWarning>0){ctx.globalAlpha=.34+.28*Math.sin(elapsed*24);ctx.strokeStyle='#a9eaff';ctx.lineWidth=2;ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(stormStrikeX,12);ctx.lineTo(stormStrikeX,GROUND);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#dff8ff';ctx.font='bold 9px Consolas,monospace';ctx.textAlign='center';ctx.fillText('LIGHTNING IN '+stormStrikeWarning.toFixed(1)+'s',stormStrikeX,26);}
     if(storm&&stormStrikeActive>0){ctx.globalAlpha=.9;ctx.shadowColor='#8de6ff';ctx.shadowBlur=22;ctx.strokeStyle='#e6fbff';ctx.lineWidth=7;ctx.lineJoin='miter';ctx.beginPath();ctx.moveTo(stormStrikeX,0);ctx.lineTo(stormStrikeX-9,GROUND*.28);ctx.lineTo(stormStrikeX+8,GROUND*.42);ctx.lineTo(stormStrikeX-5,GROUND*.66);ctx.lineTo(stormStrikeX+2,GROUND);ctx.stroke();ctx.strokeStyle='#62cfff';ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;ctx.textAlign='left';}
     if(stormFlashTimer>0){ctx.globalAlpha=stormFlashTimer/.18*.16;ctx.fillStyle='#a8eaff';ctx.fillRect(0,0,W,GROUND);ctx.globalAlpha=1;}
@@ -1144,7 +1175,7 @@
       }
       for(let i=0;i<6;i++){const x=(i*171+elapsed*12)%W;ctx.globalAlpha=.22+.14*Math.sin(elapsed*2+i);pixelRect(x,38+(i*41)%145,2,64,'#bda0ff');}
       ctx.globalAlpha=1;
-    }else{
+    }else if(tier===3){
       ctx.fillStyle='rgba(5,2,13,.26)';ctx.fillRect(0,0,W,GROUND);
       const pulse=.5+.5*Math.sin(elapsed*1.7),cx=770,cy=112,r=72+pulse*5;
       ctx.fillStyle='rgba(3,2,10,.88)';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
@@ -1156,6 +1187,23 @@
         ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y+18+(i%4)*6);ctx.lineTo(x-6,y+22+(i%3)*5);ctx.closePath();ctx.fill();
       }
       ctx.globalAlpha=1;
+    }else{
+      ctx.fillStyle='rgba(4,7,20,.30)';ctx.fillRect(0,0,W,GROUND);
+      const pulse=.5+.5*Math.sin(elapsed*1.35);
+      for(let i=0;i<8;i++){
+        const x=((i*137-elapsed*(8+(i%3)*4))%(W+170)+W+170)%(W+170)-85;
+        const base=GROUND-7,h=105+(i%4)*28;
+        ctx.fillStyle='rgba(7,12,28,.88)';ctx.fillRect(x,base-h,32+(i%2)*9,h);
+        ctx.strokeStyle=i%2?'rgba(137,212,255,.38)':'rgba(191,153,255,.38)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x-5,base-h+15);ctx.lineTo(x+12,base-h-10);ctx.lineTo(x+24,base-h+13);ctx.lineTo(x+38,base-h-4);ctx.stroke();
+        ctx.fillStyle='rgba(143,214,255,.25)';ctx.fillRect(x+7,base-h+34,3,h-45);ctx.fillRect(x+23,base-h+18,3,h-29);
+      }
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.translate(W*.72,GROUND*.42);
+      for(let ring=0;ring<4;ring++){
+        ctx.save();ctx.rotate(elapsed*(ring%2?.11:-.09)+ring*.62);ctx.strokeStyle=ring%2?'rgba(174,145,255,.34)':'rgba(127,225,255,.34)';
+        ctx.lineWidth=2+ring%2;ctx.beginPath();ctx.ellipse(0,0,85+ring*28,25+ring*11,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+      }
+      ctx.restore();ctx.globalAlpha=.18+.09*pulse;ctx.fillStyle='#9ddfff';ctx.fillRect(0,GROUND-2,W,2);ctx.globalAlpha=1;
     }
     ctx.restore();
   }
@@ -2725,6 +2773,18 @@
   if(!Array.isArray(EXPANSION_STORE.achievements))EXPANSION_STORE.achievements=[];
   if(!Array.isArray(EXPANSION_STORE.codex))EXPANSION_STORE.codex=[];
   if(!Array.isArray(EXPANSION_STORE.ghost))EXPANSION_STORE.ghost=[];
+  if(!EXPANSION_STORE.stats||typeof EXPANSION_STORE.stats!=='object'||Array.isArray(EXPANSION_STORE.stats))EXPANSION_STORE.stats={};
+  if(!Array.isArray(EXPANSION_STORE.endings))EXPANSION_STORE.endings=[];
+  if(!EXPANSION_STORE.dailyChallenge||typeof EXPANSION_STORE.dailyChallenge!=='object'||Array.isArray(EXPANSION_STORE.dailyChallenge))EXPANSION_STORE.dailyChallenge=null;
+  EXPANSION_STORE.best=Number.isFinite(Number(EXPANSION_STORE.best))?Math.max(0,Math.floor(Number(EXPANSION_STORE.best))):0;
+  EXPANSION_STORE.achievements=[...new Set(EXPANSION_STORE.achievements.filter(value=>typeof value==='string'&&value.length<=80))];
+  EXPANSION_STORE.codex=[...new Set(EXPANSION_STORE.codex.filter(value=>typeof value==='string'&&value.length<=100))];
+  EXPANSION_STORE.endings=[...new Set(EXPANSION_STORE.endings.filter(value=>typeof value==='string'&&value.length<=80))];
+  EXPANSION_STORE.ghost=EXPANSION_STORE.ghost.filter(sample=>Array.isArray(sample)&&sample.length>=2&&Number.isFinite(sample[0])&&Number.isFinite(sample[1])).slice(-1500);
+  for(const key of Object.keys(EXPANSION_STORE.stats)){
+    const value=Number(EXPANSION_STORE.stats[key]);
+    EXPANSION_STORE.stats[key]=Number.isFinite(value)&&value>=0?value:0;
+  }
   function saveExpansionStore(){
     if(UPGRADE.testMode)return;
     try{localStorage.setItem(EXPANSION_STORAGE_KEY,JSON.stringify(EXPANSION_STORE));}catch(_){}
