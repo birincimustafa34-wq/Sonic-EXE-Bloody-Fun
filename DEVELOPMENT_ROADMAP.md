@@ -320,7 +320,7 @@ The Tempest boss practice scenario previously set **999 seconds of Last Stand**,
 
 ## Rift Contracts — optional milestone objectives
 
-The new **RIFT CONTRACTS** system adds short, optional side objectives without interrupting the endless-runner flow. Contracts become eligible at **40,000**, **120,000**, **220,000**, and **340,000** score, and are held while a boss encounter is active.
+The new **RIFT CONTRACTS** system adds short, optional side objectives without interrupting the endless-runner flow. Contracts become eligible at **40,000**, **120,000**, **220,000**, and **340,000** score. New contracts wait until the arena is clear, and an active contract's timer pauses during boss encounters.
 
 Five contract types reuse existing run systems:
 
