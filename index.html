@@ -3131,7 +3131,8 @@
     EXPANSION.contractCooldown=Math.max(0,EXPANSION.contractCooldown-dt);
     const contract=EXPANSION.contract;
     if(contract){
-      contract.remaining=Math.max(0,contract.remaining-dt);
+      const bossEncounterActive=!!boss||!!EXPANSION.boss;
+      if(!bossEncounterActive)contract.remaining=Math.max(0,contract.remaining-dt);
       contract.progress=Math.min(contract.target,riftContractProgress(contract));
       if(contract.progress>=contract.target){
         EXPANSION.contract=null;EXPANSION.contractCooldown=12;EXPANSION.contractsCompleted++;
@@ -3236,7 +3237,7 @@
       frameTiming:{averageFrameMs:Number(FRAME_TIMING.averageMs.toFixed(2)),peakFrameMs:Number(FRAME_TIMING.peakMs.toFixed(2)),slowFramesOver20ms:FRAME_TIMING.slowFrames,measuredFrames:FRAME_TIMING.frames},
       particleBudget:{active:particles.length,maximum:MAX_PARTICLES,withinLimit:particles.length<=MAX_PARTICLES},
       riftReprise:{activeSeconds:Number(EXPANSION.repriseTimer.toFixed(2)),cooldownSeconds:Number(EXPANSION.repriseCooldown.toFixed(2)),historySamples:EXPANSION.positionHistory.length},
-      riftContracts:{active:EXPANSION.contract?{id:EXPANSION.contract.id,title:EXPANSION.contract.title,progress:EXPANSION.contract.progress,target:EXPANSION.contract.target,secondsLeft:Number(EXPANSION.contract.remaining.toFixed(2))}:null,completedThisRun:EXPANSION.contractsCompleted,nextMilestone:RIFT_CONTRACT_MILESTONES[EXPANSION.contractMilestoneIndex]||null,cooldownSeconds:Number(EXPANSION.contractCooldown.toFixed(2))},
+      riftContracts:{active:EXPANSION.contract?{id:EXPANSION.contract.id,title:EXPANSION.contract.title,progress:EXPANSION.contract.progress,target:EXPANSION.contract.target,secondsLeft:Number(EXPANSION.contract.remaining.toFixed(2))}:null,completedThisRun:EXPANSION.contractsCompleted,nextMilestone:RIFT_CONTRACT_MILESTONES[EXPANSION.contractMilestoneIndex]||null,pausedForBoss:!!(boss||EXPANSION.boss),cooldownSeconds:Number(EXPANSION.contractCooldown.toFixed(2))},
       combatMechanics:{flow:{charge:EXPANSION.flowCharge,activeSeconds:Number(EXPANSION.flowTimer.toFixed(2)),activations:EXPANSION.flowActivations},diveSlam:{active:diveSlam.active,cooldown:Number(diveSlam.cooldown.toFixed(2)),impacts:EXPANSION.diveSlamCount,objectsBroken:EXPANSION.diveSlamBreaks},perfectParry:{windowSeconds:Number(EXPANSION.parryTimer.toFixed(2)),attempts:EXPANSION.parryAttempts,successfulParries:EXPANSION.parryCount,misses:EXPANSION.parryMisses,cooldown:Number(UPGRADE.counterCooldown.toFixed(2))},riftSentinel:{active:EXPANSION.enemies.filter(e=>e.id==='riftSentinel').length,exposed:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardBrokenTimer||0)>0).length,guardLocks:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardHitLock||0)>0).length,staggered:EXPANSION.enemies.filter(e=>e.id==='riftSentinel'&&(e.guardStaggerTimer||0)>0).length,attackSerial:EXPANSION.attackSerial}},
       highScorePixelGlitch:{currentPixelCount:highScoreGlitchPixelCount(),tiers:HIGH_SCORE_GLITCH_TIERS.map(tier=>({unlockScore:tier.score,pixels:tier.pixels})),nextTier:HIGH_SCORE_GLITCH_TIERS.find(tier=>score<tier.score)||null,opacity:'100% source-over',distribution:'screen-wide stratified grid',sandbox:UPGRADE.testMode&&UPGRADE.testScenario==='pixel-glitch-showcase'?{tier:glitchTestTier+1,score:HIGH_SCORE_GLITCH_TIERS[glitchTestTier].score,pixels:highScoreGlitchPixelCount(),secondsUntilNextTier:Number(Math.max(0,glitchTestTimer).toFixed(2))}:null},
       ringSystem:{
