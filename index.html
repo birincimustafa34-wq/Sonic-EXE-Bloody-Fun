@@ -367,6 +367,8 @@
     if(name==='bossChoir')[330,415,494,659].forEach((n,i)=>tone(n,.55,'sine',.038,n*1.08,i*.08));
     if(name==='bossJudge'){tone(310,.22,'sawtooth',.09,72);tone(155,.34,'square',.055,42,.08);tone(620,.14,'square',.035,180,.18);}
     if(name==='bossArchitect')[880,660,440,330].forEach((n,i)=>tone(n,.48,'triangle',.04,n*.72,i*.13));
+    if(name==='bossMirror'){[294,440,587,880].forEach((n,i)=>tone(n,.38,'triangle',.038,n*(i%2?1.18:.82),i*.09));tone(73,.72,'sine',.045,41,.18);}
+    if(name==='biomeFracture'){[392,523,698,1047].forEach((n,i)=>tone(n,.32,'sine',.032,n*.92,i*.11));}
   }
   function sfx(name){
     if(muted)return;
