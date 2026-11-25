@@ -2804,7 +2804,7 @@
     nearMisses:0,enemyKills:0,pickupsCollected:0,bossesDefeated:0,
     runSamples:[],ghostSamples:[],ghostClock:0,ghostAppearanceTimer:0,ghostAppearanceClock:0,ghostAppearanceCount:0,adaptiveFactor:1,
     boss85Done:false,boss110Done:false,boss135Done:false,boss165Done:false,
-    boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,boss300Done:false,boss330Done:false,
+    boss150Done:false,boss175Done:false,boss185Done:false,boss200Done:false,boss215Done:false,boss250Done:false,boss275Done:false,boss300Done:false,boss330Done:false,boss360Done:false,
     collapseAnnounced:false,nightmareAnnounced:false,finalEra:false,
     menuPanel:null,menuButtons:null,achievementToast:'',achievementToastTimer:0,
     contract:null,contractMilestoneIndex:0,contractCooldown:0,lastContractId:'',
@@ -2841,10 +2841,10 @@
   const UPGRADE_BOSSES=[
     ['THE HOLLOW KING',85000],['THE MACHINE',110000],['THE WATCHER',135000],['THE ABSOLUTE',150000],
     ['THE FRACTURED',165000],['NULL SOVEREIGN REMATCH',175000],['THE STATIC CHOIR',185000],['THE LAST SIGNAL',200000],
-    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000],['THE TEMPEST ARCHON',300000],['THE CINDER REGENT',330000]
+    ['THE RED JUDGE',215000],['THE UNWRITTEN',250000],['THE PALE ARCHITECT',275000],['THE TEMPEST ARCHON',300000],['THE CINDER REGENT',330000],['THE MIRROR WARDEN',360000]
   ];
 
-  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done','boss300Done','boss330Done'];
+  const TEST_BOSS_FLAGS=['boss85Done','boss110Done','boss135Done','boss150Done','boss165Done','boss175Done','boss185Done','boss200Done','boss215Done','boss250Done','boss275Done','boss300Done','boss330Done','boss360Done'];
   function setupTestingScenario(id){
     if(!UPGRADE.testMode)return;
     for(const key of TEST_BOSS_FLAGS)EXPANSION[key]=true;
@@ -2906,6 +2906,22 @@
       score=195000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;shieldTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;const d=EXPANSION_ENEMIES.find(x=>x.id==='riftLancer');if(d){EXPANSION.enemies.push({id:d.id,name:d.name,color:d.color,w:d.w,h:d.h,points:d.points,kind:d.kind,x:W+190,y:GROUND-205,baseY:GROUND-205,phase:0,attackClock:.85,attackWarning:0,attackLunge:0,attackTargetY:GROUND-205,lungeNearMissAwarded:false,bounty:false,passed:false});expansionRememberEntity(d.name);}
     }else if(id==='cinder-boss-showcase'){
       score=330000;activeBiomeTier=biomeTierForScore(score);bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;UPGRADE.lastStandTimer=999;player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;startExpansionBoss('THE CINDER REGENT',56,22000,'cinderRegent');
+    }else if(id==='mirror-boss-showcase'){
+      score=360000;activeBiomeTier=biomeTierForScore(score);
+      bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
+      boss=null;bossProjectiles=[];EXPANSION.boss=null;EXPANSION.shots=[];
+      EXPANSION.enemies=[];EXPANSION.hazards=[];EXPANSION.pickups=[];EXPANSION.echoWaves=[];
+      obstacles=[];rings=[];emeralds=[];shields=[];scoreSigils=[];particles=[];trail=[];worldDetails=[];embers=[];
+      spawnClock=999;ringClock=999;emeraldClock=999;shieldClock=999;
+      EXPANSION.spawnClock=999;EXPANSION.hazardClock=999;EXPANSION.pickupClock=999;EXPANSION.ghostAppearanceClock=999;EXPANSION.shadowPursuitClock=999;
+      UPGRADE.lastStandTimer=0;player.invuln=0;shieldTimer=0;landingGrace=0;
+      EXPANSION.phaseTimer=0;EXPANSION.echoDashTimer=0;EXPANSION.repriseTimer=0;EXPANSION.glitchShieldTimer=0;EXPANSION.voidStepTimer=0;EXPANSION.reboundCharges=0;dashTimer=0;
+      rainSchedule.forEach(event=>event.done=true);bloodRainSchedule.forEach(event=>event.done=true);stormSchedule.forEach(event=>event.done=true);
+      cinderfallSchedule.forEach(event=>event.done=true);voidAuroraSchedule.forEach(event=>event.done=true);fractureBloomSchedule.forEach(event=>event.done=true);
+      UPGRADE.eventClock=999;UPGRADE.starClock=999;UPGRADE.bloodMoonClock=999;UPGRADE.choiceClock=999;UPGRADE.choiceActive=false;
+      EXPANSION.gravityShiftClock=999;EXPANSION.collapseAnnounced=true;EXPANSION.nightmareAnnounced=true;ringBonusClock=999;scoreSigilClock=999;
+      player.x=132;player.y=GROUND-player.h;player.vy=0;player.jumps=0;player.flight=0;player.sliding=false;
+      startExpansionBoss('THE MIRROR WARDEN',60,26000,'mirrorWarden');
     }else if(id==='sentinel-showcase'){
       score=150000;activeBiomeTier=biomeTierForScore(score);
       bossIntroduced=true;secondBossIntroduced=true;thirdBossIntroduced=true;fourthBossIntroduced=true;
@@ -3241,7 +3257,7 @@
     EXPANSION.adaptiveFactor=1;EXPANSION.hitCooldown=0;EXPANSION.bossRushNext=15000;
     EXPANSION.boss85Done=false;EXPANSION.boss110Done=false;EXPANSION.boss135Done=false;EXPANSION.boss165Done=false;
     EXPANSION.boss150Done=false;EXPANSION.boss175Done=false;EXPANSION.boss185Done=false;
-    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.boss330Done=false;EXPANSION.collapseAnnounced=false;
+    EXPANSION.boss200Done=false;EXPANSION.boss215Done=false;EXPANSION.boss250Done=false;EXPANSION.boss275Done=false;EXPANSION.boss300Done=false;EXPANSION.boss330Done=false;EXPANSION.boss360Done=false;EXPANSION.collapseAnnounced=false;
     resetUltimateSystems();
     EXPANSION.nightmareAnnounced=false;EXPANSION.finalEra=false;EXPANSION.achievementToastTimer=0;
     EXPANSION.contract=null;EXPANSION.contractMilestoneIndex=0;EXPANSION.contractCooldown=0;
@@ -3532,7 +3548,7 @@
       html='<b>ENTITY CODEX</b><div style="margin:7px 0;color:#d5bac4">Recorded encounters: '+found+'</div>'+rows;
     }else if(kind==='ACHIEVEMENTS'){
       const labels=[['ten-thousand','TEN THOUSAND'],['fifty-thousand','FIFTY THOUSAND'],['one-hundred-thousand','ONE HUNDRED THOUSAND'],['collapse-era','THE COLLAPSE ERA'],['hunter','HUNTER'],['boss-breaker','BOSS BREAKER'],['close-call','CLOSE CALL'],['clean-run','PERFECT STREAK'],['collector','COLLECTOR'],['first-bounty','BOUNTY CLAIMED'],['jackpot','JACKPOT'],['absolute','THE ABSOLUTE'],['last-signal','LAST SIGNAL'],['nightmare','NIGHTMARE SURVIVOR'],['unwritten','THE UNWRITTEN']];
-      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN'],['cinder-regent','CINDER REGENT'],['contract-runner','RIFT CONTRACTOR']],all=labels.concat(extra);
+      const extra=[['first-synergy','ABILITY SYNCHRONY'],['daily-champion','DAILY CHAMPION'],['golden-bat','GOLDEN BAT'],['emerald-reassembled','EMERALD REASSEMBLED'],['relic-finder','RELIC FINDER'],['star-catcher','STAR CATCHER'],['survival-medal','SURVIVAL MEDAL'],['secret-ending','SECRET ENDING'],['combo-finisher','COMBO FINISHER'],['perfect-flight','PERFECT FLIGHT'],['sentinel-break','SENTINEL BROKEN'],['cinder-regent','CINDER REGENT'],['contract-runner','RIFT CONTRACTOR'],['mirror-warden','MIRROR WARDEN']],all=labels.concat(extra);
       html='<b>ACHIEVEMENTS '+EXPANSION_STORE.achievements.length+'/'+all.length+'</b>'+all.map(a=>'<div style="padding:5px;color:'+(EXPANSION_STORE.achievements.includes(a[0])?'#ffe17a':'#75666c')+'">'+(EXPANSION_STORE.achievements.includes(a[0])?'✦ ':'◇ ')+a[1]+'</div>').join('');
     }else if(kind==='ARCHIVE'){
       const stats=EXPANSION_STORE.stats||{},endings=EXPANSION_STORE.endings||[],bosses=UPGRADE_BOSSES.map(b=>'<div style="padding:4px">◇ '+b[0]+' — '+(b[1]/1000)+'K</div>').join(''),daily=UPGRADE_DAILY.find(d=>d.id===UPGRADE.dailyType);
@@ -3724,25 +3740,26 @@
     bossIntroMessage=name.toUpperCase()+' HAS ENTERED THE COLLAPSE';
     bossIntroTimer=3.0;shake=.28;flash=.24;
     burst(W-165,120,'#d477ff',30);
-    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'||kind==='cinderRegent'?'bossArchitect':kind==='tempest'?'shield':null;
+    const bossCue=kind==='staticChoir'?'bossChoir':kind==='redJudge'?'bossJudge':kind==='paleArchitect'||kind==='cinderRegent'?'bossArchitect':kind==='mirrorWarden'?'bossMirror':kind==='tempest'?'shield':null;
     sfx(bossCue||'smash');
   }
   function updateExpansionBoss(dt,playerBox){
     const b=EXPANSION.boss;if(!b)return;
     const slowFactor=EXPANSION.timeFractureTimer>0?.58:1;
     b.lastContactTimer=Math.max(0,(b.lastContactTimer||0)-dt);
-    b.timer-=dt;b.phase+=dt*(b.kind==='final'?2.3:1.65)*slowFactor;
+    b.timer-=dt;b.phase+=dt*(b.kind==='mirrorWarden'?2.05:b.kind==='final'?2.3:1.65)*slowFactor;
     b.weaknessClock-=dt;
     if(b.weaknessClock<=0&&b.weaknessTimer<=0){b.weaknessTimer=2.15;b.weaknessClock=7.2;}
     if(b.weaknessTimer>0)b.weaknessTimer=Math.max(0,b.weaknessTimer-dt);
     const stage=b.timer<b.duration*.34?3:b.timer<b.duration*.68?2:1;
     b.stage=stage;
     let volleyPlan=null;
-    if(b.kind==='cinderRegent'&&b.warningPlan){
+    if((b.kind==='cinderRegent'||b.kind==='mirrorWarden')&&b.warningPlan){
       const plan=b.warningPlan;
       const travelTime=Math.max(0,(W-115-(player.x-25))/plan.shotSpeed);
       const startOffset=plan.offsets[plan.gapIndex];
-      const endOffset=startOffset+plan.cinderDrift*travelTime+Math.sin(travelTime*6)*5;
+      const laneDrift=b.kind==='mirrorWarden'?plan.mirrorGapDrift:plan.cinderDrift;
+      const endOffset=startOffset+laneDrift*travelTime+Math.sin(travelTime*6)*(b.kind==='mirrorWarden'?6:5);
       const minCenter=Math.max(30-startOffset,30-endOffset);
       const maxCenter=Math.min(GROUND-30-startOffset,GROUND-30-endOffset);
       plan.center=Math.max(minCenter,Math.min(maxCenter,plan.center));
@@ -3757,7 +3774,8 @@
         const standardOffsets=stage===1?[-78,0,78]:stage===2?[-108,-36,36,108]:[-132,-88,-44,0,44,88,132];
         const tempestOffsets=stage===1?[-105,-35,35,105]:stage===2?[-154,-77,0,77,154]:[-180,-120,-60,0,60,120,180];
         const cinderOffsets=stage===1?[-108,-36,36,108]:stage===2?[-162,-108,-54,0,54,108,162]:[-198,-144,-90,-36,18,72,126,180];
-        const offsets=b.kind==='tempest'?tempestOffsets:b.kind==='cinderRegent'?cinderOffsets:b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
+        const mirrorOffsets=stage===1?[-108,-54,0,54,108]:stage===2?[-162,-108,-54,0,54,108,162]:[-198,-148.5,-99,-49.5,0,49.5,99,148.5,198];
+        const offsets=b.kind==='tempest'?tempestOffsets:b.kind==='cinderRegent'?cinderOffsets:b.kind==='mirrorWarden'?mirrorOffsets:b.kind==='redJudge'?(stage===1?[-105,0,105]:stage===2?[-145,-70,0,70,145]:[-170,-120,-70,0,70,120,170]):standardOffsets;
         if(b.kind==='cinderRegent'){
           const nextVolley=b.volley+1;
           const safeGapIndices=stage===1?[1,2]:stage===2?[2,3,4]:[3,4];
@@ -3772,6 +3790,19 @@
           b.warningPlan={volley:nextVolley,stage,center:laneCenter,offsets,gapIndex,shotSpeed,cinderDrift,safeLaneStartY,safeLaneY};
           b.warning=.72;
           b.attackClock=.72;
+        }else if(b.kind==='mirrorWarden'){
+          const nextVolley=b.volley+1;
+          const gapIndex=(nextVolley*2+stage)%offsets.length;
+          const shotSpeed=stage===3?620:stage===2?545:475;
+          const mirrorDrift=(nextVolley%2===0?1:-1)*(stage===1?15:stage===2?21:27);
+          const gapDrift=mirrorDrift*(gapIndex-(offsets.length-1)/2)*.22;
+          const travelTime=Math.max(0,(W-115-(player.x-25))/shotSpeed);
+          const startOffset=offsets[gapIndex],endOffset=startOffset+gapDrift*travelTime+Math.sin(travelTime*6)*6;
+          const minCenter=Math.max(30-startOffset,30-endOffset),maxCenter=Math.min(GROUND-30-startOffset,GROUND-30-endOffset);
+          const laneCenter=Math.max(minCenter,Math.min(maxCenter,center));
+          b.warningPlan={volley:nextVolley,stage,center:laneCenter,offsets,gapIndex,shotSpeed,mirrorDrift,mirrorGapDrift:gapDrift,safeLaneStartY:laneCenter+startOffset,safeLaneY:laneCenter+endOffset};
+          b.warning=stage===3?.82:stage===2?.88:.94;
+          b.attackClock=b.warning;
         }else{
           b.volley++;
           const gapIndex=b.kind==='tempest'?(b.volley*2+1)%offsets.length:(b.kind==='staticChoir'?(b.volley*2+1):b.volley)%offsets.length;
@@ -3785,13 +3816,15 @@
       offsets.forEach((off,i)=>{
         if(i===gapIndex)return;
         const y=Math.max(28,Math.min(GROUND-22,center+off));
-        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='cinderRegent'?'#ffb16f':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
-        const shotSpeed=b.kind==='cinderRegent'?volleyPlan.shotSpeed:b.kind==='tempest'?(volleyStage===3?600:volleyStage===2?520:455):b.kind==='redJudge'?(volleyStage===3?590:volleyStage===2?510:430):b.kind==='paleArchitect'?(volleyStage===3?560:volleyStage===2?475:405):(volleyStage===3?520:volleyStage===2?440:365);
+        const shotColor=b.kind==='tempest'?'#79ddff':b.kind==='cinderRegent'?'#ffb16f':b.kind==='mirrorWarden'?'#a8dfff':b.kind==='final'?'#f2edff':b.kind==='last'?'#59e9ff':b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':'#ff6d9b';
+        const shotSpeed=b.kind==='cinderRegent'||b.kind==='mirrorWarden'?volleyPlan.shotSpeed:b.kind==='tempest'?(volleyStage===3?600:volleyStage===2?520:455):b.kind==='redJudge'?(volleyStage===3?590:volleyStage===2?510:430):b.kind==='paleArchitect'?(volleyStage===3?560:volleyStage===2?475:405):(volleyStage===3?520:volleyStage===2?440:365);
         const tempestDrift=b.kind==='tempest'?(volleyStage===1?(i%2===0?72:-72):volleyStage===2?(i%2===0?142:-142):(i-offsets.length/2)*58):0;
         const cinderDrift=b.kind==='cinderRegent'?volleyPlan.cinderDrift:0;
-        EXPANSION.shots.push({x:W-115,y:y,baseY:y,age:0,w:b.kind==='tempest'?27:b.kind==='cinderRegent'?26:23,h:b.kind==='tempest'?23:b.kind==='cinderRegent'?22:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='cinderRegent'?cinderDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:b.kind==='tempest'?'tempestArc':b.kind==='cinderRegent'?'cinderArc':'standard'});
+        const mirrorDrift=b.kind==='mirrorWarden'?volleyPlan.mirrorDrift*(i-(offsets.length-1)/2)*.22:0;
+        const shotKind=b.kind==='tempest'?'tempestArc':b.kind==='cinderRegent'?'cinderArc':b.kind==='mirrorWarden'?'mirrorShard':'standard';
+        EXPANSION.shots.push({x:W-115,y:y,baseY:y,age:0,w:b.kind==='tempest'?27:b.kind==='cinderRegent'||b.kind==='mirrorWarden'?26:23,h:b.kind==='tempest'?23:b.kind==='cinderRegent'||b.kind==='mirrorWarden'?22:20,speed:shotSpeed,vy:b.kind==='tempest'?tempestDrift:b.kind==='cinderRegent'?cinderDrift:b.kind==='mirrorWarden'?mirrorDrift:b.kind==='paleArchitect'?(off>=0?48:-48):0,phase:0,color:shotColor,kind:shotKind});
       });
-      b.attackClock=b.kind==='tempest'?(volleyStage===3?.82:volleyStage===2?1.12:1.58):b.kind==='cinderRegent'?(volleyStage===3?.96:volleyStage===2?1.28:1.72):b.kind==='staticChoir'?(volleyStage===3?1.02:volleyStage===2?1.28:1.62):b.kind==='redJudge'?(volleyStage===3?.98:volleyStage===2?1.26:1.62):(volleyStage===3?1.18:volleyStage===2?1.55:2.0);
+      b.attackClock=b.kind==='tempest'?(volleyStage===3?.82:volleyStage===2?1.12:1.58):b.kind==='cinderRegent'?(volleyStage===3?.96:volleyStage===2?1.28:1.72):b.kind==='mirrorWarden'?(volleyStage===3?1.02:volleyStage===2?1.38:1.78):b.kind==='staticChoir'?(volleyStage===3?1.02:volleyStage===2?1.28:1.62):b.kind==='redJudge'?(volleyStage===3?.98:volleyStage===2?1.26:1.62):(volleyStage===3?1.18:volleyStage===2?1.55:2.0);
       burst(W-115,b.timer%2?70:130,b.kind==='staticChoir'?'#9ceeff':b.kind==='redJudge'?'#ff3c55':b.kind==='paleArchitect'?'#e7e3f2':b.kind==='final'?'#f2edff':'#bd6bff',9);
     }
     if(b.kind==='last'||b.kind==='final'){
@@ -3804,13 +3837,13 @@
       if(!Number.isFinite(sh.baseY)){sh.baseY=sh.y;sh.age=0;}
       sh.age=(sh.age||0)+dt*slowFactor;
       sh.x-=sh.speed*dt*slowFactor;sh.phase+=dt*6*slowFactor;
-      sh.y=sh.baseY+(sh.vy||0)*sh.age+Math.sin(sh.phase)*(sh.kind==='cinderArc'?5:12);
-      const isTempestArc=sh.kind==='tempestArc';
+      sh.y=sh.baseY+(sh.vy||0)*sh.age+Math.sin(sh.phase)*(sh.kind==='cinderArc'?5:sh.kind==='mirrorShard'?6:12);
+      const isTempestArc=sh.kind==='tempestArc',isMirrorShard=sh.kind==='mirrorShard';
       // Tempest's bright, thin lightning needs a forgiving contact envelope.
       // The swept check also catches a bolt that crosses the player between frames.
       const box=isTempestArc?{x:sh.x-6,y:sh.y-6,w:sh.w+12,h:sh.h+12}:{x:sh.x,y:sh.y,w:sh.w,h:sh.h};
-      const projectileContact=rectHit(playerBox,box,isTempestArc?0:3)||
-        (isTempestArc&&sweptProjectileHit(playerBox,box,previousX-6,previousY-6,6));
+      const projectileContact=rectHit(playerBox,box,isTempestArc||isMirrorShard?0:3)||
+        ((isTempestArc||isMirrorShard)&&sweptProjectileHit(playerBox,box,previousX-(isTempestArc?6:0),previousY-(isTempestArc?6:0),isTempestArc?6:0));
       if(EXPANSION.parryTimer>0&&Math.hypot(sh.x+sh.w/2-(player.x+player.w/2),sh.y+sh.h/2-(player.y+player.h/2))<118){
         EXPANSION.shots.splice(i,1);perfectParrySuccess(sh.x+sh.w/2,sh.y+sh.h/2,sh.color||'#ffe17a');continue;
       }
@@ -3854,6 +3887,7 @@
       if(b.kind==='last')expansionAchievement('last-signal','LAST SIGNAL');
       if(b.kind==='final'){UPGRADE.finalBossDefeated=true;expansionAchievement('unwritten','THE UNWRITTEN');}
       if(b.kind==='cinderRegent')expansionAchievement('cinder-regent','CINDER REGENT');
+      if(b.kind==='mirrorWarden')expansionAchievement('mirror-warden','MIRROR WARDEN');
       expansionAchievement('boss-breaker','BOSS BREAKER');
     }
   }
@@ -3960,7 +3994,8 @@
       {at:250000,key:'boss250Done',name:'THE UNWRITTEN',duration:45,reward:12000,kind:'final'},
       {at:275000,key:'boss275Done',name:'THE PALE ARCHITECT',duration:48,reward:15000,kind:'paleArchitect'},
       {at:300000,key:'boss300Done',name:'THE TEMPEST ARCHON',duration:52,reward:18000,kind:'tempest'},
-      {at:330000,key:'boss330Done',name:'THE CINDER REGENT',duration:56,reward:22000,kind:'cinderRegent'}
+      {at:330000,key:'boss330Done',name:'THE CINDER REGENT',duration:56,reward:22000,kind:'cinderRegent'},
+      {at:360000,key:'boss360Done',name:'THE MIRROR WARDEN',duration:60,reward:26000,kind:'mirrorWarden'}
     ];
     for(const b of nextBosses){
       if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
