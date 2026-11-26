@@ -3331,6 +3331,7 @@
   }
 
 
+  function legacyBossEncounterActive(){return !!boss;}
   function buildDiagnosticReport(){
     const boss=EXPANSION.boss;
     return JSON.stringify({
@@ -3379,6 +3380,7 @@
         pickups:EXPANSION.pickups.map(p=>p.kind),
         projectiles:EXPANSION.shots.length
       },
+      legacyBossEncounterActive:legacyBossEncounterActive(),simultaneousBossEncounters:legacyBossEncounterActive()&&!!EXPANSION.boss,
       boss:boss?{name:boss.name,kind:boss.kind,timeLeft:Number(boss.timer.toFixed(2)),cores:boss.cores,stage:boss.stage,volley:boss.volley,
         weaknessTime:Number(boss.weaknessTimer.toFixed(2)),warningSeconds:Number((boss.warning||0).toFixed(2)),safeLaneY:boss.warningPlan?Math.round(boss.warningPlan.safeLaneY):null,
         lightningShots:EXPANSION.shots.filter(sh=>sh.kind==='tempestArc').length,contacts:boss.contacts||0,protectedContacts:boss.protectedContacts||0,damageContacts:boss.damageContacts||0,lastContact:boss.lastContact||'NONE'}:null,
@@ -3535,7 +3537,7 @@
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
-      ['Boss encounter exclusivity',!(boss&&EXPANSION.boss),boss&&EXPANSION.boss?'CHECK · legacy and expansion bosses are both active':'At most one boss encounter active'],
+      ['Boss encounter exclusivity',!(legacyBossEncounterActive()&&!!EXPANSION.boss),legacyBossEncounterActive()&&EXPANSION.boss?'CHECK · legacy and expansion bosses are both active':'At most one boss encounter active'],
       ['Skin selection',skinUnlocked(UPGRADE.selectedSkin),UPGRADE.selectedSkin+' · saved '+(EXPANSION_STORE.selectedSkin||'DEFAULT')],
       ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
       ['Sandbox isolation',!UPGRADE.testMode||!!UPGRADE.testSnapshot,(UPGRADE.testMode?'ACTIVE · '+UPGRADE.testScenario:'INACTIVE')],
