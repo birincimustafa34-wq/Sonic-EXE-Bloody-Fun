@@ -3305,6 +3305,8 @@
   function finishExpansionRun(){
     if(UPGRADE.testMode){
       if(UPGRADE.testSnapshot)EXPANSION_STORE=UPGRADE.testSnapshot;
+      // Test-only skin changes must not leak into the normal run after restoring the saved profile.
+      UPGRADE.selectedSkin=skinUnlocked(EXPANSION_STORE.selectedSkin)?EXPANSION_STORE.selectedSkin:'DEFAULT';
       UPGRADE.testMode=false;UPGRADE.testScenario='';UPGRADE.testSnapshot=null;
       refreshExpansionMenu();return;
     }
@@ -3533,6 +3535,7 @@
       ['Enemy capacity',EXPANSION.enemies.length<=5,EXPANSION.enemies.length+'/5 active'],
       ['Hazard capacity',EXPANSION.hazards.length<=3,EXPANSION.hazards.length+'/3 active'],
       ['Boss data',!boss||([boss.timer,boss.duration,boss.reward,boss.phase,boss.cores].every(Number.isFinite)&&boss.cores>=0&&boss.cores<=3),boss?boss.name+' · '+boss.cores+'/3 cores':'No active boss'],
+      ['Boss encounter exclusivity',!(boss&&EXPANSION.boss),boss&&EXPANSION.boss?'CHECK · legacy and expansion bosses are both active':'At most one boss encounter active'],
       ['Skin selection',skinUnlocked(UPGRADE.selectedSkin),UPGRADE.selectedSkin+' · saved '+(EXPANSION_STORE.selectedSkin||'DEFAULT')],
       ['Ability synergies',Number.isFinite(UPGRADE.synergyCount)&&UPGRADE.synergyCount>=0&&Number.isFinite(UPGRADE.lastAbilityTime),UPGRADE.synergyCount+' this run · '+(UPGRADE.lastAbilityKey||'combo ready')],
       ['Sandbox isolation',!UPGRADE.testMode||!!UPGRADE.testSnapshot,(UPGRADE.testMode?'ACTIVE · '+UPGRADE.testScenario:'INACTIVE')],
@@ -4067,7 +4070,7 @@
       {at:360000,key:'boss360Done',name:'THE MIRROR WARDEN',duration:60,reward:26000,kind:'mirrorWarden'}
     ];
     for(const b of nextBosses){
-      if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss){
+      if(score>=b.at&&!EXPANSION[b.key]&&!EXPANSION.boss&&!boss){
         EXPANSION[b.key]=true;startExpansionBoss(b.name,b.duration,b.reward,b.kind);break;
       }
     }
