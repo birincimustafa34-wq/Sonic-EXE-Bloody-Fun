@@ -23,6 +23,8 @@ The lab reports:
 - Configuration bounds and speed/Overdrive cap consistency
 - Custom player-image setting, configured path, and loaded-image state
 - Daily Seed initialization state and active deterministic RNG seed
+- Mutual exclusion of legacy and expansion boss encounters
+- Restoration of the saved skin after an isolated test ends
 
 **REFRESH / RE-RUN CHECKS** rebuilds the diagnostic snapshot. **COPY DIAGNOSTIC REPORT** creates a structured JSON snapshot with player position, current entities, hazards, boss state, biome, skin, ability cooldowns, synergies, and sandbox status. It attempts to copy the report to the clipboard; when clipboard access is unavailable, the report is shown in a selectable text area. **CLOSE PANEL** hides the panel.
 
@@ -33,7 +35,7 @@ All scenarios are started from the title screen or Game Over screen.
 | Scenario | What it stages |
 |---|---|
 | FREE TEST RUN | A standard run in sandbox mode |
-| ENEMY SHOWCASE | Rift Lantern, Mirror Wraith, and Grave Mantis |
+| ENEMY SHOWCASE | Rift Lantern, Mirror Wraith, Grave Mantis, and Tempest Herald |
 | BOSS TEST | THE STATIC CHOIR at its late-game score context |
 | SYNERGY TEST | Starts at 60,000 score with the relevant ability cooldowns ready for all three combinations |
 | HAZARD TEST | Laser Grid, Gravity Zone, and Spike Corridor |
@@ -176,6 +178,8 @@ The copyable diagnostic report adds Perfect Parry attempts, successes, misses, c
 The **ENEMY SHOWCASE** now includes **Tempest Herald**, alongside Rift Lantern, Mirror Wraith, and Grave Mantis. The Herald unlocks at 170,000 score. Its **GUST CHARGE** warning draws a target line toward the player's current vertical lane; after the warning expires it performs a short downward lunge. Review that the warning remains visible before the lunge and that its collision uses the normal enemy hit/protection path.
 
 The **TEMPEST ARCHON BOSS TEST** starts an isolated 300,000-score context and launches **THE TEMPEST ARCHON** directly. It is a 52-second encounter with the normal three-core weakness windows and a unique projectile pattern. Early volleys use a narrow diagonal spread; later phases widen the pattern and increase both horizontal speed and vertical drift. Check that the gaps rotate between volleys, that the projectile bolts remain legible, and that Echo Wave can still interact with exposed cores.
+
+During normal score progression, an expansion boss now waits until any legacy boss encounter has ended; the two boss systems are not allowed to run concurrently. The diagnostic panel checks this invariant. Skin changes made during an isolated test are also reverted to the saved profile when that test ends.
 
 ## Electrical storm preview
 
