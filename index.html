@@ -26,11 +26,12 @@
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center;
     padding:clamp(12px,3vw,34px); background:rgba(5,2,7,.84);
+    overflow-y:auto; overscroll-behavior:contain;
   }
   #overlay.hidden { display:none; }
   h1 { margin:0 0 10px; color:#bd1025; font-size:clamp(25px,5.3vw,58px); letter-spacing:.12em;
     text-shadow:3px 3px 0 #3c0008, 0 0 18px #a00012; }
-  #subtitle { margin:0 0 18px; color:#efcbd2; font-size:clamp(11px,1.7vw,16px); line-height:1.65; max-width:700px; }
+  #subtitle { margin:0 0 18px; color:#efcbd2; font-size:clamp(11px,1.7vw,16px); line-height:1.65; max-width:700px; white-space:pre-line; }
   #message { min-height:1.4em; margin:0 0 14px; color:#ff899b; font-size:clamp(11px,1.5vw,14px); }
   button { font:700 15px Consolas,"Courier New",monospace; cursor:pointer; touch-action:none; }
   #start {
@@ -106,10 +107,26 @@
   CONFIG.sounds = Object.assign({}, CONFIG.sounds || {});
   CONFIG.biomeMusic = Object.assign({}, CONFIG.biomeMusic || {});
   CONFIG.colors = Object.assign({ringOuter:'#760008',ringInner:'#bd0718',accent:'#b41136',ground:'#190713',groundLine:'#9d1230'}, CONFIG.colors || {});
+  const configNumber=(key,fallback,min,max)=>{
+    const parsed=Number(CONFIG[key]);
+    return Math.max(min,Math.min(max,Number.isFinite(parsed)?parsed:fallback));
+  };
+  const INITIAL_SPEED=configNumber('initialSpeed',360,100,900);
+  const BASE_MAX_SPEED=Math.max(INITIAL_SPEED,configNumber('maxSpeed',850,150,1400));
+  const OVERDRIVE_MAX_SPEED=Math.max(BASE_MAX_SPEED,Math.min(900,BASE_MAX_SPEED+38));
+  const SPEED_RAMP=configNumber('speedRamp',8.5,0,30);
+  const GRAVITY=configNumber('gravity',1750,300,4000);
+  const JUMP_POWER=configNumber('jumpPower',650,100,1200);
+  const DOUBLE_JUMP_POWER=configNumber('doubleJumpPower',565,100,1200);
+  const FLIGHT_DURATION=configNumber('flightDuration',10,1,60);
+  const SHIELD_DURATION=configNumber('shieldDuration',9,1,60);
+  const RING_COMBO_WINDOW=configNumber('ringComboWindow',2.35,.25,10);
+  const USE_PLAYER_IMAGE=CONFIG.usePlayerImage===true;
+  const MUSIC_VOLUME=Math.max(0,Math.min(1,Number.isFinite(Number(CONFIG.music.volume))?Number(CONFIG.music.volume):.45));
   document.title = (CONFIG.title || 'SONIC.EXE') + ' — Bloody Flight';
 
   const W = canvas.width, H = canvas.height;
-  const GROUND = H - Math.max(50, Math.min(150, Number(CONFIG.groundHeight) || 92));
+  const GROUND = H - configNumber('groundHeight',92,50,150);
   // Off-screen snapshot used for brief horizontal glitch/tearing slices.
   const glitchBuffer = document.createElement('canvas');
   glitchBuffer.width = W; glitchBuffer.height = H;
@@ -128,7 +145,7 @@
   if (CONFIG.music.path) {
     bgMusic = new Audio(CONFIG.music.path);
     bgMusic.loop = CONFIG.music.loop !== false;
-    bgMusic.volume = Math.max(0,Math.min(1,Number(CONFIG.music.volume ?? .45)));
+    bgMusic.volume = MUSIC_VOLUME;
     bgMusic.preload = 'auto';
     bgMusic.addEventListener('error', () => { musicFailed = true; });
   }
@@ -144,7 +161,7 @@
   }
   function startMusic() {
     if (!muted && !(EXPANSION.soundlessTimer>0) && bgMusic && !musicFailed) {
-      bgMusic.volume = Math.max(0,Math.min(1,Number(CONFIG.music.volume ?? .45)));
+      bgMusic.volume = MUSIC_VOLUME;
       const playback=bgMusic.play();
       if(playback&&typeof playback.catch==='function')playback.catch(error=>{
         AUDIO_DIAGNOSTICS.musicPlayFailures++;
@@ -159,7 +176,7 @@
     const resume=state==='running'&&!muted;
     stopMusic();bgMusicPath=target;bgMusic=null;musicFailed=false;
     if(!target)return;
-    bgMusic=new Audio(target);bgMusic.loop=CONFIG.music.loop!==false;bgMusic.volume=Math.max(0,Math.min(1,Number(CONFIG.music.volume??.45)));bgMusic.preload='auto';
+    bgMusic=new Audio(target);bgMusic.loop=CONFIG.music.loop!==false;bgMusic.volume=MUSIC_VOLUME;bgMusic.preload='auto';
     bgMusic.addEventListener('error',()=>{musicFailed=true;if(target!==(CONFIG.music.path||''))switchMusicTrack(CONFIG.music.path||'');});
     if(resume)startMusic();
   }
@@ -173,13 +190,11 @@
   const AUDIO_DIAGNOSTICS={events:0,synthFallbacks:0,customPlays:0,customPlayFailures:0,musicPlayFailures:0,resumeAttempts:0,resumeSuccesses:0,resumeFailures:0,lastError:'',lastContextState:'not-created'};
   const FRAME_TIMING={averageMs:0,peakMs:0,slowFrames:0,frames:0};
   let state = 'ready';
-  let lastTime = 0, elapsed = 0, score = 0, speed = Number(CONFIG.initialSpeed) || 360;
+  let lastTime = 0, elapsed = 0, score = 0, speed = INITIAL_SPEED;
   let spawnClock = 0, ringClock = 0, ringBonusClock = 0, emeraldClock = 0, shieldClock = 0, glitchClock = 0, scoreSigilClock=0;
   let scoreMultiplierTimer=0;
   const SCORE_SIGIL_MULTIPLIER=1.5;
   const DISTANCE_SCORE_MULTIPLIER=1.12;
-  const BASE_MAX_SPEED=Math.max(Number(CONFIG.initialSpeed)||360,Number(CONFIG.maxSpeed)||850);
-  const OVERDRIVE_MAX_SPEED=Math.min(900,BASE_MAX_SPEED+38);
   const RING_GROUP_SIZE=5,RING_GROUP_SPACING=42,RING_GROUP_SPAWN_OFFSET=35,RING_GROUP_OFFSCREEN_MARGIN=35;
   const REGULAR_RING_RADIUS=12,BONUS_RING_RADIUS=14,RING_PICKUP_PADDING=25;
   const RING_LOW_SCORE=15,RING_HIGH_SCORE=35,RING_BONUS_SCORE=60,RING_COMBO_CAP=5;
@@ -187,7 +202,7 @@
   const RING_FORMATION_NAMES=Object.freeze(['arc','stair-step','zigzag','risk-reward','wave']);
   const HIGH_SCORE_GLITCH_LAYOUTS=Object.create(null);
   const HIGH_SCORE_GLITCH_TIERS=Object.freeze([{score:200000,pixels:200},{score:500000,pixels:500},{score:1000000,pixels:1000}]);
-  const RING_TEST_SPEEDS=Object.freeze([...new Set([Number(CONFIG.initialSpeed)||360,Math.min(650,BASE_MAX_SPEED),BASE_MAX_SPEED,OVERDRIVE_MAX_SPEED])]);
+  const RING_TEST_SPEEDS=Object.freeze([...new Set([INITIAL_SPEED,Math.min(650,BASE_MAX_SPEED),BASE_MAX_SPEED,OVERDRIVE_MAX_SPEED])]);
   let ringPatternIndex=0,lastRingFormation='none',ringTestTimer=0,ringTestTier=0;
   let glitchTestTimer=0,glitchTestTier=0;
   let audioTestTimer=0,audioTestIndex=0,audioTestCue='READY';
@@ -382,7 +397,10 @@
     overlay.classList.remove('hidden');
     if (mode==='ready') {
       titleEl.textContent=CONFIG.title || 'SONIC.EXE';
-      subtitleEl.innerHTML=(CONFIG.subtitle || 'BLOODY FLIGHT EDITION')+'<br>SPACE / ↑: Double Jump &nbsp; | &nbsp; ↓: Slide &nbsp; | &nbsp; ← / →: Move Back / Forward &nbsp; | &nbsp; X: Shadow Dash<br>Collect the BLOOD-RED CHAOS EMERALD to activate flight.<br>Chain red rings for combo points. Collect Blood Shields to survive one hit.';
+      subtitleEl.textContent=[CONFIG.subtitle || 'BLOODY FLIGHT EDITION',
+        'SPACE / ↑: Double Jump  |  ↓: Slide  |  ← / →: Move Back / Forward  |  X: Shadow Dash',
+        'Collect the BLOOD-RED CHAOS EMERALD to activate flight.',
+        'Chain red rings for combo points. Collect Blood Shields to survive one hit.' ].join('\n');
       messageEl.textContent=CONFIG.startMessage || 'The blood moon is rising. The forest is watching.'; startBtn.textContent='START RUN';
     } else if (mode==='over') {
       titleEl.textContent='GAME OVER';
@@ -398,7 +416,9 @@
   }
   let ringCount = 0;
   function reset() {
-    elapsed=0; score=0; speed=Number(CONFIG.initialSpeed)||360; FRAME_TIMING.averageMs=0;FRAME_TIMING.peakMs=0;FRAME_TIMING.slowFrames=0;FRAME_TIMING.frames=0; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
+    // Seed the selected random mode before any run setup consumes randomness.
+    resetExpansion();
+    elapsed=0; score=0; speed=INITIAL_SPEED; FRAME_TIMING.averageMs=0;FRAME_TIMING.peakMs=0;FRAME_TIMING.slowFrames=0;FRAME_TIMING.frames=0; spawnClock=1.1; ringClock=ringGroupIntervalForSpeed(speed); ringBonusClock=10+Math.random()*6; scoreSigilClock=18+Math.random()*8; scoreMultiplierTimer=0; emeraldClock=10; shieldClock=13; glitchClock=0;
     ringPatternIndex=Math.floor(Math.random()*RING_FORMATION_NAMES.length);lastRingFormation='none';ringTestTimer=0;ringTestTier=0;glitchTestTimer=0;glitchTestTier=0;audioTestTimer=0;audioTestIndex=0;audioTestCue='READY';
     shake=0; flash=0; glitchLevel=0; glitchPulse=0; ringCount=0; combo=0; bestCombo=0; comboTimer=0; rushTimer=0; shieldTimer=0;
     hallucinationTier=0;hallucinationTimer=0;hallucinationCooldown=2;hallucinationDuration=0;hallucinationKind=0;
@@ -406,7 +426,6 @@
     boss=null;bossProjectiles=[];bossIntroduced=false;secondBossIntroduced=false;thirdBossIntroduced=false;fourthBossIntroduced=false;bossClearTimer=0;bossIntroTimer=0;bossIntroMessage='SOMETHING IS HUNTING YOU';bossClearMessage='THE HUNTER RETREATED  +1200';
     dashTimer=0;dashCharges=3;flightDamageTaken=0;landingGrace=0;diveSlam.active=false;diveSlam.cooldown=0;diveSlam.impactTimer=0;diveSlam.impactX=0;diveSlam.impactHits=0;
     flightComboMultiplier=1;flightComboProgress=0;flightComboTimer=0;
-    resetExpansion();
     embers=[];emberClock=0;verticalEmberClock=0;
     obstacles=[]; rings=[]; emeralds=[]; shields=[]; scoreSigils=[]; particles=[]; trail=[];
     player.x=132; player.y=GROUND-player.h; player.vy=0; player.jumps=0; player.sliding=false; player.flight=0; player.invuln=0;
@@ -485,7 +504,7 @@
     if (code==='Space' || code==='ArrowUp' || code==='KeyW') {
       if (player.flight>0) return;
       if (player.jumps<2) {
-        player.vy = player.jumps===0 ? -(Number(CONFIG.jumpPower)||650) : -(Number(CONFIG.doubleJumpPower)||565);
+        player.vy = player.jumps===0 ? -JUMP_POWER : -DOUBLE_JUMP_POWER;
         player.jumps++; player.sliding=false; sfx('jump');
       }
     }
@@ -727,7 +746,7 @@
       particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,life:.45+Math.random()*.5,max:.95,color,size:3+Math.random()*4});
     }
   }
-  function activateFlight() { if(EXPANSION.mode==='NO FLIGHT'){awardScore(125);burst(player.x+20,player.y+20,'#74eaff',12);return;} EXPANSION.attackSerial=(EXPANSION.attackSerial||0)+1;diveSlam.active=false;landingGrace=0; flightDamageTaken=0; player.flight=Math.max(1,Number(CONFIG.flightDuration)||10); player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
+  function activateFlight() { if(EXPANSION.mode==='NO FLIGHT'){awardScore(125);burst(player.x+20,player.y+20,'#74eaff',12);return;} EXPANSION.attackSerial=(EXPANSION.attackSerial||0)+1;diveSlam.active=false;landingGrace=0; flightDamageTaken=0; player.flight=FLIGHT_DURATION; player.vy=0; player.h=52; player.invuln=player.flight; player.sliding=false; sfx('emerald'); sfx('flight'); burst(player.x+20,player.y+20,'#ff304f',25); }
   function spawnWorldDetail(){
     const type=Math.floor(Math.random()*3);
     const y=type===2?GROUND-70:105+Math.random()*155;
@@ -1382,7 +1401,7 @@
   function update(dt) {
     elapsed+=dt; awardScore(dt*(10+speed*.012)*DISTANCE_SCORE_MULTIPLIER);updateBiomeTransition(dt);updateRainWeather(dt);
     const scoreSpeedBonus=Math.floor(score/1000)*1.25;
-    speed=Math.min(BASE_MAX_SPEED,(Number(CONFIG.initialSpeed)||360)+elapsed*(Number(CONFIG.speedRamp)||8.5)+scoreSpeedBonus);
+    speed=Math.min(BASE_MAX_SPEED,INITIAL_SPEED+elapsed*SPEED_RAMP+scoreSpeedBonus);
     if(EXPANSION.timeFractureTimer>0)speed*=.58;
     if(EXPANSION.overdriveTimer>0)speed=Math.min(OVERDRIVE_MAX_SPEED,speed+38);
     if(UPGRADE.testMode&&UPGRADE.testScenario==='ring-showcase'){
@@ -1553,7 +1572,7 @@
       player.h=player.sliding?29:52;
       const wasAirborne=player.y<GROUND-player.h-1;
       const gravityScale=score>=160000&&EXPANSION.gravityShiftTimer>0?EXPANSION.gravityShiftScale:1;
-      player.vy+=(Number(CONFIG.gravity)||1750)*gravityScale*dt;
+      player.vy+=GRAVITY*gravityScale*dt;
       if(diveSlam.active)player.vy=Math.min(1350,Math.max(720,player.vy));
       player.y+=player.vy*dt;
       if(player.y>=GROUND-player.h){player.y=GROUND-player.h;player.vy=0;player.jumps=0;if(wasAirborne&&diveSlam.active)triggerDiveSlamImpact();}
@@ -1757,7 +1776,7 @@
         else{
           chargeFlow(5);
           const previousCombo=combo;
-          combo=comboTimer>0?Math.min(RING_COMBO_CAP,combo+1):1;comboTimer=Number(CONFIG.ringComboWindow)||2.35;bestCombo=Math.max(bestCombo,combo);
+          combo=comboTimer>0?Math.min(RING_COMBO_CAP,combo+1):1;comboTimer=RING_COMBO_WINDOW;bestCombo=Math.max(bestCombo,combo);
           const points=(r.high?RING_HIGH_SCORE:RING_LOW_SCORE)*combo*(rushTimer>0?2:1);awardScore(points);ringCount++;sfx('ring');
           burst(r.x,r.y,'#97000c',6);
           if(combo===5&&previousCombo<5){rushTimer=5;awardScore(275);expansionAchievement('combo-finisher','COMBO FINISHER');sfx('rush');burst(r.x,r.y,'#c00016',26);}
@@ -1779,7 +1798,7 @@
       const sh=shields[i],box={x:sh.x,y:sh.y+Math.sin(sh.phase)*6,w:sh.w,h:sh.h};
       if(rectHit(playerBox,box,3)){
         if(EXPANSION.mode==='ONE LIFE'){awardScore(175);burst(sh.x+15,sh.y+15,'#ff718b',12);}
-        else{shieldTimer=Math.max(1,Number(CONFIG.shieldDuration)||9);sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);}
+        else{shieldTimer=SHIELD_DURATION;sfx('shield');burst(sh.x+15,sh.y+15,'#a00010',18);}
       }else if(sh.x>-50)shields[keptShields++]=sh;
     }
     shields.length=keptShields;
@@ -1836,7 +1855,7 @@
             const remainingDrain=Math.max(0,MAX_AURA_FLIGHT_DRAIN-flightDamageTaken);
             const appliedDrain=Math.min(auraDamagePercent,remainingDrain);
             if(appliedDrain>0){
-              const fullFlight=Number(CONFIG.flightDuration)||10;
+              const fullFlight=FLIGHT_DURATION;
               flightDamageTaken+=appliedDrain;
               player.flight=Math.max(0,player.flight-fullFlight*(appliedDrain/100));
               if(player.flight===0)landingGrace=Math.max(landingGrace,.5);
@@ -2146,7 +2165,15 @@
     const smooth=ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled=false;
     const skinFilter=UPGRADE.selectedSkin==='BLOODSTAINED'?'hue-rotate(325deg) saturate(1.5)':UPGRADE.selectedSkin==='VOID'?'grayscale(1) brightness(.72) contrast(1.4)':UPGRADE.selectedSkin==='EMERALD'?'hue-rotate(105deg) saturate(1.7)':UPGRADE.selectedSkin==='PHANTOM'?'hue-rotate(185deg) saturate(1.35) brightness(1.12)':UPGRADE.selectedSkin==='OBSIDIAN'?'grayscale(.75) brightness(.48) contrast(1.65) sepia(.2)':UPGRADE.selectedSkin==='UNWRITTEN'?'grayscale(1) brightness(1.28) contrast(1.25)':'none';ctx.filter=skinFilter;
-    if(sliding)ctx.drawImage(runnerSprite,x-9,y-1,64,30);else ctx.drawImage(runnerSprite,x-9,y-2+bob,64,56);
+    const customPlayer=USE_PLAYER_IMAGE&&images.player&&images.player.complete&&images.player.naturalWidth>0;
+    if(customPlayer){
+      if(sliding)ctx.drawImage(images.player,x-9,y+4,64,30);
+      else ctx.drawImage(images.player,x-9,y-2+bob,64,56);
+    }else{
+      buildRunnerSprite(frame,sliding);
+      if(sliding)ctx.drawImage(runnerSprite,x-9,y-1,64,30);
+      else ctx.drawImage(runnerSprite,x-9,y-2+bob,64,56);
+    }
     ctx.filter='none';ctx.imageSmoothingEnabled=smooth;
     drawSelectedSkinEffects(x,y);
   }
@@ -2698,7 +2725,7 @@
     if(scoreMultiplierTimer>0){ctx.fillStyle='#d9a2ff';ctx.fillText('SCORE SURGE  x1.5  '+scoreMultiplierTimer.toFixed(1)+'s',W-22,76);}
     ctx.textAlign='left';
     if(player.flight>0){
-      const fullFlight=Math.max(1,Number(CONFIG.flightDuration)||10);
+      const fullFlight=FLIGHT_DURATION;
       const remainingFlight=Math.max(0,Math.min(1,player.flight/fullFlight));
       ctx.fillStyle='#b90016';ctx.font='bold 18px Consolas, monospace';
       ctx.fillText('BLOODY FLIGHT  '+player.flight.toFixed(1)+'s',22,104);
@@ -3311,6 +3338,7 @@
       state,mode:EXPANSION.mode,
       score:Math.floor(score),bestScore:EXPANSION_STORE.best||0,
       elapsedSeconds:Math.floor(elapsed),speed:Math.round(speed),
+      configuration:{initialSpeed:INITIAL_SPEED,maxSpeed:BASE_MAX_SPEED,speedRamp:SPEED_RAMP,overdriveMaxSpeed:OVERDRIVE_MAX_SPEED,gravity:GRAVITY,usePlayerImage:USE_PLAYER_IMAGE,playerImageLoaded:!!images.player?.naturalWidth},
       player:{x:Math.round(player.x),y:Math.round(player.y),verticalVelocity:Math.round(player.vy),
         flightSeconds:Number(player.flight.toFixed(2)),shieldSeconds:Number(shieldTimer.toFixed(2)),
         jumps:player.jumps,sliding:player.sliding},
@@ -3418,7 +3446,7 @@
     });
     const riskRewardYs=Array.from({length:RING_GROUP_SIZE},(_,i)=>GROUND-74+ringFormationOffset('risk-reward',i));
     const riskRewardSplitValid=riskRewardYs.filter(y=>y<GROUND-155).length===3&&riskRewardYs.filter(y=>y>=GROUND-155).length===2;
-    const ringRewardRulesValid=RING_GROUP_SIZE===5&&RING_GROUP_SPACING===42&&REGULAR_RING_RADIUS===12&&BONUS_RING_RADIUS===14&&RING_PICKUP_PADDING===25&&RING_LOW_SCORE===15&&RING_HIGH_SCORE===35&&RING_BONUS_SCORE===60&&RING_COMBO_CAP===5&&Number(CONFIG.ringComboWindow)>0;
+    const ringRewardRulesValid=RING_GROUP_SIZE===5&&RING_GROUP_SPACING===42&&REGULAR_RING_RADIUS===12&&BONUS_RING_RADIUS===14&&RING_PICKUP_PADDING===25&&RING_LOW_SCORE===15&&RING_HIGH_SCORE===35&&RING_BONUS_SCORE===60&&RING_COMBO_CAP===5&&RING_COMBO_WINDOW>0;
     const contractStateValid=Number.isInteger(EXPANSION.contractsCompleted)&&EXPANSION.contractsCompleted>=0&&
       Number.isInteger(EXPANSION.contractMilestoneIndex)&&EXPANSION.contractMilestoneIndex>=0&&
       Number.isFinite(EXPANSION.contractCooldown)&&EXPANSION.contractCooldown>=0&&
@@ -3428,7 +3456,14 @@
         EXPANSION.contract.progress<=EXPANSION.contract.target));
     const contractScenarioValid=!UPGRADE.testMode||UPGRADE.testScenario!=='contract-showcase'||
       (EXPANSION.contract?.id==='ring-sweep'&&EXPANSION.contract.target===8&&EXPANSION.contract.remaining>0);
+    const configSanityValid=[INITIAL_SPEED,BASE_MAX_SPEED,OVERDRIVE_MAX_SPEED,SPEED_RAMP,GRAVITY,JUMP_POWER,DOUBLE_JUMP_POWER,FLIGHT_DURATION,SHIELD_DURATION,RING_COMBO_WINDOW].every(Number.isFinite)&&
+      BASE_MAX_SPEED>=INITIAL_SPEED&&OVERDRIVE_MAX_SPEED>=BASE_MAX_SPEED&&SPEED_RAMP>=0;
+    const customPlayerSettingValid=typeof CONFIG.usePlayerImage==='boolean'&&(!USE_PLAYER_IMAGE||typeof CONFIG.images.player==='string'&&CONFIG.images.player.length>0);
+    const dailySeedValid=state!=='running'||EXPANSION.mode!=='DAILY SEED'||(EXPANSION.dailySeed===expansionSeedForToday()&&EXPANSION.rng!==0);
     const checks=[
+      ['Configuration bounds',configSanityValid,'Start '+INITIAL_SPEED+' · Base cap '+BASE_MAX_SPEED+' · Overdrive cap '+OVERDRIVE_MAX_SPEED+' · Ramp '+SPEED_RAMP],
+      ['Custom player image option',customPlayerSettingValid,USE_PLAYER_IMAGE?'Custom player enabled · '+(images.player?.naturalWidth?'image loaded':'fallback until image loads'):'Built-in animated runner active'],
+      ['Daily Seed initialization',dailySeedValid,EXPANSION.mode==='DAILY SEED'?'Seed '+EXPANSION.dailySeed+' · RNG '+EXPANSION.rng:'Not using Daily Seed mode'],
       ['Game state', ['ready','running','paused','over'].includes(state),String(state)],
       ['Score and speed',Number.isFinite(score)&&Number.isFinite(speed),'Score '+Math.floor(score)+' · Speed '+Math.round(speed)],
       ['Distance score boost',DISTANCE_SCORE_MULTIPLIER>=1.1&&DISTANCE_SCORE_MULTIPLIER<=1.2,Math.round(DISTANCE_SCORE_MULTIPLIER*100)+'% speed-scaled travel score'],
