@@ -17,7 +17,7 @@ Bazı tarayıcılar yerel dosya güvenliği nedeniyle belirli özellikleri kıs�
 | Dosya | Kullanım | Öneri |
 |---|---|---|
 | `background.png` | Arka plan / orman / ay | 960×448, yatay |
-| `player.png` | Oyuncu karakteri | Şeffaf PNG, yaklaşık 96×96 |
+| `player.png` | İsteğe bağlı özel oyuncu görseli | Şeffaf PNG, yaklaşık 96×96 |
 | `ring.png` | Kan kırmızısı halka | Şeffaf PNG, kare |
 | `emerald.png` | Chaos Emerald | Şeffaf PNG, kare |
 | `shield.png` | Blood Shield | Şeffaf PNG, kare |
@@ -26,7 +26,7 @@ Bazı tarayıcılar yerel dosya güvenliği nedeniyle belirli özellikleri kıs�
 | `bat.png` | Yarasa engeli | Şeffaf PNG |
 | `rock.png` | Kaya engeli | Şeffaf PNG |
 
-ZIP içindeki PNG'ler başlangıç örnekleridir; dilediğinde aynı adla kendi dosyalarınla değiştirebilirsin. Bir görsel dosyası eksikse oyun kendi çizdiği varsayılan piksel görselini kullanır. Böylece klasördeki her dosyanın hazır olması gerekmez.
+ZIP içindeki PNG'ler başlangıç örnekleridir; dilediğinde aynı adla kendi dosyalarınla değiştirebilirsin. Arka plan, halka ve diğer görseller eksikse oyun kendi çizdiği varsayılanları kullanır. Oyuncu için varsayılan olarak dört karelik animasyonlu yerleşik piksel karakter kullanılır. Kendi `player.png` dosyanı kullanmak için Sandbox Editor'deki **Harici oyuncu görselini kullan** seçeneğini aç; dosya bulunamaz veya yüklenemezse yerleşik karakter otomatik olarak korunur. Harici oyuncu PNG'si tek görseldir; yerleşik koşu animasyonunun yerine geçer.
 
 ## 3) Müzik ve ses efektleri
 
@@ -43,7 +43,7 @@ Aynı dosya adlarını kullanman yeterli. Depodaki varsayılan kurulumda bu ses 
 
 ## 4) Sandbox Editor ve config.js
 
-`editor.html` dosyasını açarak oyun başlığını, başlangıç mesajını, başlangıç/en yüksek hızı, yer çekimini, zıplama gücünü, uçuş/kalkan sürelerini ve müzik ses düzeyini değiştirebilirsin.
+`editor.html` dosyasını açarak oyun başlığını, başlangıç mesajını, başlangıç/en yüksek hızı, yer çekimini, zıplama gücünü, uçuş/kalkan sürelerini ve müzik ses düzeyini değiştirebilirsin. Görsel dosyaları panelindeki **Harici oyuncu görselini kullan** kutusu, `player.png` dosyasını açıp kapatır. Sayısal alanlar indirme öncesinde aralık ve başlangıç/en yüksek hız tutarlılığı açısından denetlenir; sıfır hız artışı geçerli bir tercihtir.
 
 `config.js` oyun ayarlarının ana dosyasıdır. Düzenleyicide **config.js dosyasını indir** düğmesine bastığında yeni bir `config.js` iner. İndirdiğin dosyayı proje ana klasöründeki eski `config.js` ile değiştir.
 
