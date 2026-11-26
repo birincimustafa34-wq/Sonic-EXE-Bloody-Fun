@@ -20,6 +20,9 @@ The lab reports:
 - AudioContext state, resume attempts/success/failures, SFX fallback counts, custom-audio playback failures, and the last audio error
 - Average/peak frame interval, number of frames over 20 ms, and measured frame count
 - Canvas availability, menu event bindings, and local-storage accessibility
+- Configuration bounds and speed/Overdrive cap consistency
+- Custom player-image setting, configured path, and loaded-image state
+- Daily Seed initialization state and active deterministic RNG seed
 
 **REFRESH / RE-RUN CHECKS** rebuilds the diagnostic snapshot. **COPY DIAGNOSTIC REPORT** creates a structured JSON snapshot with player position, current entities, hazards, boss state, biome, skin, ability cooldowns, synergies, and sandbox status. It attempts to copy the report to the clipboard; when clipboard access is unavailable, the report is shown in a selectable text area. **CLOSE PANEL** hides the panel.
 
@@ -165,7 +168,7 @@ While airborne, **J** opens a 0.42-second parry window and starts a 10-second co
 ### RIFT SENTINEL
 The **Rift Sentinel** joins the enemy pool at 145,000 score. Its cyan guard is a two-step defense: a powered collision, Echo Wave riposte, or Dive Slam first breaks the guard and exposes the Sentinel for 1.75 seconds. A separate follow-up hit during that window defeats it and unlocks **SENTINEL BROKEN**. A 0.72-second contact lock prevents one continuous powered overlap from registering as both the guard break and the finishing hit. A direct powered-contact guard break also staggers the Sentinel just ahead of the player for 1.05 seconds, with the HUD showing the remaining exposure time. Finishing it through body contact requires a newly activated ability after the guard break; simply holding Flight or one continuous Dash cannot count twice. The diagnostic report exposes the attack serial, guard lock, and stagger state. Its shield state is shown as **GUARDED** or **EXPOSED**. Use the protected, records-disabled **RIFT SENTINEL TEST** scenario to inspect it without risking a normal run.
 
-The copyable diagnostic report adds Perfect Parry attempts, successes, misses, cooldown, and Rift Sentinel active/exposed counts to combatMechanics. Test Lab checks FLOW bounds, Dive Slam timer/impact state, Perfect Parry accounting and window bounds, combat showcase initialization, and the Sentinel sandbox. These source checks do not replace interactive browser timing and feel tests.
+The copyable diagnostic report adds Perfect Parry attempts, successes, misses, cooldown, and Rift Sentinel active/exposed counts to combatMechanics. It also includes the normalized gameplay configuration and whether the optional player image has loaded. Test Lab checks FLOW bounds, Dive Slam timer/impact state, Perfect Parry accounting and window bounds, combat showcase initialization, the Sentinel sandbox, configuration ranges, custom-player fallback readiness, and Daily Seed initialization. These source checks do not replace interactive browser timing and feel tests.
 
 
 ## Tempest enemy and boss scenarios
