@@ -5,6 +5,7 @@
 */
 window.BLOODY_FLIGHT_CONFIG = {
   title: "SONIC.EXE",
+  // false keeps the animated built-in runner; true uses assets/images/player.png.
   usePlayerImage: false,
   subtitle: "BLOODY FLIGHT EDITION",
   startMessage: "The blood moon is rising. The forest is watching.",
