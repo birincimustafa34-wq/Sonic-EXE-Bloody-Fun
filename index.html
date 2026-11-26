@@ -2157,7 +2157,6 @@
     const bob=(!sliding&&!flying)?[0,1,0,-1][frame]:0;
     if(flying)drawFlightAura(x,y,h);
     if(shieldTimer>0)drawShieldField(x,y,h);
-    buildRunnerSprite(frame,sliding);
     if(!flying&&!sliding){
       ctx.fillStyle='rgba(0,0,0,.32)';
       ctx.beginPath();ctx.ellipse(x+23,GROUND+2,21,4,0,0,Math.PI*2);ctx.fill();
