@@ -3649,6 +3649,10 @@
     EXPANSION.menuButtons.mode.textContent='MODE: '+EXPANSION_MODE_NAMES[EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode)] ;
     EXPANSION.menuButtons.mode.title='Cycle through challenge modes';if(EXPANSION.menuButtons.skin)EXPANSION.menuButtons.skin.textContent='SKIN: '+UPGRADE.selectedSkin;
     EXPANSION.menuButtons.mode.onclick=()=>{
+      if(state!=='ready'&&state!=='over'){
+        messageEl.textContent='CHALLENGE MODE CHANGES APPLY BETWEEN RUNS.';
+        return;
+      }
       const i=EXPANSION_MODE_NAMES.indexOf(EXPANSION.mode);
       EXPANSION.mode=EXPANSION_MODE_NAMES[(i+1)%EXPANSION_MODE_NAMES.length];
       applyExpansionRandomMode();expansionPanelShow(null);refreshExpansionMenu();
